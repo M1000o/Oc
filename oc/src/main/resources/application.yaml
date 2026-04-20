@@ -1,0 +1,49 @@
+#En local corre en docker -_-
+spring:
+  profiles:
+    active: dev
+  application:
+    name: oc
+
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:oc};encrypt=false;trustServerCertificate=true
+    username:  ${DB_USER:oc_user}
+    password: ${DB_PASSWORD:VillaOc2026}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: pepecuentacuentos36@gmail.com
+    password: okmz ljgn nrjm xvpx
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  app:
+    frontend-base-url: http://127.0.0.1:4200
+    email:
+      from: pepecuentacuentos36@gmail.com
+    activation:
+      expiration-hours: 24
+
+  logging:
+    level:
+      org.hibernate.SQL: DEBUG
+      com.kong.oc: DEBUG
+      org.springframework: DEBUG
+
+server:
+    port: 8080

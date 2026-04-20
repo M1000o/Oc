@@ -1,0 +1,33 @@
+<main class="auth-page">
+  <header class="auth-header">
+    <strong class="auth-brand">Supplier Portal</strong>
+    <a class="auth-help" href="/" aria-label="Centro de ayuda">?</a>
+  </header>
+
+  <section class="auth-center">
+    <div class="auth-card status-card">
+      <div class="auth-icon">!</div>
+      <h1 class="auth-title">{{ title() }}</h1>
+      <p class="auth-copy">{{ description() }}</p>
+
+      @if (backendMessage()) {
+        <div class="feedback-banner">
+          {{ backendMessage() }}
+        </div>
+      }
+
+      <div class="status-actions">
+        <a class="btn btn-primary" [routerLink]="['/login']">Ir a login</a>
+        <a class="btn btn-secondary" [routerLink]="['/set-password']">Solicitar nuevo token</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="auth-footer">
+    <span>Si el problema persiste, contacta al equipo de soporte.</span>
+    <nav>
+      <a [routerLink]="['/register']">Registro proveedor</a>
+      <a [routerLink]="['/login']">Login</a>
+    </nav>
+  </footer>
+</main>

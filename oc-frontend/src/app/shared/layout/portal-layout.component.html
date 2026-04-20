@@ -1,0 +1,38 @@
+<main
+  class="portal-layout"
+  [class.sidebar-hidden]="!sidebarVisible"
+  [class.sidebar-visible]="sidebarVisible"
+>
+  <app-portal-sidebar
+    class="layout-sidebar"
+    (logoutRequest)="onLogoutClick()"
+    (navigationRequest)="handleNavigationClick()"
+  ></app-portal-sidebar>
+
+  @if (sidebarVisible) {
+    <button
+      class="sidebar-backdrop"
+      type="button"
+      aria-label="Cerrar sidebar"
+      (click)="closeSidebar()"
+    ></button>
+  }
+
+  <section class="portal-content">
+    <app-portal-header
+      [title]="title"
+      [sidebarVisible]="sidebarVisible"
+      (toggleSidebarRequest)="toggleSidebar()"
+    >
+      <ng-content select="[layoutHeaderActions]"></ng-content>
+    </app-portal-header>
+
+    <div class="portal-workspace">
+      <ng-content select="[layoutBody]"></ng-content>
+    </div>
+
+    <app-portal-footer [year]="currentYear">
+      <ng-content select="[layoutFooter]"></ng-content>
+    </app-portal-footer>
+  </section>
+</main>

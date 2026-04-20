@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.portal-layout {
+  --sidebar-width: 198px;
+
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+  background: #f2f1f4;
+  transition: grid-template-columns 0.25s ease;
+}
+
+.portal-layout.sidebar-hidden {
+  --sidebar-width: 0px;
+}
+
+.layout-sidebar {
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+
+.portal-layout.sidebar-hidden .layout-sidebar {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.portal-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f2f1f4;
+}
+
+.portal-workspace {
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .portal-layout {
+    display: block;
+  }
+
+  .layout-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 80;
+    transform: translateX(-102%);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .portal-layout.sidebar-visible .layout-sidebar {
+    transform: translateX(0);
+  }
+
+  .portal-layout.sidebar-hidden .layout-sidebar {
+    transform: translateX(-102%);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: block;
+    border: 0;
+    background: rgba(7, 16, 33, 0.35);
+  }
+
+}

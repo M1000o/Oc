@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.portal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid #dde3ef;
+  background: rgba(255, 255, 255, 0.92);
+  color: #6a748c;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1000px) {
+  .portal-footer {
+    padding: 10px 12px;
+  }
+}

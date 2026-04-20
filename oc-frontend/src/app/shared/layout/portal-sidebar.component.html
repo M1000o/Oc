@@ -1,0 +1,44 @@
+<aside class="portal-sidebar" aria-label="Navegacion principal de pedidos">
+  <div class="profile-card">
+    <div class="profile-avatar" aria-hidden="true">{{ userInitials }}</div>
+    <h2>{{ userName }}</h2>
+    <p>{{ userRole }}</p>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Navegacion de pedidos">
+    <a
+      class="nav-item"
+      [routerLink]="['/portal']"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      (click)="handleNavigationClick()"
+    >
+      <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
+      <span>Realizar Pedido</span>
+    </a>
+
+    <a
+      class="nav-item"
+      [routerLink]="['/portal/guardados']"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      (click)="handleNavigationClick()"
+    >
+      <mat-icon aria-hidden="true">bookmark</mat-icon>
+      <span>Ver Pedidos Guardados</span>
+    </a>
+
+    <a
+      class="nav-item"
+      [routerLink]="['/portal/enviados']"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      (click)="handleNavigationClick()"
+    >
+      <mat-icon aria-hidden="true">local_shipping</mat-icon>
+      <span>Ver Pedidos Enviados</span>
+    </a>
+  </nav>
+
+  <button class="logout-button" type="button" (click)="onLogoutClick()">Cerrar sesion</button>
+</aside>

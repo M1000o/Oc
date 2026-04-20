@@ -1,0 +1,22 @@
+permissions:
+  - READ_USERS
+  - MANAGE_USERS
+  - READ_ROLES
+  - MANAGE_ROLES
+  - READ_PERMISSIONS
+  - MANAGE_PERMISSIONS
+  - READ_OWN_PURCHASE_ORDERS
+
+roles:
+  - name: ADMIN
+    permissions: [READ_USERS, MANAGE_USERS, READ_ROLES, MANAGE_ROLES, READ_PERMISSIONS, MANAGE_PERMISSIONS]
+  - name: USER
+    permissions: [READ_USERS]
+  - name: PROVEEDOR
+    permissions: [READ_OWN_PURCHASE_ORDERS]
+
+
+admin:
+  username: admin
+  password: ${ADMIN_PASSWORD:Admin123!}
+  role: ADMIN

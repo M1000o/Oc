@@ -1,0 +1,56 @@
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: oc-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${SA_PASSWORD}
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+      - ./docker/init.sql:/docker/init.sql
+      - ./docker/entrypoint.sh:/docker/entrypoint.sh
+
+    command: /docker/entrypoint.sh
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $$MSSQL_SA_PASSWORD -C -Q 'SELECT 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - oc-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oc-app
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://sql:1433;databaseName=orden_compra;encrypt=false;trustServerCertificate=true
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SERVER_PORT=9000
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.SQLServerDialect
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.microsoft.sqlserver.jdbc.SQLServerDriver
+      - JAVA_OPTS=${JAVA_OPTS:-"-Xms256m -Xmx512m"}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "9000:9000"
+    depends_on:
+      sql:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - oc-network
+
+volumes:
+  mssql-data:
+
+networks:
+  oc-network:
+    driver: bridge

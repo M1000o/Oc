@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  width: 198px;
+  background: linear-gradient(180deg, #0a1e49 0%, #061534 100%);
+  color: #e5ebfb;
+}
+
+.portal-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-height: 100%;
+  padding: 16px 10px;
+  overflow: hidden;
+}
+
+.profile-card {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  border: 2px solid rgba(152, 190, 238, 0.45);
+  background: linear-gradient(145deg, rgba(60, 104, 175, 0.95), rgba(30, 58, 110, 0.95));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.profile-card h2 {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+}
+
+.profile-card p {
+  margin: 0;
+  color: rgba(213, 223, 247, 0.72);
+  font-size: 0.76rem;
+}
+
+.sidebar-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #d3dcf2;
+  font-size: 0.84rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.nav-item mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  line-height: 18px;
+}
+
+.nav-item:hover {
+  background: rgba(95, 127, 191, 0.14);
+}
+
+.nav-item.active {
+  border-color: rgba(61, 236, 225, 0.55);
+  background: rgba(61, 236, 225, 0.12);
+  color: #70f1e8;
+}
+
+.logout-button {
+  margin-top: auto;
+  min-height: 38px;
+  border: 1px solid rgba(164, 184, 225, 0.26);
+  border-radius: 10px;
+  background: rgba(25, 47, 88, 0.92);
+  color: #dde6fb;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}

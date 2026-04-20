@@ -1,0 +1,96 @@
+<div class="service-modal-backdrop" (click)="onBackdropClick($event)">
+  <section class="service-modal" role="dialog" aria-modal="true" aria-labelledby="serviceProviderModalTitle">
+    <header class="service-modal-header">
+      <h2 id="serviceProviderModalTitle">Seleccionar Servicio y Proveedor</h2>
+      <button class="close-btn" type="button" (click)="close()" aria-label="Cerrar modal">
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    </header>
+
+    <div class="service-modal-content">
+      <aside class="service-panel">
+        <h3>SERVICIO</h3>
+
+        @if (servicesLoading) {
+          <p class="empty-state">Cargando servicios...</p>
+        } @else if (servicesLoadError) {
+          <p class="empty-state">{{ servicesLoadError }}</p>
+        } @else if (!services.length) {
+          <p class="empty-state">No hay servicios disponibles.</p>
+        } @else {
+          <div class="service-grid">
+            @for (service of services; track service.id) {
+              <button
+                class="service-card"
+                type="button"
+                [class.active]="service.id === selectedServiceId"
+                (click)="selectService(service.id)"
+              >
+                <span class="service-icon" aria-hidden="true">
+                  <mat-icon>{{ service.icon }}</mat-icon>
+                </span>
+                <span class="service-label">{{ service.label }}</span>
+              </button>
+            }
+          </div>
+        }
+      </aside>
+
+      <section class="provider-panel">
+        <div class="provider-panel-header">
+          <div>
+            <h3>Proveedores de {{ selectedServiceName || 'un servicio' }}</h3>
+            <p>Selecciona un proveedor de la red autorizada</p>
+          </div>
+
+          <label class="search-box" aria-label="Buscar proveedor">
+            <mat-icon aria-hidden="true">search</mat-icon>
+            <input
+              type="text"
+              placeholder="Buscar proveedor o RUC..."
+              [(ngModel)]="searchTerm"
+              [ngModelOptions]="{ standalone: true }"
+              [disabled]="selectedServiceId === null"
+            />
+          </label>
+        </div>
+
+        <div class="provider-list">
+          @if (providersLoading) {
+            <p class="empty-state">Cargando proveedores...</p>
+          } @else if (providersLoadError) {
+            <p class="empty-state">{{ providersLoadError }}</p>
+          } @else {
+            @for (provider of filteredProviders; track provider.id) {
+              <article class="provider-card">
+                <div class="provider-main">
+                  <span class="provider-icon" aria-hidden="true">
+                    <mat-icon>{{ provider.icon }}</mat-icon>
+                  </span>
+
+                  <div class="provider-copy">
+                    <h4>{{ provider.name }}</h4>
+                    <div class="provider-meta">
+                      <span>
+                        <mat-icon aria-hidden="true">badge</mat-icon>
+                        RUC: {{ provider.ruc }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="select-provider-btn" type="button" (click)="selectProvider(provider)">
+                  Seleccionar
+                </button>
+              </article>
+            }
+          }
+
+          @if (!providersLoading && !providersLoadError && !filteredProviders.length) {
+            <p class="empty-state">No hay proveedores que coincidan con tu busqueda.</p>
+          }
+        </div>
+      </section>
+    </div>
+  </section>
+</div>

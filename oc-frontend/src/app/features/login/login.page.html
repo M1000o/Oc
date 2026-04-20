@@ -1,0 +1,74 @@
+<main class="auth-page">
+  <header class="auth-header">
+    <!-- <strong class="auth-brand">Supplier Portal</strong> -->
+    <!-- <a class="auth-help" href="/" aria-label="Centro de ayuda">?</a> -->
+  </header>
+
+  <section class="auth-center">
+    <div class="auth-card">
+      <!-- <div class="auth-icon">▦</div> -->
+      <h1 class="auth-title">Inicio de sesión</h1>
+      <p class="auth-copy">Ingresa tus credenciales para acceder al portal</p>
+
+      @if (errorMessage()) {
+        <div class="feedback-banner">{{ errorMessage() }}</div>
+      }
+
+      <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="auth-field">
+          <label for="username">Nombre de Usuario</label>
+          <input
+            id="username"
+            type="text"
+            formControlName="username"
+            placeholder="usuario"
+            autocomplete="username"
+          />
+          @if (hasError('username', 'required')) {
+            <small class="error-text">El nombre de usuario es obligatorio.</small>
+          }
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-row">
+            <label for="password">Password</label>
+            <a class="app-link" [routerLink]="['/set-password']">Tengo token de activacion</a>
+          </div>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          />
+          @if (hasError('password', 'required')) {
+            <small class="error-text">La contraseña es obligatoria.</small>
+          }
+        </div>
+
+        <!-- <label class="auth-checkbox">
+          <input type="checkbox" checked />
+          <span>Recordarme por 30 dias en este dispositivo</span>
+        </label> -->
+
+        <button class="btn btn-primary" type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Ingresando...' : 'Ingresar al portal' }}
+        </button>
+      </form>
+
+      <p class="auth-copy">
+        ¿Aun no activas tu cuenta?
+        <a class="app-link" [routerLink]="['/register']">Registrate como proveedor</a>.
+      </p>
+    </div>
+  </section>
+
+  <footer class="auth-footer">
+    <span>© 2024 ProForm Enterprise. All rights reserved.</span>
+    <nav>
+      <a href="/">Terms of Service</a>
+      <a href="/">Privacy Policy</a>
+      <a href="/">Contact Support</a>
+    </nav>
+  </footer>
+</main>

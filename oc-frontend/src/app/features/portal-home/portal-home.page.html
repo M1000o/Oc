@@ -1,0 +1,139 @@
+<app-portal-layout
+  title="Realizar Pedido"
+  (logoutRequest)="logout()"
+>
+  <div layoutHeaderActions class="header-actions" aria-label="Acciones de cabecera">
+        <button class="icon-btn" type="button" aria-label="Notificaciones">
+          <mat-icon aria-hidden="true">notifications</mat-icon>
+        </button>
+        <button class="icon-btn" type="button" aria-label="Configuracion">
+          <mat-icon aria-hidden="true">settings</mat-icon>
+        </button>
+  </div>
+
+  <div layoutBody class="workspace-canvas">
+      <section class="order-card">
+        <div class="order-toolbar">
+          <label class="field-inline">
+            <span>F. emision</span>
+            <input
+              type="date"
+              [(ngModel)]="orderDate"
+              [ngModelOptions]="{ standalone: true }"
+            />
+          </label>
+
+          <label class="field-inline">
+            <span>F. despacho</span>
+            <input
+              type="date"
+              [(ngModel)]="dispatchDate"
+              [ngModelOptions]="{ standalone: true }"
+            />
+          </label>
+
+          <button class="btn btn-primary" type="button" (click)="openServiceProviderModal()">
+            + Crear Nuevo Pedido
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ITEM</th>
+                <th>CODIGO</th>
+                <th>DENOMINACION</th>
+                <th>UNIDAD</th>
+                <th>CANTIDAD</th>
+                <th>ELIMINAR</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows; track row.id) {
+                <tr>
+                  <td>{{ $index + 1 }}</td>
+                  <td>
+                    <input
+                      class="table-input"
+                      type="text"
+                      placeholder="---"
+                      [(ngModel)]="row.code"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      class="table-input"
+                      type="text"
+                      placeholder="Buscar producto..."
+                      [(ngModel)]="row.description"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                  </td>
+                  <td>
+                    <select
+                      class="table-input"
+                      [(ngModel)]="row.unit"
+                      [ngModelOptions]="{ standalone: true }"
+                    >
+                      <option value="">--</option>
+                      @for (option of unitOptions; track option) {
+                        <option [value]="option">{{ option }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      class="table-input quantity"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      [(ngModel)]="row.quantity"
+                      [ngModelOptions]="{ standalone: true }"
+                    />
+                  </td>
+                  <td>
+                    <button
+                      class="delete-btn"
+                      type="button"
+                      (click)="removeRow(row.id)"
+                      aria-label="Eliminar fila"
+                    >
+                      <mat-icon aria-hidden="true">delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <button class="add-row" type="button" (click)="addRow()">+ Añadir fila</button>
+        </div>
+      </section>
+
+      <section class="notes-card">
+        <h2>OBSERVACIONES</h2>
+        <textarea
+          [(ngModel)]="notes"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="Escriba aqui notas adicionales para el despacho o requerimientos especiales del pedido..."
+        ></textarea>
+      </section>
+
+      @if (statusMessage) {
+        <div class="feedback-banner" [class.success]="statusKind === 'success'">{{ statusMessage }}</div>
+      }
+
+      <footer class="content-footer">
+        <button class="btn btn-secondary" type="button" (click)="resetOrder()">Cancelar</button>
+        <button class="btn btn-primary" type="button" (click)="saveOrder()">Guardar Pedido</button>
+      </footer>
+
+      <app-service-provider-modal
+        *ngIf="showServiceProviderModal"
+        (closeRequest)="closeServiceProviderModal()"
+        (providerSelected)="onProviderSelected($event)"
+      ></app-service-provider-modal>
+  </div>
+</app-portal-layout>

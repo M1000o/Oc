@@ -1,0 +1,303 @@
+<main class="page-shell">
+  <section class="hero">
+    <h1>Registro de Proveedores</h1>
+    <p class="hero-links">
+      <a class="app-link" [routerLink]="['/login']">Iniciar sesion</a>
+      <a class="app-link" [routerLink]="['/set-password']">Cambiar contraseña con token</a>
+    </p>
+  </section>
+
+  @if (statusMessage(); as message) {
+    <section class="toast-container" aria-live="polite" aria-atomic="true">
+      <div class="toast" [class.success]="message.type === 'success'" [class.error]="message.type === 'error'" role="status">
+        <span class="toast-icon" aria-hidden="true">{{ message.type === 'success' ? 'OK' : '!' }}</span>
+        <p>{{ message.text }}</p>
+        <button type="button" class="toast-close" (click)="dismissStatusMessage()" aria-label="Cerrar notificacion">
+          Cerrar
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (loadingError()) {
+    <div class="feedback-banner error">
+      {{ loadingError() }}
+    </div>
+  }
+
+  <form class="supplier-form" [formGroup]="form" (ngSubmit)="submit()">
+    <section class="card">
+      <div class="section-header">
+        <div class="section-icon">▦</div>
+        <h2>Informacion de la Empresa</h2>
+      </div>
+
+      <div class="grid two-columns">
+        <label class="field">
+          <span>RUC (Registro Unico de Contribuyente)</span>
+          <input type="text" formControlName="ruc" placeholder="Ej. 20123456789" maxlength="11" />
+          @if (hasError('ruc')) {
+            <small>{{ controlError('ruc', 'RUC', { pattern: 'RUC debe tener 11 digitos numericos.' }) }}</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Razon Social</span>
+          <input
+            type="text"
+            formControlName="razon_social"
+            placeholder="Nombre completo de la empresa"
+          />
+          @if (hasError('razon_social')) {
+            <small>{{ controlError('razon_social', 'La razon social') }}</small>
+          }
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-header split-header">
+        <div class="section-title">
+          <div class="section-icon">◫</div>
+          <h2>Categoria de Servicios</h2>
+        </div>
+
+        <label class="search-field">
+          <span class="search-icon">⌕</span>
+          <input
+            type="search"
+            placeholder="Buscar servicio..."
+            [value]="serviceQuery()"
+            (input)="updateServiceQuery(($any($event.target)).value)"
+          />
+        </label>
+      </div>
+
+      @if (loadingCatalogs()) {
+        <div class="empty-state">Cargando servicios y bancos...</div>
+      } @else {
+        <div class="services-panel">
+          @for (service of filteredServices(); track service.id) {
+            <label class="service-option">
+              <input
+                type="checkbox"
+                [checked]="isServiceSelected(service.id)"
+                (change)="toggleService(service.id, $any($event.target).checked)"
+              />
+              <span>{{ service.nombre }}</span>
+            </label>
+          } @empty {
+            <div class="empty-state">No se encontraron servicios con ese filtro.</div>
+          }
+        </div>
+      }
+
+      @if (hasError('services')) {
+        <small class="section-error">
+          {{
+            controlError('services', 'al menos un servicio', {
+              minlength: 'Debe seleccionar al menos un servicio.'
+            })
+          }}
+        </small>
+      }
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <div class="section-icon">●</div>
+        <h2>Persona de Contacto</h2>
+      </div>
+
+      <div class="grid contact-grid">
+        <label class="field">
+          <span>Nombre</span>
+          <input type="text" formControlName="nombre_contacto" placeholder="Francisco" />
+          @if (hasError('nombre_contacto')) {
+            <small>{{ controlError('nombre_contacto', 'El nombre') }}</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Apellido Paterno</span>
+          <input type="text" formControlName="apellido_p_contacto" placeholder="Delgado" />
+          @if (hasError('apellido_p_contacto')) {
+            <small>{{ controlError('apellido_p_contacto', 'El apellido paterno') }}</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Apellido Materno</span>
+          <input type="text" formControlName="apellido_m_contacto" placeholder="Ramirez" />
+        </label>
+
+        <label class="field">
+          <span>Telefono</span>
+          <input type="tel" formControlName="telefono_contacto" placeholder="+51987654321" />
+          @if (hasError('telefono_contacto')) {
+            <small>
+              {{
+                controlError('telefono_contacto', 'El telefono', {
+                  pattern: 'Numero de celular invalido. Use entre 7 y 15 digitos.'
+                })
+              }}
+            </small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Correo Electronico</span>
+          <input type="email" formControlName="correo_pedidos" placeholder="contacto@empresa.com" />
+          @if (hasError('correo_pedidos')) {
+            <small>
+              {{
+                controlError('correo_pedidos', 'El correo para pedidos', {
+                  email: 'Correo para pedidos invalido.'
+                })
+              }}
+            </small>
+          }
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <div class="section-icon">▤</div>
+        <h2>Detalles Bancarios y Pagos</h2>
+      </div>
+
+      <div class="bank-grid">
+        <label class="field">
+          <span>Entidad Bancaria</span>
+          <select formControlName="bank">
+            <option [ngValue]="null">Seleccione un banco</option>
+            @for (bank of banks(); track bank.id) {
+              <option [ngValue]="bank.id">{{ bank.banco }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="field field-credit-days">
+          <span>Dias de Credito</span>
+          <div class="credit-days">
+            @for (option of creditDayOptions; track option.value) {
+              <button
+                type="button"
+                class="credit-chip"
+                [class.active]="form.controls.creditDays.value === option.value"
+                (click)="selectCreditDay(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            }
+          </div>
+          @if (hasError('creditDays')) {
+            <small>{{ controlError('creditDays', 'Los dias de credito') }}</small>
+          } @else {
+            <small class="helper">Seleccione el periodo estandar para la liquidacion de facturas.</small>
+          }
+        </div>
+      </div>
+
+      <div class="bank-grid lower-grid">
+        <div class="field">
+          <span>Tipo de Cuenta</span>
+          <div class="account-type-group">
+            @for (option of accountTypeOptions; track option.value) {
+              <label class="radio-card" [class.active]="form.controls.accountType.value === option.value">
+                <input type="radio" formControlName="accountType" [value]="option.value" />
+                <span>{{ option.label }}</span>
+              </label>
+            }
+          </div>
+          @if (hasError('accountType')) {
+            <small>{{ controlError('accountType', 'El tipo de cuenta') }}</small>
+          }
+        </div>
+
+        <label class="switch-card">
+          <div>
+            <span class="switch-title">¿Sujeto a Detraccion?</span>
+            <small>Active si sus servicios requieren cuenta BN.</small>
+          </div>
+          <span class="toggle">
+            <input type="checkbox" formControlName="is_detraccion" />
+            <span></span>
+          </span>
+        </label>
+      </div>
+
+      <div class="grid bank-accounts-grid">
+        <label class="field">
+          <span>Cuenta Soles</span>
+          <input type="text" formControlName="accountNumber_Soles" placeholder="193-0072492-0-41" />
+          @if (hasError('accountNumber_Soles')) {
+            <small>{{ controlError('accountNumber_Soles', 'La cuenta en soles') }}</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>CCI (Soles)</span>
+          <input type="text" formControlName="cci_soles" placeholder="002-193-000072492041-18" />
+        </label>
+
+        <label class="field">
+          <span>Cuenta Dolares</span>
+          <input type="text" formControlName="accountNumber_Dolares" placeholder="193-1044644-1-68" />
+        </label>
+
+        <label class="field">
+          <span>CCI (Dolares)</span>
+          <input type="text" formControlName="cci_dolares" placeholder="002-193-001044644168-14" />
+        </label>
+
+        <label class="field" [class.full-width]="form.controls.is_detraccion.value">
+          <span>Correo Constancia</span>
+          <input type="email" formControlName="correo_constancia" placeholder="constancia@empresa.com" />
+          @if (hasError('correo_constancia')) {
+            <small>
+              {{
+                controlError('correo_constancia', 'El correo constancia', {
+                  email: 'Correo constancia invalido.'
+                })
+              }}
+            </small>
+          }
+        </label>
+
+        @if (form.controls.is_detraccion.value) {
+          <label class="field">
+            <span>Cuenta de Detracciones (Banco de la Nacion)</span>
+            <input
+              type="text"
+              formControlName="accountNumber_Detraccion"
+              placeholder="00-000-0000000"
+            />
+            @if (hasError('accountNumber_Detraccion')) {
+              <small>{{ controlError('accountNumber_Detraccion', 'La cuenta de detracciones') }}</small>
+            }
+          </label>
+        }
+      </div>
+    </section>
+
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" [routerLink]="['/login']">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || loadingCatalogs()">
+        {{ isSubmitting() ? 'Enviando...' : 'Finalizar Registro' }}
+      </button>
+    </div>
+  </form>
+</main>
+
+<footer class="page-footer">
+  <strong>Supplier Activation Experience</strong>
+  <nav>
+    <a [routerLink]="['/login']">Login</a>
+    <a [routerLink]="['/set-password']">Set Password</a>
+    <a href="/">Help Center</a>
+    <a href="/">Contact Support</a>
+  </nav>
+  <span>© 2024 The Orchestrated Workspace. All rights reserved.</span>
+</footer>

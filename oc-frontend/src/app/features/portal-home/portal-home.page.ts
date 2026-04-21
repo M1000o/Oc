@@ -4,10 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/auth/auth.service';
 import { PortalLayoutComponent } from '../../shared/layout/portal-layout.component';
-import {
-  ProviderSelection,
-  ServiceProviderModalComponent
-} from './service-provider-modal.component';
+import { ServiceProviderModalComponent } from './service-provider-modal.component';
+import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
 
 type UnitOption = 'UN' | 'PAQ' | 'CJ';
 

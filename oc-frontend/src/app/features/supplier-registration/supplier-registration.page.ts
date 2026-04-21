@@ -6,44 +6,11 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-type AccountType = 'CUENTA_AHORRO' | 'CUENTA_CORRIENTE';
-
-interface ApiResponse<T> {
-  message: string;
-  data: T;
-}
-
-interface ServiceResponse {
-  id: number;
-  nombre: string;
-}
-
-interface BankResponse {
-  id: number;
-  banco: string;
-}
-
-interface SupplierFormPayload {
-  ruc: string;
-  razon_social: string;
-  services: number[];
-  nombre_contacto: string;
-  apellido_p_contacto: string;
-  apellido_m_contacto: string;
-  telefono_contacto: string;
-  correo_pedidos: string;
-  bank: number | null;
-  accountType: AccountType;
-  accountNumber_Soles: string;
-  cci_soles: string;
-  accountNumber_Dolares: string;
-  cci_dolares: string;
-  is_detraccion: boolean;
-  accountNumber_Detraccion: string;
-  correo_constancia: string;
-  creditDays: number;
-}
+import { ApiResponse } from '../../core/interfaces/api-response.interface';
+import { ServiceResponse } from '../../core/interfaces/services.interface';
+import { BankResponse } from '../../core/interfaces/bank-response.interface';
+import { SupplierFormPayload } from '../../core/interfaces/supplier.interface';
+import { AccountType } from '../../core/interfaces/account-type.type';
 
 interface StatusMessage {
   type: 'success' | 'error';

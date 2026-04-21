@@ -1,47 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, EventEmitter, HostListener, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, HostListener, OnInit, Output, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { environment } from '../../../environments/environment';
-
-type ServiceId = number;
-
-interface ApiResponse<T> {
-  message: string;
-  data: T;
-}
-
-interface ServiceResponse {
-  id: number;
-  nombre: string;
-}
-
-interface SupplierResponse {
-  id: number;
-  razon_social: string;
-  ruc: string;
-}
-
-interface ServiceOption {
-  id: ServiceId;
-  label: string;
-  icon: string;
-}
-
-interface ProviderOption {
-  id: number;
-  name: string;
-  ruc: string;
-  icon: string;
-}
-
-export interface ProviderSelection {
-  serviceId: ServiceId;
-  serviceName: string;
-  providerId: number;
-  providerName: string;
-}
+import { switchMap, tap, catchError, of, filter } from 'rxjs';
+import { ApiResponse } from '../../core/interfaces/api-response.interface';
+import { ServiceResponse, ServiceOption, ServiceId } from '../../core/interfaces/services.interface';
+import { SupplierResponse } from '../../core/interfaces/supplier.interface';
+import { ProviderOption, ProviderSelection } from '../../core/interfaces/provider-option.interface';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-service-provider-modal',
@@ -51,45 +19,89 @@ export interface ProviderSelection {
 })
 export class ServiceProviderModalComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly destroyRef = inject(DestroyRef);
 
   @Output() closeRequest = new EventEmitter<void>();
   @Output() providerSelected = new EventEmitter<ProviderSelection>();
 
-  protected searchTerm = '';
-  protected selectedServiceId: ServiceId | null = null;
-  protected servicesLoading = true;
-  protected servicesLoadError = '';
-  protected providersLoading = false;
-  protected providersLoadError = '';
+  //Signals
+  searchTerm = signal('');
+  selectedServiceId = signal<ServiceId | null >(null);
 
-  protected services: ServiceOption[] = [];
-  protected providers: ProviderOption[] = [];
+  services = signal<ServiceOption[]>([]);
+  providers = signal<ProviderOption[]>([]);
+
+  servicesLoading = signal(true);
+  providersLoading = signal(false);
+
+  servicesLoadingDelayed = signal(false);
+  providersLoadingDelayed = signal(false);
+
+  servicesLoadError = signal('');
+  providersLoadError = signal('');
+
+  private servicesLoadingTimer: ReturnType<typeof setTimeout> | null = null;
+  private providersLoadingTimer: ReturnType<typeof setTimeout> | null = null;
+
+
+  //Computed 
+  selectedServiceName = computed(() => {
+    const id = this.selectedServiceId();
+    return this.services().find(s => s.id === id)?.label ?? '';
+  });
+
+  filteredProviders  = computed(() => {
+    const search = this.searchTerm().toLocaleLowerCase().trim();
+
+    return this.providers().filter(provider => {
+      if(!search) return true;
+
+      return (
+        provider.name.toLocaleLowerCase().includes(search) || 
+        provider.ruc.toLocaleLowerCase().includes(search)
+      );
+    });
+  });
+
+
+  constructor(){
+    toObservable(this.selectedServiceId)
+    .pipe(
+      filter(id => id !== null),
+      switchMap(id => {
+        this.setProvidersLoading(true);
+        this.providersLoadError.set('');
+
+        return this.http.get<ApiResponse<SupplierResponse[]>>(
+          `${environment.api.baseUrl}${environment.api.endpoints.services}/${id}/suppliers`
+        ).pipe(
+          catchError(() => {
+            this.providersLoadError.set('No se pudo cargar los proveedores.');
+            return of(null);
+          })
+        );
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    )
+    .subscribe(response => {
+      if(response){
+        const providers = (response.data ?? []).map(p => ({
+          id: p.id,
+          name: p.razon_social,
+          ruc: p.ruc,
+          icon: 'store'
+        }));
+        this.providers.set(providers);
+      } else {
+        this.providers.set([]);
+      }
+      this.setProvidersLoading(false);
+    });
+  }
+
 
   ngOnInit(): void {
     this.loadServices();
-  }
-
-  protected get selectedServiceName(): string {
-    if (this.selectedServiceId === null) {
-      return '';
-    }
-
-    return this.services.find((service) => service.id === this.selectedServiceId)?.label ?? '';
-  }
-
-  protected get filteredProviders(): ProviderOption[] {
-    const normalizedSearch = this.searchTerm.trim().toLowerCase();
-
-    return this.providers.filter((provider) => {
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      return (
-        provider.name.toLowerCase().includes(normalizedSearch) ||
-        provider.ruc.toLowerCase().includes(normalizedSearch)
-      );
-    });
   }
 
   @HostListener('document:keydown.escape')
@@ -101,10 +113,22 @@ export class ServiceProviderModalComponent implements OnInit {
     this.closeRequest.emit();
   }
 
-  protected selectService(serviceId: ServiceId): void {
-    this.selectedServiceId = serviceId;
-    this.searchTerm = '';
-    this.loadProviders(serviceId);
+  protected selectService(serviceId: ServiceId): void{
+    this.searchTerm.set('');
+    this.selectedServiceId.set(serviceId);
+  }
+
+  protected selectProvider(provider: ProviderOption): void {
+    const serviceId = this.selectedServiceId();
+
+    if(serviceId === null) return;
+
+    this.providerSelected.emit({
+      serviceId,
+      serviceName: this.selectedServiceName(),
+      providerId: provider.id,
+      providerName: provider.name
+    });
   }
 
   protected onBackdropClick(event: MouseEvent): void {
@@ -113,122 +137,91 @@ export class ServiceProviderModalComponent implements OnInit {
     }
   }
 
-  protected selectProvider(provider: ProviderOption): void {
-    if (this.selectedServiceId === null) {
-      return;
+  private setServicesLoading(value: boolean): void {
+    this.servicesLoading.set(value);
+ 
+    if (this.servicesLoadingTimer) {
+      clearTimeout(this.servicesLoadingTimer);
+      this.servicesLoadingTimer = null;
     }
-
-    this.providerSelected.emit({
-      serviceId: this.selectedServiceId,
-      serviceName: this.selectedServiceName,
-      providerId: provider.id,
-      providerName: provider.name
-    });
+ 
+    if (value) {
+      this.servicesLoadingTimer = setTimeout(() => {
+        if (this.servicesLoading()) {
+          this.servicesLoadingDelayed.set(true);
+        }
+      }, 150);
+    } else {
+      this.servicesLoadingDelayed.set(false);
+    }
   }
 
+  private setProvidersLoading(value: boolean): void {
+    this.providersLoading.set(value);
+ 
+    if (this.providersLoadingTimer) {
+      clearTimeout(this.providersLoadingTimer);
+      this.providersLoadingTimer = null;
+    }
+ 
+    if (value) {
+      this.providersLoadingTimer = setTimeout(() => {
+        if (this.providersLoading()) {
+          this.providersLoadingDelayed.set(true);
+        }
+      }, 150);
+    } else {
+      this.providersLoadingDelayed.set(false);
+    }
+  }
+
+
+
+  //Load Services
+
   private loadServices(): void {
-    this.servicesLoading = true;
-    this.servicesLoadError = '';
+    this.setServicesLoading(true);
+    this.servicesLoadError.set('');
 
     this.http
       .get<ApiResponse<ServiceResponse[]>>(
         `${environment.api.baseUrl}${environment.api.endpoints.services}`
       )
-      .subscribe({
-        next: (response) => {
-          const services = (response.data ?? []).map((service) => ({
+      .pipe(
+        tap(response => {
+          const services = (response.data ?? []).map(service => ({
             id: service.id,
             label: service.nombre,
             icon: this.resolveServiceIcon(service.nombre)
           }));
 
-          this.services = services;
+          this.services.set(services);
 
-          if (!services.length) {
-            this.selectedServiceId = null;
-            this.providers = [];
-            return;
+          if(services.length){
+            this.selectedServiceId.set(services[0].id);
           }
-
-          const selectedStillExists = services.some((service) => service.id === this.selectedServiceId);
-          if (!selectedStillExists) {
-            this.selectedServiceId = services[0].id;
-          }
-
-          if (this.selectedServiceId !== null) {
-            this.loadProviders(this.selectedServiceId);
-          }
-        },
-        error: () => {
-          this.services = [];
-          this.providers = [];
-          this.selectedServiceId = null;
-          this.servicesLoadError =
-            'No se pudieron cargar los servicios. Verifica que el backend este disponible.';
-          this.servicesLoading = false;
-        },
-        complete: () => {
-          this.servicesLoading = false;
-        }
-      });
-  }
-
-  private loadProviders(serviceId: ServiceId): void {
-    this.providersLoading = true;
-    this.providersLoadError = '';
-    this.providers = [];
-
-    this.http
-      .get<ApiResponse<SupplierResponse[]>>(
-        `${environment.api.baseUrl}${environment.api.endpoints.services}/${serviceId}/suppliers`
+        }),
+        catchError(() => {
+          this.services.set([]);
+          this.servicesLoadError.set(
+            'No se pudieron cargar los servicios. Verifica que el backend este disponible.'
+          );
+          return of(null);
+        }),
+        tap(() => this.setServicesLoading(false))
       )
-      .subscribe({
-        next: (response) => {
-          this.providers = (response.data ?? []).map((provider) => ({
-            id: provider.id,
-            name: provider.razon_social,
-            ruc: provider.ruc,
-            icon: 'store'
-          }));
-        },
-        error: () => {
-          this.providers = [];
-          this.providersLoadError =
-            'No se pudieron cargar los proveedores para este servicio.';
-          this.providersLoading = false;
-        },
-        complete: () => {
-          this.providersLoading = false;
-        }
-      });
+      .subscribe();
   }
 
   private resolveServiceIcon(serviceName: string): string {
     const normalized = serviceName.trim().toLowerCase();
 
-    if (normalized.includes('carne')) {
-      return 'set_meal';
-    }
-
-    if (normalized.includes('papa')) {
-      return 'agriculture';
-    }
-
-    if (normalized.includes('abarrote')) {
-      return 'storefront';
-    }
-
-    if (normalized.includes('licor')) {
-      return 'wine_bar';
-    }
-
-    if (normalized.includes('crema')) {
-      return 'water_drop';
-    }
-
-    if (normalized.includes('limpieza')) {
-      return 'cleaning_services';
-    }
+    if (normalized.includes('carne')) return 'set_meal';
+    if (normalized.includes('papa')) return 'agriculture';
+    if (normalized.includes('abarrote')) return 'storefront';
+    if (normalized.includes('licor')) return 'wine_bar';
+    if (normalized.includes('crema')) return 'water_drop';
+    if (normalized.includes('limpieza')) return 'cleaning_services';
 
     return 'category';
   }

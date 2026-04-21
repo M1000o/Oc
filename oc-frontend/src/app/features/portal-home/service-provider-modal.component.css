@@ -208,7 +208,7 @@
 }
 
 .provider-list {
-  min-height: 0;
+  min-height: 320px;
   overflow-y: auto;
   display: grid;
   align-content: start;
@@ -362,6 +362,88 @@
   font-size: 0.82rem;
 }
 
+/* ─── Skeleton loaders ─────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.skeleton-card {
+  height: 80px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #edf1f8 25%, #dde4f0 50%, #edf1f8 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.skeleton-list {
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton-provider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(130, 141, 160, 0.14);
+  border-radius: 14px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.skeleton-provider-icon {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #edf1f8 25%, #dde4f0 50%, #edf1f8 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.skeleton-provider-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf1f8 25%, #dde4f0 50%, #edf1f8 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.skeleton-line--title {
+  height: 14px;
+  width: 55%;
+}
+
+.skeleton-line--subtitle {
+  height: 11px;
+  width: 35%;
+}
+
+.skeleton-btn {
+  flex: 0 0 auto;
+  width: 90px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #edf1f8 25%, #dde4f0 50%, #edf1f8 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* ─── Responsive ───────────────────────────────────────────────────── */
+
 @media (max-width: 920px) {
   .service-modal {
     width: min(100%, 760px);
@@ -410,4 +492,35 @@
   .select-provider-btn {
     width: 100%;
   }
+}
+
+/* Oculta el panel de providers mientras los servicios aún no cargan */
+.provider-panel--hidden {
+  visibility: hidden;
+}
+
+/* ─── Animación de entrada del modal ──────────────────────────────── */
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.service-modal-backdrop {
+  animation: backdrop-in 0.2s ease forwards;
+}
+
+.service-modal {
+  animation: modal-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

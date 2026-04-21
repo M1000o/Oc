@@ -11,19 +11,23 @@
       <aside class="service-panel">
         <h3>SERVICIO</h3>
 
-        @if (servicesLoading) {
-          <p class="empty-state">Cargando servicios...</p>
-        } @else if (servicesLoadError) {
-          <p class="empty-state">{{ servicesLoadError }}</p>
-        } @else if (!services.length) {
+        @if(servicesLoadingDelayed()){
+          <div class="skeleton-grid">
+            @for(i of [1,2,3,4]; track i){
+              <div class="skeleton-card"></div>
+            }
+          </div>
+        } @else if(servicesLoadError()){
+          <p class="empty-state">{{ servicesLoadError() }}</p>
+        } @else if(!services().length){
           <p class="empty-state">No hay servicios disponibles.</p>
         } @else {
           <div class="service-grid">
-            @for (service of services; track service.id) {
+            @for(service of services(); track service.id){
               <button
                 class="service-card"
                 type="button"
-                [class.active]="service.id === selectedServiceId"
+                [class.active]="service.id === selectedServiceId()"
                 (click)="selectService(service.id)"
               >
                 <span class="service-icon" aria-hidden="true">
@@ -36,10 +40,10 @@
         }
       </aside>
 
-      <section class="provider-panel">
+      <section class="provider-panel" [class.provider-panel--hidden]="servicesLoading()">
         <div class="provider-panel-header">
           <div>
-            <h3>Proveedores de {{ selectedServiceName || 'un servicio' }}</h3>
+            <h3>Proveedores de {{ selectedServiceName() || 'un servicio' }}</h3>
             <p>Selecciona un proveedor de la red autorizada</p>
           </div>
 
@@ -48,20 +52,29 @@
             <input
               type="text"
               placeholder="Buscar proveedor o RUC..."
-              [(ngModel)]="searchTerm"
-              [ngModelOptions]="{ standalone: true }"
-              [disabled]="selectedServiceId === null"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="searchTerm.set($event)"
+              [disabled]="selectedServiceId() === null"
             />
           </label>
         </div>
 
         <div class="provider-list">
-          @if (providersLoading) {
-            <p class="empty-state">Cargando proveedores...</p>
-          } @else if (providersLoadError) {
-            <p class="empty-state">{{ providersLoadError }}</p>
+          @if(providersLoadingDelayed()){
+            <div class="skeleton-list">
+              @for(i of [1,2,3]; track i){
+                <div class="skeleton-provider">
+                  <div class="skeleton-provider-icon"></div>
+                  <div class="skeleton-provider-text">
+                    <div class="skeleton-line skeleton-line--title"></div>
+                    <div class="skeleton-line skeleton-line--subtitle"></div>
+                  </div>
+                  <div class="skeleton-btn"></div>
+                </div>
+              }
+            </div>
           } @else {
-            @for (provider of filteredProviders; track provider.id) {
+            @for(provider of filteredProviders(); track provider.id){
               <article class="provider-card">
                 <div class="provider-main">
                   <span class="provider-icon" aria-hidden="true">
@@ -79,15 +92,17 @@
                   </div>
                 </div>
 
-                <button class="select-provider-btn" type="button" (click)="selectProvider(provider)">
-                  Seleccionar
-                </button>
+                <button class="select-provider-btn" type="button" (click)="selectProvider(provider)">Seleccionar</button>
               </article>
             }
-          }
 
-          @if (!providersLoading && !providersLoadError && !filteredProviders.length) {
-            <p class="empty-state">No hay proveedores que coincidan con tu busqueda.</p>
+            @if(!providersLoadError() && !filteredProviders().length && selectedServiceId() !== null && !providersLoading()){
+              <p class="empty-state">No hay proveedores que coincidan con tu busqueda.</p>
+            }
+  
+            @if(providersLoadError() && selectedServiceId() !== null){
+              <p class="empty-state">{{ providersLoadError() }}</p>
+            }
           }
         </div>
       </section>

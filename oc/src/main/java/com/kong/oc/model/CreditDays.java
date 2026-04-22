@@ -4,7 +4,6 @@ import lombok.Getter;
 
 @Getter
 public enum CreditDays {
-    EFECTIVO(0),
     SEVEN(7),
     FIFTEEN(15),
     TWENTY_ONE(21),

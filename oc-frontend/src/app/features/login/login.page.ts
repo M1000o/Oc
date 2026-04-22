@@ -36,7 +36,8 @@ export class LoginPage {
     }
 
     const { username, password } = this.form.getRawValue();
-    const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo') || '/portal';
+    const redirectTo =
+      this.route.snapshot.queryParamMap.get('redirectTo') || this.authService.getDefaultPortalRoute();
 
     this.isSubmitting.set(true);
     this.authService

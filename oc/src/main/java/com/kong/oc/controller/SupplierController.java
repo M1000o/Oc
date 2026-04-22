@@ -3,18 +3,22 @@ package com.kong.oc.controller;
 import com.kong.oc.dto.ApiResponse;
 import com.kong.oc.dto.ProveedorResponse;
 import com.kong.oc.dto.ServicioResponse;
+import com.kong.oc.dto.SupplierFormRequest;
 import com.kong.oc.interfaces.ISupplierService;
+import com.kong.oc.model.Supplier;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
+@RequestMapping("/api/v1/suppliers")
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/proveedores")
 public class SupplierController {
-
     private final ISupplierService supplierService;
 
     @GetMapping
@@ -26,5 +30,13 @@ public class SupplierController {
     public ResponseEntity<ApiResponse<List<ServicioResponse>>> listServiciosByProveedor(@PathVariable Long id){
         return ResponseEntity.ok(new ApiResponse<>("Servicios del proveedor obtenidos exitosamente", supplierService.listServiciosByProveedor(id)));
     }
-}
 
+    @PostMapping("/form")
+    public ResponseEntity<?> create(@Valid @RequestBody SupplierFormRequest req) {
+        Supplier s = supplierService.createFromForm(req);
+        // retornar mensaje de estado en lugar de DTO
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                Map.of("message", "Registro recibido. Email de activación enviado (o en cola). Revise su correo o la carpeta de spam." , "userId", s.getId())
+        );
+    }
+}

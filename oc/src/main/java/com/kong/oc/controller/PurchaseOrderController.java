@@ -2,8 +2,9 @@ package com.kong.oc.controller;
 
 import com.kong.oc.dto.ApiResponse;
 import com.kong.oc.dto.PurchaseOrderResponse;
+import com.kong.oc.interfaces.IPurchaseOrderService;
 import com.kong.oc.security.UserDetailsImpl;
-import com.kong.oc.service.PurchaseOrderService;
+import com.kong.oc.service.PurchaseOrderServiceImpl;
 import com.kong.oc.interfaces.ISupplierService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PurchaseOrderController {
 
-    private final PurchaseOrderService purchaseOrderService;
+    private final IPurchaseOrderService purchaseOrderService;
     private final ISupplierService supplierService;
 
     @GetMapping

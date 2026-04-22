@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+const createJwt = (payload: Record<string, unknown>) => {
+  const base64UrlEncode = (value: string) =>
+    Buffer.from(value, 'utf-8').toString('base64url');
+
+  return [
+    base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
+    base64UrlEncode(JSON.stringify(payload)),
+    'signature'
+  ].join('.');
+};
+
 test('redirecciona al login cuando una ruta protegida no tiene token', async ({ page }) => {
   await page.goto('/#/portal');
 
@@ -66,6 +77,34 @@ test('login exitoso guarda tokens y consume endpoints protegidos con Authorizati
   await expect(page).toHaveURL(/#\/portal$/);
   await expect(page.getByText('2 servicios cargados')).toBeVisible();
   await expect(page.getByText('2 bancos cargados')).toBeVisible();
+});
+
+test('login exitoso redirecciona al panel de proveedor cuando el token tiene rol PROVEEDOR', async ({
+  page
+}) => {
+  await page.route('**/api/v1/auth/login', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accessToken: createJwt({
+          sub: 'proveedor-1',
+          email: 'proveedor@empresa.com',
+          roles: ['PROVEEDOR']
+        }),
+        refreshToken: 'test-refresh-token',
+        tokenType: 'Bearer'
+      })
+    });
+  });
+
+  await page.goto('/#/login');
+  await page.getByLabel('Email Address').fill('proveedor@empresa.com');
+  await page.getByLabel('Password').fill('Secreta123!');
+  await page.getByRole('button', { name: 'Login to Portal' }).click();
+
+  await expect(page).toHaveURL(/#\/portal\/proveedor$/);
+  await expect(page.getByText('provider-home works!')).toBeVisible();
 });
 
 test('cambio de contraseña y reenvio de activacion consumen los endpoints del flujo', async ({

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TokenStorageService } from './token-storage.service';
+import { OrderSummaryDraftService } from '../services/order-summary-draft.service';
 
 interface TokenResponse {
   accessToken: string;
@@ -22,6 +23,7 @@ interface JwtClaims {
 interface UserIdentity {
   displayName: string;
   role: string;
+  roleKey: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -29,6 +31,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly tokenStorage = inject(TokenStorageService);
+  private readonly orderSummaryDraftService = inject(OrderSummaryDraftService);
 
   login(username: string, password: string): Observable<TokenResponse> {
     return this.http
@@ -78,6 +81,7 @@ export class AuthService {
   }
 
   clearSession(): void {
+    this.orderSummaryDraftService.clear();
     this.tokenStorage.clear();
     this.router.navigate(['/login']);
   }
@@ -88,6 +92,18 @@ export class AuthService {
 
   getUserRole(): string {
     return this.getUserIdentity().role;
+  }
+
+  getUserRoleKey(): string | null {
+    return this.getUserIdentity().roleKey;
+  }
+
+  isProviderUser(): boolean {
+    return this.getUserRoleKey() === 'PROVEEDOR';
+  }
+
+  getDefaultPortalRoute(): string {
+    return this.isProviderUser() ? '/portal/proveedor' : '/portal';
   }
 
   getUserInitials(): string {
@@ -110,16 +126,19 @@ export class AuthService {
     if (!claims) {
       return {
         displayName: 'Usuario',
-        role: 'Sin rol'
+        role: 'Sin rol',
+        roleKey: null
       };
     }
 
     const displayName = this.resolveDisplayName(claims) ?? 'Usuario';
-    const role = this.resolveRole(claims) ?? 'Sin rol';
+    const roleKey = this.resolveRoleKey(claims);
+    const role = roleKey ? this.formatRole(roleKey) : 'Sin rol';
 
     return {
       displayName,
-      role
+      role,
+      roleKey
     };
   }
 
@@ -165,22 +184,22 @@ export class AuthService {
     ]);
   }
 
-  private resolveRole(claims: JwtClaims): string | null {
+  private resolveRoleKey(claims: JwtClaims): string | null {
     const directRole = this.normalizeRoleValue(claims['role']);
     if (directRole) {
-      return this.formatRole(directRole);
+      return this.normalizeRoleKey(directRole);
     }
 
     const commonRoles = this.normalizeRoleValue(claims['roles'] ?? claims['authorities']);
     if (commonRoles) {
-      return this.formatRole(commonRoles);
+      return this.normalizeRoleKey(commonRoles);
     }
 
     const realmAccess = claims['realm_access'];
     if (this.isRecord(realmAccess)) {
       const realmRoles = this.normalizeRoleValue(realmAccess['roles']);
       if (realmRoles) {
-        return this.formatRole(realmRoles);
+        return this.normalizeRoleKey(realmRoles);
       }
     }
 
@@ -190,7 +209,7 @@ export class AuthService {
         if (this.isRecord(resource)) {
           const resourceRole = this.normalizeRoleValue(resource['roles']);
           if (resourceRole) {
-            return this.formatRole(resourceRole);
+            return this.normalizeRoleKey(resourceRole);
           }
         }
       }
@@ -254,6 +273,10 @@ export class AuthService {
       .filter((part) => part.length > 0)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
       .join(' ');
+  }
+
+  private normalizeRoleKey(rawRole: string): string {
+    return rawRole.replace(/^ROLE_/i, '').trim().toUpperCase();
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

@@ -34,8 +34,8 @@
 
       <div class="grid two-columns">
         <label class="field">
-          <span>RUC (Registro Unico de Contribuyente)</span>
-          <input type="text" formControlName="ruc" placeholder="Ej. 20123456789" maxlength="11" />
+          <span>RUC</span>
+          <input type="text" formControlName="ruc" placeholder="Ej. 20123456789" maxlength="11" inputmode="numeric" appOnlyNumbers />
           @if (hasError('ruc')) {
             <small>{{ controlError('ruc', 'RUC', { pattern: 'RUC debe tener 11 digitos numericos.' }) }}</small>
           }
@@ -112,7 +112,7 @@
       <div class="grid contact-grid">
         <label class="field">
           <span>Nombre</span>
-          <input type="text" formControlName="nombre_contacto" placeholder="Francisco" />
+          <input type="text" formControlName="nombre_contacto" placeholder="Francisco" appOnlyLetters/>
           @if (hasError('nombre_contacto')) {
             <small>{{ controlError('nombre_contacto', 'El nombre') }}</small>
           }
@@ -120,7 +120,7 @@
 
         <label class="field">
           <span>Apellido Paterno</span>
-          <input type="text" formControlName="apellido_p_contacto" placeholder="Delgado" />
+          <input type="text" formControlName="apellido_p_contacto" placeholder="Delgado" appOnlyLetters />
           @if (hasError('apellido_p_contacto')) {
             <small>{{ controlError('apellido_p_contacto', 'El apellido paterno') }}</small>
           }
@@ -128,17 +128,17 @@
 
         <label class="field">
           <span>Apellido Materno</span>
-          <input type="text" formControlName="apellido_m_contacto" placeholder="Ramirez" />
+          <input type="text" formControlName="apellido_m_contacto" placeholder="Ramirez" appOnlyLetters />
         </label>
 
         <label class="field">
           <span>Telefono</span>
-          <input type="tel" formControlName="telefono_contacto" placeholder="+51987654321" />
+          <input type="tel" formControlName="telefono_contacto" placeholder="987654321" maxlength="9" inputmode="numeric" appOnlyNumbers />
           @if (hasError('telefono_contacto')) {
             <small>
               {{
                 controlError('telefono_contacto', 'El telefono', {
-                  pattern: 'Numero de celular invalido. Use entre 7 y 15 digitos.'
+                  pattern: 'Numero de celular invalido. Use 9 digitos.'
                 })
               }}
             </small>
@@ -231,7 +231,7 @@
       <div class="grid bank-accounts-grid">
         <label class="field">
           <span>Cuenta Soles</span>
-          <input type="text" formControlName="accountNumber_Soles" placeholder="193-0072492-0-41" />
+          <input type="text" formControlName="accountNumber_Soles" placeholder="193-0072492-0-41" inputmode="numeric" appOnlyNumbers />
           @if (hasError('accountNumber_Soles')) {
             <small>{{ controlError('accountNumber_Soles', 'La cuenta en soles') }}</small>
           }
@@ -239,17 +239,17 @@
 
         <label class="field">
           <span>CCI (Soles)</span>
-          <input type="text" formControlName="cci_soles" placeholder="002-193-000072492041-18" />
+          <input type="text" formControlName="cci_soles" placeholder="002-193-000072492041-18" inputmode="numeric" appOnlyNumbers />
         </label>
 
         <label class="field">
           <span>Cuenta Dolares</span>
-          <input type="text" formControlName="accountNumber_Dolares" placeholder="193-1044644-1-68" />
+          <input type="text" formControlName="accountNumber_Dolares" placeholder="193-1044644-1-68" inputmode="numeric" appOnlyNumbers />
         </label>
 
         <label class="field">
           <span>CCI (Dolares)</span>
-          <input type="text" formControlName="cci_dolares" placeholder="002-193-001044644168-14" />
+          <input type="text" formControlName="cci_dolares" placeholder="002-193-001044644168-14" inputmode="numeric" appOnlyNumbers />
         </label>
 
         <label class="field" [class.full-width]="form.controls.is_detraccion.value">
@@ -284,7 +284,7 @@
 
     <div class="actions">
       <button type="button" class="btn btn-secondary" [routerLink]="['/login']">Cancelar</button>
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || loadingCatalogs()">
+      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || loadingCatalogs() || form.invalid">
         {{ isSubmitting() ? 'Enviando...' : 'Finalizar Registro' }}
       </button>
     </div>

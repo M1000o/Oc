@@ -11,6 +11,8 @@ import { ServiceResponse } from '../../core/interfaces/services.interface';
 import { BankResponse } from '../../core/interfaces/bank-response.interface';
 import { SupplierFormPayload } from '../../core/interfaces/supplier.interface';
 import { AccountType } from '../../core/interfaces/account-type.type';
+import { OnlyNumbers } from '../../directives/only-numbers.directive';
+import { OnlyLetters } from '../../directives/only-letters.directive';
 
 interface StatusMessage {
   type: 'success' | 'error';
@@ -19,7 +21,7 @@ interface StatusMessage {
 
 @Component({
   selector: 'app-supplier-registration-page',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, OnlyNumbers, OnlyLetters],
   templateUrl: './supplier-registration.page.html',
   styleUrl: './supplier-registration.page.css'
 })
@@ -66,7 +68,7 @@ export class SupplierRegistrationPage implements OnInit {
     apellido_m_contacto: this.fb.nonNullable.control(''),
     telefono_contacto: this.fb.nonNullable.control('', [
       Validators.required,
-      Validators.pattern(/^\+?[0-9]{7,15}$/)
+      Validators.pattern(/^\d{9}$/)
     ]),
     correo_pedidos: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
     bank: this.fb.control<number | null>(null),

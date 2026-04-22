@@ -50,7 +50,6 @@ export class SupplierRegistrationPage implements OnInit {
   ];
 
   protected readonly creditDayOptions = [
-    { value: 0, label: 'Efectivo' },
     { value: 7, label: '7' },
     { value: 15, label: '15' },
     { value: 21, label: '21' },
@@ -58,6 +57,26 @@ export class SupplierRegistrationPage implements OnInit {
     { value: 45, label: '45' },
     { value: 60, label: '60' }
   ];
+
+  private readonly bankRules: any = {
+    1: {
+      cuenta: [20],
+      cci: [20]
+    },
+    2: {
+      cuenta: [12,13],
+      cci: [20]
+    },
+    3: { 
+      cuenta: [13],
+      cci: [20]
+    },
+    4: { 
+      cuenta: [13, 14],
+      cci: [20]
+    }
+  }
+
 
   protected readonly form = this.fb.group({
     ruc: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(/^\d{11}$/)]),
@@ -73,10 +92,10 @@ export class SupplierRegistrationPage implements OnInit {
     correo_pedidos: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
     bank: this.fb.control<number | null>(null),
     accountType: this.fb.nonNullable.control<AccountType>('CUENTA_AHORRO', [Validators.required]),
-    accountNumber_Soles: this.fb.nonNullable.control('', [Validators.required]),
-    cci_soles: this.fb.nonNullable.control(''),
-    accountNumber_Dolares: this.fb.nonNullable.control(''),
-    cci_dolares: this.fb.nonNullable.control(''),
+    accountNumber_Soles: this.fb.nonNullable.control({ value: '', disabled: true }, [Validators.required]),
+    cci_soles: this.fb.nonNullable.control({ value: '', disabled: true }),
+    accountNumber_Dolares: this.fb.nonNullable.control({ value: '', disabled: true }),
+    cci_dolares: this.fb.nonNullable.control({ value: '', disabled: true }),
     is_detraccion: this.fb.nonNullable.control(false),
     accountNumber_Detraccion: this.fb.nonNullable.control(''),
     correo_constancia: this.fb.nonNullable.control('', [Validators.email]),
@@ -102,6 +121,50 @@ export class SupplierRegistrationPage implements OnInit {
     this.form.controls.is_detraccion.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((isDetraccion) => this.toggleDetraccionValidators(isDetraccion));
+
+    this.form.controls.accountNumber_Soles.addValidators(
+      this.validarCuentaPorBanco('cuenta')
+    );
+      
+    this.form.controls.cci_soles.addValidators(
+      this.validarCuentaPorBanco('cci')
+    );
+      
+    this.form.controls.accountNumber_Dolares.addValidators(
+      this.validarCuentaPorBanco('cuenta')
+    );
+      
+    this.form.controls.cci_dolares.addValidators(
+      this.validarCuentaPorBanco('cci')
+    );
+
+    this.form.controls.bank.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((bankId) => {
+
+         const fields = [
+          'accountNumber_Soles',
+          'cci_soles',
+          'accountNumber_Dolares',
+          'cci_dolares'
+        ];
+
+        fields.forEach(field => {
+          const control = this.form.get(field);
+
+          if (!control) return;
+
+          control.setValue('', { emitEvent: false });
+
+          if (bankId) {
+            control.enable({ emitEvent: false });
+          } else {
+            control.disable({ emitEvent: false });
+          }
+
+          control.updateValueAndValidity({ emitEvent: false });
+        });
+      });
 
     this.toggleDetraccionValidators(this.form.controls.is_detraccion.value);
   }
@@ -262,6 +325,14 @@ export class SupplierRegistrationPage implements OnInit {
       return customMessages['minlength'] ?? `Debe completar ${label}.`;
     }
 
+    if (errors['longitudInvalida']) {
+      return 'Número no válido para el banco seleccionado.';
+    }
+    
+    if (errors['soloNumeros']) {
+      return 'Solo se permiten números.';
+    }
+
     return `${label} no es valido.`;
   }
 
@@ -324,5 +395,49 @@ export class SupplierRegistrationPage implements OnInit {
       window.clearTimeout(this.statusTimerId);
       this.statusTimerId = null;
     }
+  }
+
+  protected getPlaceholder(tipo: 'cuenta' | 'cci'): string {
+    const bankId = this.form.controls.bank.value;
+  
+    if (!bankId || !this.bankRules[bankId]) {
+      return 'Ingrese número';
+    }
+  
+    const longitudes = this.bankRules[bankId][tipo];
+  
+    return tipo === 'cci'
+      ? `CCI (${longitudes[0]} dígitos)`
+      : `Cuenta (${longitudes.join(' o ')} dígitos)`;
+  }
+
+  private validarCuentaPorBanco = (tipo: 'cuenta' | 'cci') => {
+    return (control: any) => {
+      const value = (control.value || '').replace(/\D/g, '');
+      const bankId = this.form.controls.bank.value;
+  
+      if (!value) return null;
+      if (!/^\d+$/.test(value)) return { soloNumeros: true };
+  
+      if (!bankId || !this.bankRules[bankId]) return null;
+  
+      const longitudes = this.bankRules[bankId][tipo];
+  
+      if (!longitudes.includes(value.length)) {
+        return { longitudInvalida: true };
+      }
+  
+      return null;
+    };
+  }
+
+  getMaxLength(tipo: 'cuenta' | 'cci'): number {
+    const bankId = this.form.controls.bank.value;
+  
+    if (!bankId || !this.bankRules[bankId]) {
+      return 20;
+    }
+  
+    return Math.max(...this.bankRules[bankId][tipo]);
   }
 }

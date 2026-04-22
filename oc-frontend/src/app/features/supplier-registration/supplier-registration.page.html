@@ -231,7 +231,14 @@
       <div class="grid bank-accounts-grid">
         <label class="field">
           <span>Cuenta Soles</span>
-          <input type="text" formControlName="accountNumber_Soles" placeholder="193-0072492-0-41" inputmode="numeric" appOnlyNumbers />
+          <input 
+            type="text" 
+            formControlName="accountNumber_Soles" 
+            [attr.maxlength]="getMaxLength('cuenta')"
+            [placeholder]="getPlaceholder('cuenta')" 
+            inputmode="numeric" 
+            appOnlyNumbers 
+          />
           @if (hasError('accountNumber_Soles')) {
             <small>{{ controlError('accountNumber_Soles', 'La cuenta en soles') }}</small>
           }
@@ -239,17 +246,38 @@
 
         <label class="field">
           <span>CCI (Soles)</span>
-          <input type="text" formControlName="cci_soles" placeholder="002-193-000072492041-18" inputmode="numeric" appOnlyNumbers />
+          <input  
+            type="text" 
+            formControlName="cci_soles" 
+            [attr.maxlength]="getMaxLength('cci')"
+            [placeholder]="getPlaceholder('cci')" 
+            inputmode="numeric" 
+            appOnlyNumbers 
+          />
         </label>
 
         <label class="field">
           <span>Cuenta Dolares</span>
-          <input type="text" formControlName="accountNumber_Dolares" placeholder="193-1044644-1-68" inputmode="numeric" appOnlyNumbers />
+          <input 
+            type="text" 
+            formControlName="accountNumber_Dolares" 
+            [attr.maxlength]="getMaxLength('cuenta')"
+            [placeholder]="getPlaceholder('cuenta')" 
+            inputmode="numeric" 
+            appOnlyNumbers 
+          />
         </label>
 
         <label class="field">
           <span>CCI (Dolares)</span>
-          <input type="text" formControlName="cci_dolares" placeholder="002-193-001044644168-14" inputmode="numeric" appOnlyNumbers />
+          <input 
+            type="text" 
+            formControlName="cci_dolares" 
+            [attr.maxlength]="getMaxLength('cci')"
+            [placeholder]="getPlaceholder('cci')" 
+            inputmode="numeric" 
+            appOnlyNumbers 
+          />
         </label>
 
         <label class="field" [class.full-width]="form.controls.is_detraccion.value">
@@ -292,12 +320,12 @@
 </main>
 
 <footer class="page-footer">
-  <strong>Supplier Activation Experience</strong>
+  <strong>Supplier Activation</strong>
   <nav>
     <a [routerLink]="['/login']">Login</a>
     <a [routerLink]="['/set-password']">Set Password</a>
     <a href="/">Help Center</a>
     <a href="/">Contact Support</a>
   </nav>
-  <span>© 2024 The Orchestrated Workspace. All rights reserved.</span>
+  <span>© 2026 Grupo Kong. All rights reserved.</span>
 </footer>

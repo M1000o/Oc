@@ -28,6 +28,40 @@ export class PortalSidebarComponent {
     return this.authService.getUserInitials();
   }
 
+  protected get navItems(): Array<{ label: string; icon: string; route: string; exact?: boolean }> {
+    if (this.authService.isProviderUser()) {
+      return [
+        {
+          label: 'Panel del Proveedor',
+          icon: 'storefront',
+          route: '/portal/proveedor',
+          exact: true
+        }
+      ];
+    }
+
+    return [
+      {
+        label: 'Realizar Pedido',
+        icon: 'add_shopping_cart',
+        route: '/portal',
+        exact: true
+      },
+      {
+        label: 'Ver Pedidos Guardados',
+        icon: 'bookmark',
+        route: '/portal/guardados',
+        exact: true
+      },
+      {
+        label: 'Ver Pedidos Enviados',
+        icon: 'local_shipping',
+        route: '/portal/enviados',
+        exact: true
+      }
+    ];
+  }
+
   protected handleNavigationClick(): void {
     this.navigationRequest.emit();
   }

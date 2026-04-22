@@ -6,38 +6,18 @@
   </div>
 
   <nav class="sidebar-nav" aria-label="Navegacion de pedidos">
-    <a
-      class="nav-item"
-      [routerLink]="['/portal']"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      (click)="handleNavigationClick()"
-    >
-      <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
-      <span>Realizar Pedido</span>
-    </a>
-
-    <a
-      class="nav-item"
-      [routerLink]="['/portal/guardados']"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      (click)="handleNavigationClick()"
-    >
-      <mat-icon aria-hidden="true">bookmark</mat-icon>
-      <span>Ver Pedidos Guardados</span>
-    </a>
-
-    <a
-      class="nav-item"
-      [routerLink]="['/portal/enviados']"
-      routerLinkActive="active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      (click)="handleNavigationClick()"
-    >
-      <mat-icon aria-hidden="true">local_shipping</mat-icon>
-      <span>Ver Pedidos Enviados</span>
-    </a>
+    @for (item of navItems; track item.route) {
+      <a
+        class="nav-item"
+        [routerLink]="[item.route]"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+        (click)="handleNavigationClick()"
+      >
+        <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+        <span>{{ item.label }}</span>
+      </a>
+    }
   </nav>
 
   <button class="logout-button" type="button" (click)="onLogoutClick()">Cerrar sesion</button>

@@ -3,6 +3,10 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../core/auth/auth.service';
+import {
+  OrderSummaryDraftService,
+  OrderSummaryDraftState
+} from '../../core/services/order-summary-draft.service';
 import { PortalLayoutComponent } from '../../shared/layout/portal-layout.component';
 import { ServiceProviderModalComponent } from './service-provider-modal.component';
 import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
@@ -21,16 +25,6 @@ interface OrderRow {
   quantity: number;
 }
 
-interface PersistedSummaryState {
-  rows: OrderRow[];
-  summaryProviderSelection: ProviderSelection | null;
-  dispatchDate: string;
-  deliverySite: string;
-  deliveryArea: string;
-  notes: string;
-  nextRowId: number;
-}
-
 @Component({
   selector: 'app-portal-home-page',
   imports: [
@@ -45,28 +39,17 @@ interface PersistedSummaryState {
   styleUrl: './portal-home.page.css'
 })
 export class PortalHomePage {
-    private beforeUnloadHandler = (event: BeforeUnloadEvent) => {
-      if (this.hasDraftSummary()) {
-        event.preventDefault();
-        event.returnValue = 'Tienes un resumen en curso. Si sales, podrías perder los cambios.';
-        return event.returnValue;
-      }
-      return undefined;
-    };
-
-    private hasDraftSummary(): boolean {
-      // Considera que hay un resumen en curso si hay productos en el borrador
-      const draft = window.localStorage.getItem(this.storageKey);
-      if (!draft) return false;
-      try {
-        const data = JSON.parse(draft);
-        return data && Array.isArray(data.rows) && data.rows.length > 0;
-      } catch {
-        return false;
-      }
+  private readonly beforeUnloadHandler = (event: BeforeUnloadEvent) => {
+    if (this.hasDraftSummary()) {
+      event.preventDefault();
+      event.returnValue = 'Tienes un resumen en curso. Si sales, podrías perder los cambios.';
+      return event.returnValue;
     }
+    return undefined;
+  };
+
   private readonly authService = inject(AuthService);
-  private readonly storageKey = 'oc.portal-home.summary.v1';
+  private readonly draftService = inject(OrderSummaryDraftService);
   private readonly validUnits: UnitOption[] = ['UN', 'PAQ', 'CJ'];
   private readonly taxRate = 0.16;
   private readonly currencyFormatter = new Intl.NumberFormat('es-PE', {
@@ -133,7 +116,24 @@ export class PortalHomePage {
   }
 
   protected logout(): void {
+    this.clearPersistedSummaryState();
     this.authService.logout();
+  }
+
+  confirmDiscardDraft(): boolean {
+    if (!this.hasDraftSummary()) {
+      return true;
+    }
+
+    const shouldDiscard = window.confirm(
+      'Vas a salir del resumen actual y perderas toda la informacion registrada. ¿Deseas continuar?'
+    );
+
+    if (shouldDiscard) {
+      this.clearPersistedSummaryState();
+    }
+
+    return shouldDiscard;
   }
 
   protected openServiceProviderModal(): void {
@@ -244,11 +244,7 @@ export class PortalHomePage {
   }
 
   private persistSummaryState(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const payload: PersistedSummaryState = {
+    const payload: OrderSummaryDraftState = {
       rows: this.rows,
       summaryProviderSelection: this.summaryProviderSelection,
       dispatchDate: this.dispatchDate,
@@ -258,64 +254,52 @@ export class PortalHomePage {
       nextRowId: this.nextRowId
     };
 
-    window.localStorage.setItem(this.storageKey, JSON.stringify(payload));
+    this.draftService.save(payload);
   }
 
   private restoreSummaryState(): void {
-    if (typeof window === 'undefined') {
+    const parsed = this.draftService.load();
+    if (!parsed) {
       return;
     }
 
-    const raw = window.localStorage.getItem(this.storageKey);
+    const restoredRows = this.normalizeRows(parsed.rows);
 
-    if (!raw) {
-      return;
+    this.rows = restoredRows;
+    this.summaryProviderSelection = this.normalizeProviderSelection(parsed.summaryProviderSelection);
+
+    if (this.isDateInput(parsed.dispatchDate)) {
+      this.dispatchDate = parsed.dispatchDate;
     }
 
-    try {
-      const parsed = JSON.parse(raw) as Partial<PersistedSummaryState>;
-      const restoredRows = this.normalizeRows(parsed.rows);
-
-      this.rows = restoredRows;
-      this.summaryProviderSelection = this.normalizeProviderSelection(parsed.summaryProviderSelection);
-
-      if (this.isDateInput(parsed.dispatchDate)) {
-        this.dispatchDate = parsed.dispatchDate;
-      }
-
-      if (typeof parsed.deliverySite === 'string') {
-        this.deliverySite = parsed.deliverySite;
-      }
-
-      if (typeof parsed.deliveryArea === 'string') {
-        this.deliveryArea = parsed.deliveryArea;
-      }
-
-      if (typeof parsed.notes === 'string') {
-        this.notes = parsed.notes;
-      }
-
-      const nextByRows = restoredRows.length
-        ? Math.max(...restoredRows.map((row) => row.id)) + 1
-        : 1;
-
-      const restoredNext =
-        typeof parsed.nextRowId === 'number' && Number.isInteger(parsed.nextRowId) && parsed.nextRowId > 0
-          ? parsed.nextRowId
-          : nextByRows;
-
-      this.nextRowId = Math.max(nextByRows, restoredNext);
-    } catch {
-      this.clearPersistedSummaryState();
+    if (typeof parsed.deliverySite === 'string') {
+      this.deliverySite = parsed.deliverySite;
     }
+
+    if (typeof parsed.deliveryArea === 'string') {
+      this.deliveryArea = parsed.deliveryArea;
+    }
+
+    if (typeof parsed.notes === 'string') {
+      this.notes = parsed.notes;
+    }
+
+    const nextByRows = restoredRows.length ? Math.max(...restoredRows.map((row) => row.id)) + 1 : 1;
+
+    const restoredNext =
+      typeof parsed.nextRowId === 'number' && Number.isInteger(parsed.nextRowId) && parsed.nextRowId > 0
+        ? parsed.nextRowId
+        : nextByRows;
+
+    this.nextRowId = Math.max(nextByRows, restoredNext);
   }
 
   private clearPersistedSummaryState(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
+    this.draftService.clear();
+  }
 
-    window.localStorage.removeItem(this.storageKey);
+  private hasDraftSummary(): boolean {
+    return this.rows.some((row) => row.description.trim().length > 0 && row.quantity > 0);
   }
 
   private normalizeRows(value: unknown): OrderRow[] {

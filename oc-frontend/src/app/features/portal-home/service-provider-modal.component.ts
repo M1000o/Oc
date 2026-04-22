@@ -6,7 +6,7 @@ import { switchMap, filter } from 'rxjs';
 import { ServiceOption, ServiceId } from '../../core/interfaces/services.interface';
 import { ProviderOption, ProviderSelection } from '../../core/interfaces/provider-option.interface';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { ServiceProviderModal } from '../../core/services/service-provider-modal';
+import { ServiceProviderModal } from '../../core/services/service-provider-modal.service';
 @Component({
   selector: 'app-service-provider-modal',
   imports: [CommonModule, FormsModule, MatIconModule],
@@ -115,7 +115,8 @@ export class ServiceProviderModalComponent implements OnInit {
       serviceId,
       serviceName: this.selectedServiceName(),
       providerId: provider.id,
-      providerName: provider.name
+      providerName: provider.name,
+      providerRuc: provider.ruc
     });
   }
 

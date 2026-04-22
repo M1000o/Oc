@@ -12,4 +12,5 @@ export interface ProviderSelection {
     serviceName: string;
     providerId: number;
     providerName: string;
+    providerRuc: string;
 }

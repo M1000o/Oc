@@ -2,6 +2,7 @@ package com.kong.oc.model;
 
 import com.kong.oc.auth.model.User;
 import com.kong.oc.common.model.BaseEntity;
+import com.kong.oc.dto.CreditDays;
 import jakarta.persistence.*;
 import lombok.*;
 

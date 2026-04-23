@@ -5,9 +5,7 @@ import com.kong.oc.auth.repository.RoleRepository;
 import com.kong.oc.auth.repository.UserRepository;
 import com.kong.oc.auth.service.ActivationService;
 import com.kong.oc.auth.util.UsernameUtils;
-import com.kong.oc.dto.ProveedorResponse;
-import com.kong.oc.dto.ServicioResponse;
-import com.kong.oc.dto.SupplierFormRequest;
+import com.kong.oc.dto.*;
 import com.kong.oc.interfaces.ISupplierService;
 import com.kong.oc.model.*;
 import com.kong.oc.repository.*;
@@ -66,9 +64,7 @@ public class SupplierServiceImpl implements ISupplierService {
 
     @Override
     public Optional<Supplier> findByUserId(Long userId) {
-        return supplierRepository.findAll().stream()
-                .filter(s -> s.getUser() != null && s.getUser().getId().equals(userId))
-                .findFirst();
+        return supplierRepository.findByUser_Id(userId);
     }
 
     @Transactional

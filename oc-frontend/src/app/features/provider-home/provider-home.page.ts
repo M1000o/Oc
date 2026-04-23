@@ -6,7 +6,7 @@ import { PortalLayoutComponent } from '../../shared/layout/portal-layout.compone
 
 @Component({
   selector: 'app-provider-home-page',
-  imports: [CommonModule, MatIconModule, PortalLayoutComponent],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './provider-home.page.html',
   styleUrl: './provider-home.page.css'
 })

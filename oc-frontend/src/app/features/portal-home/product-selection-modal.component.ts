@@ -16,6 +16,8 @@ export interface ProductSelectionItem {
   unit: UnitOption;
   unitPrice: number;
   quantity: number;
+  serviceId: number;
+  serviceName: string;
 }
 
 interface ProductRow extends ProductSelectionItem {
@@ -129,12 +131,14 @@ export class ProductSelectionModalComponent {
   protected confirmSelection(): void {
     const selectedProducts = this.products()
       .filter((product) => product.quantity > 0)
-      .map(({ sku, name, unit, unitPrice, quantity }) => ({
+      .map(({ sku, name, unit, unitPrice, quantity, serviceId, serviceName }) => ({
         sku,
         name,
         unit,
         unitPrice,
-        quantity
+        quantity,
+        serviceId,
+        serviceName
       }));
 
     if (!selectedProducts.length) {
@@ -161,7 +165,9 @@ export class ProductSelectionModalComponent {
       name: product.nombre,
       unit: 'UN',
       unitPrice: this.toNumber(product.precio),
-      quantity: existingSelection?.quantity ?? 0
+      quantity: existingSelection?.quantity ?? 0,
+      serviceId: product.servicioId,
+      serviceName: product.servicioNombre
     };
   }
 

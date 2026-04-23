@@ -17,7 +17,7 @@ interface SavedOrder {
 
 @Component({
   selector: 'app-saved-orders-page',
-  imports: [CommonModule, FormsModule, MatIconModule, PortalLayoutComponent],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './saved-orders.page.html',
   styleUrl: './saved-orders.page.css'
 })
@@ -199,7 +199,7 @@ export class SavedOrdersPage {
   }
 
   protected editOrder(order: SavedOrder): void {
-    this.router.navigate(['/portal'], {
+    this.router.navigate(['/portal/pedido'], {
       queryParams: {
         draft: order.reference
       }

@@ -2,7 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Output, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService } from '../../../core/auth/auth.service';
+import { NavItem } from '../../models/nav-item.model';
+
 
 @Component({
   selector: 'app-portal-sidebar',
@@ -28,13 +30,7 @@ export class PortalSidebarComponent {
     return this.authService.getUserInitials();
   }
 
-  protected get navItems(): Array<{
-    label: string;
-    icon: string;
-    route: string;
-    exact?: boolean;
-    queryParams?: Record<string, string>;
-  }> {
+  protected get navItems(): NavItem[] {
     if (this.authService.isProviderUser()) {
       return [
         {
@@ -73,6 +69,24 @@ export class PortalSidebarComponent {
         icon: 'local_shipping',
         route: '/portal/enviados',
         exact: true
+      },
+      {
+        label: 'Mantenimiento',
+        icon: 'build',
+        children: [
+          {
+            label: 'Productos',
+            icon: 'inventory_2',
+            route: '/portal/productos',
+            exact: true
+          },
+          {
+            label: 'Proveedores',
+            icon: 'folder_shared',
+            route: '/portal/proveedores',
+            exact: true
+          }
+        ]
       }
     ];
   }

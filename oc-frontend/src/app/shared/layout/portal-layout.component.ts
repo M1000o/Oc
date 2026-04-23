@@ -2,9 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-import { PortalSidebarComponent } from './portal-sidebar.component';
-import { PortalHeaderComponent } from './portal-header.component';
-import { PortalFooterComponent } from './portal-footer.component';
+import { PortalSidebarComponent } from './sidebar/portal-sidebar.component';
+import { PortalHeaderComponent } from './header/portal-header.component';
+import { PortalFooterComponent } from './footer/portal-footer.component';
 
 @Component({
   selector: 'app-portal-layout',

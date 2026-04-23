@@ -96,3 +96,64 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ===== GRUPOS ===== */
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(213, 223, 247, 0.65);
+  text-transform: uppercase;
+}
+
+.nav-group-title mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.nav-subitems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 14px;
+}
+
+.nav-subitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #c7d2f0;
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.nav-subitem mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.nav-subitem:hover {
+  background: rgba(95, 127, 191, 0.12);
+}
+
+.nav-subitem.active {
+  color: #70f1e8;
+  background: rgba(61, 236, 225, 0.12);
+}

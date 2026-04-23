@@ -1,0 +1,54 @@
+<aside class="portal-sidebar" aria-label="Navegacion principal de pedidos">
+  <div class="profile-card">
+    <div class="profile-avatar" aria-hidden="true">{{ userInitials }}</div>
+    <h2>{{ userName }}</h2>
+    <p>{{ userRole }}</p>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Navegacion de pedidos">
+    @for (item of navItems; track item.label) {
+
+      @if(!('children' in item)){
+        <a 
+          class="nav-item"
+          [routerLink]="[item.route]"
+          [queryParams]="item.queryParams"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+          (click)="handleNavigationClick()"
+        >
+          <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+
+      @if('children' in item){
+        
+        <div class="nav-group">
+          <div class="nav-group-title">
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </div>
+
+          <div class="nav-subitems">
+            @for(child of item.children; track child.route){
+              <a
+                class="nav-subitem"
+                [routerLink]="[child.route]"
+                [queryParams]="child.queryParams"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: child.exact ?? false }"
+                (click)="handleNavigationClick()"
+              >
+                <mat-icon aria-hidden="true">{{ child.icon }}</mat-icon>
+                <span>{{ child.label }}</span>
+              </a>
+            }
+          </div>
+        </div>
+      }
+    }
+  </nav>
+
+  <button class="logout-button" type="button" (click)="onLogoutClick()">Cerrar sesion</button>
+</aside>

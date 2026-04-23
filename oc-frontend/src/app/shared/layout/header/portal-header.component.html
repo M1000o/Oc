@@ -6,7 +6,7 @@
       [attr.aria-label]="sidebarVisible ? 'Ocultar sidebar' : 'Mostrar sidebar'"
       (click)="onToggleSidebarClick()"
     >
-      <mat-icon aria-hidden="true">{{ sidebarVisible ? 'menu_open' : 'menu' }}</mat-icon>
+      <mat-icon aria-hidden="true">{{ sidebarVisible ? 'chevron_left' : 'chevron_right' }}</mat-icon>
     </button>
     <h1>{{ title }}</h1>
   </div>

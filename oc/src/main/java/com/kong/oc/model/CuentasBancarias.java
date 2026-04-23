@@ -1,6 +1,8 @@
 package com.kong.oc.model;
 
 import com.kong.oc.common.model.BaseEntity;
+import com.kong.oc.dto.AccountType;
+import com.kong.oc.dto.Currency;
 import jakarta.persistence.*;
 import lombok.*;
 

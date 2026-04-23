@@ -6,5 +6,8 @@ export interface OrderSummaryDraftAware {
 }
 
 export const orderSummaryDraftGuard: CanDeactivateFn<OrderSummaryDraftAware> = (component) => {
-  return component.confirmDiscardDraft();
+  if (component && typeof component.confirmDiscardDraft === 'function') {
+    return component.confirmDiscardDraft();
+  }
+  return true;
 };

@@ -9,6 +9,8 @@ export interface OrderSummaryDraftRow {
   unit: UnitOption;
   unitPrice: number;
   quantity: number;
+  serviceId: number;
+  serviceName: string;
 }
 
 export interface OrderSummaryDraftState {

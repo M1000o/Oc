@@ -1,4 +1,4 @@
-package com.kong.oc.model;
+package com.kong.oc.dto;
 
 import lombok.Getter;
 

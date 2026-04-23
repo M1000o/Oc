@@ -1,6 +1,7 @@
 package com.kong.oc.model;
 
 import com.kong.oc.common.model.BaseEntity;
+import com.kong.oc.dto.Unit;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,9 +20,16 @@ public class Product extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "codigo_producto", nullable = false, length = 30)
+    private String codigoProducto;
+
     private String nombre;
     private String descripcion;
     private BigDecimal precio;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "und", nullable = false)
+    private Unit und_medida;
 
     @ManyToOne
     @JoinColumn(name = "proveedor_id")

@@ -31,12 +31,16 @@ public class ProductServiceImpl implements IProductService {
         Services servicio = servicesRepository.findById(request.servicioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
-        validateAndNormalize(request);
+        String normalizedName = request.nombre() == null ? "" : request.nombre().trim();
+        String normalizedProductCode = normalizeProductCode(request.codigo_producto());
+        validateRequest(request, normalizedName, normalizedProductCode, null);
 
         Product p = Product.builder()
-                .nombre(request.nombre().trim())
+                .codigoProducto(normalizedProductCode)
+                .nombre(normalizedName)
                 .descripcion(request.descripcion())
                 .precio(request.precio())
+                .und_medida(request.und_medida())
                 .proveedor(supplier)
                 .servicio(servicio)
                 .build();
@@ -52,11 +56,15 @@ public class ProductServiceImpl implements IProductService {
         Services servicio = servicesRepository.findById(request.servicioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
-        validateAndNormalize(request);
+        String normalizedName = request.nombre() == null ? "" : request.nombre().trim();
+        String normalizedProductCode = normalizeProductCode(request.codigo_producto());
+        validateRequest(request, normalizedName, normalizedProductCode, p.getId());
 
-        p.setNombre(request.nombre().trim());
+        p.setCodigoProducto(normalizedProductCode);
+        p.setNombre(normalizedName);
         p.setDescripcion(request.descripcion());
         p.setPrecio(request.precio());
+        p.setUnd_medida(request.und_medida());
         p.setProveedor(supplier);
         p.setServicio(servicio);
         return toDto(p);
@@ -116,21 +124,39 @@ public class ProductServiceImpl implements IProductService {
                 .toList();
     }
 
-    private void validateAndNormalize(ProductRequest r){
-        if (r.nombre() == null || r.nombre().isBlank()){
+    private void validateRequest(ProductRequest request, String normalizedName, String normalizedProductCode, Long currentProductId){
+        if (normalizedName.isBlank()){
             throw new BadRequestException("El nombre del producto es obligatorio");
         }
-        if (r.precio() == null || r.precio().doubleValue() <= 0){
+        if (request.precio() == null || request.precio().signum() <= 0){
             throw new BadRequestException("El precio del producto debe ser mayor que 0");
         }
+        if (request.und_medida() == null) {
+            throw new BadRequestException("La unidad de medida es obligatoria");
+        }
+
+        productRepository.findByCodigoProductoIgnoreCaseAndIsDeletedFalse(normalizedProductCode)
+                .filter(existing -> currentProductId == null || !existing.getId().equals(currentProductId))
+                .ifPresent(existing -> {
+                    throw new BadRequestException("El codigo del producto ya existe");
+                });
+    }
+
+    private String normalizeProductCode(String value) {
+        if (value == null || value.isBlank()) {
+            throw new BadRequestException("El codigo del producto es obligatorio");
+        }
+        return value.trim().toUpperCase();
     }
 
     private ProductResponse toDto(Product p){
         return new ProductResponse(
                 p.getId(),
+                p.getCodigoProducto(),
                 p.getNombre(),
                 p.getPrecio(),
                 p.getProveedor() == null ? null : p.getProveedor().getId(),
+                p.getUnd_medida() == null ? null : p.getUnd_medida().name(),
                 p.getProveedor() == null ? null : p.getProveedor().getRuc(),
                 p.getServicio() == null ? null : p.getServicio().getId(),
                 p.getServicio() == null ? null : p.getServicio().getNombre()

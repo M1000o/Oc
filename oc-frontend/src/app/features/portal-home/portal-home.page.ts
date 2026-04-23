@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   OrderSummaryDraftService,
@@ -31,7 +32,6 @@ interface OrderRow {
     CommonModule,
     FormsModule,
     MatIconModule,
-    PortalLayoutComponent,
     ServiceProviderModalComponent,
     ProductSelectionModalComponent
   ],
@@ -49,6 +49,8 @@ export class PortalHomePage {
   };
 
   private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly draftService = inject(OrderSummaryDraftService);
   private readonly validUnits: UnitOption[] = ['UN', 'PAQ', 'CJ'];
   private readonly taxRate = 0.16;
@@ -77,6 +79,7 @@ export class PortalHomePage {
 
   constructor() {
     this.restoreSummaryState();
+    this.handleStartSelectionRequest();
     window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
   ngOnDestroy(): void {
@@ -113,6 +116,25 @@ export class PortalHomePage {
 
   protected get serviceName(): string {
     return this.summaryProviderSelection?.serviceName ?? 'Sin servicio asociado';
+  }
+
+  protected get initialProductSelections(): ProductSelectionItem[] {
+    if (
+      !this.currentProviderSelection ||
+      !this.summaryProviderSelection ||
+      this.currentProviderSelection.providerId !== this.summaryProviderSelection.providerId ||
+      this.currentProviderSelection.serviceId !== this.summaryProviderSelection.serviceId
+    ) {
+      return [];
+    }
+
+    return this.summaryRows.map(({ code, description, unit, unitPrice, quantity }) => ({
+      sku: code,
+      name: description,
+      unit,
+      unitPrice,
+      quantity
+    }));
   }
 
   protected logout(): void {
@@ -152,6 +174,7 @@ export class PortalHomePage {
 
   protected closeProductSelectionModal(): void {
     this.showProductSelectionModal = false;
+    this.showServiceProviderModal = true;
   }
 
   protected onProductsConfirmed(items: ProductSelectionItem[]): void {
@@ -205,6 +228,13 @@ export class PortalHomePage {
   }
 
   protected reopenSelection(): void {
+    if (this.summaryProviderSelection) {
+      this.currentProviderSelection = this.summaryProviderSelection;
+      this.showServiceProviderModal = false;
+      this.showProductSelectionModal = true;
+      return;
+    }
+
     this.openServiceProviderModal();
   }
 
@@ -300,6 +330,22 @@ export class PortalHomePage {
 
   private hasDraftSummary(): boolean {
     return this.rows.some((row) => row.description.trim().length > 0 && row.quantity > 0);
+  }
+
+  private handleStartSelectionRequest(): void {
+    if (this.route.snapshot.queryParamMap.get('startSelection') !== '1') {
+      return;
+    }
+
+    this.openServiceProviderModal();
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        startSelection: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   private normalizeRows(value: unknown): OrderRow[] {

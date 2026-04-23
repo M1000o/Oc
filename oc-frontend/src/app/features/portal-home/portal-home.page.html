@@ -1,64 +1,47 @@
-<app-portal-layout
-  title="Resumen de Pedido"
-  (logoutRequest)="logout()"
->
-  <div layoutHeaderActions class="header-actions" aria-label="Acciones de cabecera">
-    <button class="icon-btn" type="button" aria-label="Notificaciones">
-      <mat-icon aria-hidden="true">notifications</mat-icon>
-    </button>
-    <button class="icon-btn" type="button" aria-label="Configuracion">
-      <mat-icon aria-hidden="true">settings</mat-icon>
-    </button>
-  </div>
-
-  <div layoutBody class="workspace-canvas">
-    <section class="summary-hero">
-      <div>
-        <h1>Resumen de Pedido</h1>
-        <p>
-          Verifica proveedor, fechas de entrega y productos seleccionados antes de confirmar el envio.
-        </p>
-      </div>
-
-      <div class="hero-actions">
-        <button class="btn btn-secondary" type="button" (click)="reopenSelection()">
-          Volver a Seleccion
-        </button>
-        <button class="btn btn-primary" type="button" (click)="saveOrder()">
-          Confirmar Pedido
-        </button>
-      </div>
-    </section>
-
-    @if (statusMessage) {
-      <div class="feedback-banner" [class.success]="statusKind === 'success'">{{ statusMessage }}</div>
-    }
-
-    <section class="summary-grid">
-      <div class="summary-main">
-        <div class="info-grid">
-          <article class="info-card">
-            <header>
-              <mat-icon aria-hidden="true">storefront</mat-icon>
-              <h2>Informacion del Proveedor</h2>
-            </header>
-
-            <div class="info-content">
-              <div>
-                <span class="field-label">Proveedor Principal</span>
-                <p class="field-main">{{ providerName }}</p>
-                <p class="field-sub">RUC: {{ providerRuc }}</p>
-              </div>
-
-              <div>
-                <span class="field-label">Servicio Asociado</span>
-                <p class="field-main field-main-inline">
-                  <span class="status-dot" aria-hidden="true"></span>
-                  {{ serviceName }}
-                </p>
-              </div>
+<div layoutBody class="workspace-canvas">
+  <section class="summary-hero">
+    <div>
+      <h1>Resumen de Pedido</h1>
+      <p>
+        Verifica proveedor, fechas de entrega y productos seleccionados antes de confirmar el envio.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <button class="btn btn-secondary" type="button" (click)="reopenSelection()">
+        Volver a Selección
+      </button>
+      <button class="btn btn-primary" type="button" (click)="saveOrder()">
+        Confirmar Pedido
+      </button>
+    </div>
+  </section>
+  @if (statusMessage) {
+    <div class="feedback-banner" [class.success]="statusKind === 'success'">{{ statusMessage }}</div>
+  }
+  <section class="summary-grid">
+    <div class="summary-main">
+      <div class="info-grid">
+        <article class="info-card">
+          <header>
+            <mat-icon aria-hidden="true">storefront</mat-icon>
+            <h2>Informacion del Proveedor</h2>
+          </header>
+          <div class="info-content">
+            <div>
+              <span class="field-label">Proveedor Principal</span>
+              <p class="field-main">{{ providerName }}</p>
+              <p class="field-sub">RUC: {{ providerRuc }}</p>
             </div>
-          </article>
+            <div>
+              <span class="field-label">Servicio Asociado</span>
+              <p class="field-main field-main-inline">
+                <span class="status-dot" aria-hidden="true"></span>
+                {{ serviceName }}
+              </p>
+            </div>
+          </div>
+        </article>
+        <!-- ...resto del contenido... -->
 
           <article class="info-card">
             <header>
@@ -225,9 +208,9 @@
     @if (showProductSelectionModal) {
       <app-product-selection-modal
         [providerSelection]="currentProviderSelection"
+        [initialSelections]="initialProductSelections"
         (closeRequest)="closeProductSelectionModal()"
         (productsConfirmed)="onProductsConfirmed($event)"
       ></app-product-selection-modal>
     }
   </div>
-</app-portal-layout>

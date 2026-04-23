@@ -1,0 +1,59 @@
+<div layoutBody class="workspace-canvas">
+  <section class="welcome-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Portal de Compras</span>
+      <h1>Empieza tu pedido</h1>
+      <div class="hero-actions">
+        <button class="btn btn-primary" type="button" (click)="startOrder()">
+          <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
+          Realizar Pedido
+        </button>
+        @if (hasDraftOrder) {
+          <button class="btn btn-secondary" type="button" (click)="continueDraft()">
+            <mat-icon aria-hidden="true">play_circle</mat-icon>
+            Continuar Pedido
+          </button>
+        }
+      </div>
+    </div>
+    <aside class="hero-side-card">
+      <div class="hero-side-icon">
+        <mat-icon aria-hidden="true">inventory_2</mat-icon>
+      </div>
+      <h2>Flujo</h2>
+      <ol>
+        <li>Inicia un pedido</li>
+        <li>Selecciona servicio y proveedor</li>
+        <li>Revisa el resumen antes de enviar</li>
+      </ol>
+    </aside>
+  </section>
+  @if (hasDraftOrder) {
+    <section class="draft-banner" aria-label="Pedido en progreso">
+      <div>
+        <strong>Tienes un pedido en progreso.</strong>
+        <p>Si quieres, puedes retomarlo desde donde lo dejaste.</p>
+      </div>
+      <button class="btn btn-secondary" type="button" (click)="continueDraft()">
+        Continuar
+      </button>
+    </section>
+  }
+  <section class="quick-grid">
+      @for (action of quickActions; track action.route) {
+        <article class="quick-card">
+          <div class="quick-card-icon">
+            <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+          </div>
+          <div class="quick-card-copy">
+            <h2>{{ action.title }}</h2>
+            <p>{{ action.description }}</p>
+          </div>
+          <button class="card-link" type="button" (click)="navigateTo(action.route)">
+            Abrir
+            <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+          </button>
+        </article>
+      }
+    </section>
+  </div>

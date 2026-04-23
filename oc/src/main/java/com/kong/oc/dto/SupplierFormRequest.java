@@ -1,6 +1,5 @@
 package com.kong.oc.dto;
 
-import com.kong.oc.model.AccountType;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;

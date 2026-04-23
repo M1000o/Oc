@@ -218,21 +218,21 @@
           </button>
         </section>
       </aside>
-    </section>
+  </section>
 
-    <app-service-provider-modal
-      *ngIf="showServiceProviderModal"
-      [lockedProviderSelection]="summaryProviderSelection"
-      (closeRequest)="closeServiceProviderModal()"
-      (providerSelected)="onProviderSelected($event)"
-    ></app-service-provider-modal>
+  <app-service-provider-modal
+    *ngIf="showServiceProviderModal"
+    [lockedProviderSelection]="summaryProviderSelection"
+    (closeRequest)="closeServiceProviderModal()"
+    (providerSelected)="onProviderSelected($event)"
+  ></app-service-provider-modal>
 
-    @if (showProductSelectionModal) {
-      <app-product-selection-modal
-        [providerSelection]="currentProviderSelection"
-        [initialSelections]="initialProductSelections"
-        (closeRequest)="closeProductSelectionModal()"
-        (productsConfirmed)="onProductsConfirmed($event)"
-      ></app-product-selection-modal>
-    }
-  </div>
+  @if (showProductSelectionModal) {
+    <app-product-selection-modal
+      [providerSelection]="currentProviderSelection"
+      [initialSelections]="initialProductSelections"
+      (closeRequest)="closeProductSelectionModal()"
+      (productsConfirmed)="onProductsConfirmed($event)"
+    ></app-product-selection-modal>
+  }
+</div>

@@ -60,7 +60,7 @@ export class PortalHomePage {
   private readonly router = inject(Router);
   private readonly draftService = inject(OrderSummaryDraftService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
-  private readonly validUnits: UnitOption[] = ['UN', 'PAQ', 'CJ'];
+  private readonly validUnits: UnitOption[] = ['KG', 'UND', 'PAQ', 'DOC', 'GR', 'UN', 'CJ'];
   private readonly taxRate = 0.18;
   private readonly currencyFormatter = new Intl.NumberFormat('es-PE', {
     style: 'currency',
@@ -529,7 +529,7 @@ export class PortalHomePage {
       return null;
     }
 
-    const unit = this.isUnitOption(row.unit) ? row.unit : 'UN';
+    const unit = this.isUnitOption(row.unit) ? row.unit : 'UND';
     const unitPrice = this.toNonNegativeNumber(row.unitPrice);
 
     return {

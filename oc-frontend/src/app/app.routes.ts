@@ -30,28 +30,39 @@ export const routes: Routes = [
   },
   {
     path: 'portal',
-    canActivate: [authGuard, nonProviderGuard],
-    canDeactivate: [orderSummaryDraftGuard],
-    loadComponent: () =>
-      import('./features/portal-home/portal-home.page').then((m) => m.PortalHomePage)
+    canActivate: [authGuard],
+    loadComponent: () => import('./shared/layout/portal-layout.component').then(m => m.PortalLayoutComponent),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/portal-dashboard/portal-dashboard.page').then((m) => m.PortalDashboardPage)
+      },
+      {
+        path: 'pedido',
+        canActivate: [nonProviderGuard],
+        canDeactivate: [orderSummaryDraftGuard],
+        loadComponent: () => import('./features/portal-home/portal-home.page').then((m) => m.PortalHomePage)
+      },
+      {
+        path: 'proveedor',
+        canActivate: [providerOnlyGuard],
+        loadComponent: () => import('./features/provider-home/provider-home.page').then((m) => m.ProviderHomePage)
+      },
+      {
+        path: 'guardados',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/saved-orders/saved-orders.page').then((m) => m.SavedOrdersPage)
+      },
+      {
+        path: 'enviados',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/sent-orders/sent-orders.page').then((m) => m.SentOrdersPage)
+      },
+       // ...otras rutas hijas protegidas
+    ]
   },
-  {
-    path: 'portal/proveedor',
-    canActivate: [authGuard, providerOnlyGuard],
-    loadComponent: () =>
-      import('./features/provider-home/provider-home.page').then((m) => m.ProviderHomePage)
-  },
-  {
-    path: 'portal/guardados',
-    canActivate: [authGuard, nonProviderGuard],
-    loadComponent: () =>
-      import('./features/saved-orders/saved-orders.page').then((m) => m.SavedOrdersPage)
-  },
-  {
-    path: 'portal/enviados',
-    canActivate: [authGuard, nonProviderGuard],
-    loadComponent: () =>
-      import('./features/sent-orders/sent-orders.page').then((m) => m.SentOrdersPage)
-  },
+  // Rutas duplicadas eliminadas. Las rutas de guardados y enviados solo existen como hijas de portal con layout.
   { path: '**', redirectTo: 'login' }
 ];

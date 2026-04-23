@@ -19,7 +19,7 @@ interface SentOrder {
 
 @Component({
   selector: 'app-sent-orders-page',
-  imports: [CommonModule, FormsModule, MatIconModule, PortalLayoutComponent],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './sent-orders.page.html',
   styleUrl: './sent-orders.page.css'
 })

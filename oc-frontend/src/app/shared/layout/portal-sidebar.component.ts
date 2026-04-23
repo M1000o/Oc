@@ -28,7 +28,13 @@ export class PortalSidebarComponent {
     return this.authService.getUserInitials();
   }
 
-  protected get navItems(): Array<{ label: string; icon: string; route: string; exact?: boolean }> {
+  protected get navItems(): Array<{
+    label: string;
+    icon: string;
+    route: string;
+    exact?: boolean;
+    queryParams?: Record<string, string>;
+  }> {
     if (this.authService.isProviderUser()) {
       return [
         {
@@ -42,10 +48,19 @@ export class PortalSidebarComponent {
 
     return [
       {
-        label: 'Realizar Pedido',
-        icon: 'add_shopping_cart',
+        label: 'Inicio',
+        icon: 'space_dashboard',
         route: '/portal',
         exact: true
+      },
+      {
+        label: 'Realizar Pedido',
+        icon: 'add_shopping_cart',
+        route: '/portal/pedido',
+        exact: true,
+        queryParams: {
+          startSelection: '1'
+        }
       },
       {
         label: 'Ver Pedidos Guardados',

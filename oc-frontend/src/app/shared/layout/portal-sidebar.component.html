@@ -10,6 +10,7 @@
       <a
         class="nav-item"
         [routerLink]="[item.route]"
+        [queryParams]="item.queryParams"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
         (click)="handleNavigationClick()"

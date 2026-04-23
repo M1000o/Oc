@@ -5,9 +5,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import {
+  PurchaseOrderRequest,
+  PurchaseOrderResponse
+} from '../../core/interfaces/purchase-order.interface';
+import {
   OrderSummaryDraftService,
   OrderSummaryDraftState
 } from '../../core/services/order-summary-draft.service';
+import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { PortalLayoutComponent } from '../../shared/layout/portal-layout.component';
 import { ServiceProviderModalComponent } from './service-provider-modal.component';
 import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
@@ -24,6 +29,8 @@ interface OrderRow {
   unit: UnitOption;
   unitPrice: number;
   quantity: number;
+  serviceId: number;
+  serviceName: string;
 }
 
 @Component({
@@ -52,8 +59,9 @@ export class PortalHomePage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly draftService = inject(OrderSummaryDraftService);
+  private readonly purchaseOrderService = inject(PurchaseOrderService);
   private readonly validUnits: UnitOption[] = ['UN', 'PAQ', 'CJ'];
-  private readonly taxRate = 0.16;
+  private readonly taxRate = 0.18;
   private readonly currencyFormatter = new Intl.NumberFormat('es-PE', {
     style: 'currency',
     currency: 'PEN',
@@ -71,6 +79,11 @@ export class PortalHomePage {
   protected notes = '';
   protected statusMessage = '';
   protected statusKind: 'success' | 'error' | '' = '';
+  protected purchaseOrderNumber = '';
+  protected purchaseOrderPreviewError = '';
+  protected isLoadingPurchaseOrderNumber = false;
+  protected isSubmittingOrder = false;
+  protected lastSubmittedOrderNumber = '';
   protected showServiceProviderModal = false;
   protected showProductSelectionModal = false;
   protected currentProviderSelection: ProviderSelection | null = null;
@@ -115,26 +128,51 @@ export class PortalHomePage {
   }
 
   protected get serviceName(): string {
+    const serviceNames = this.summaryProviderSelection?.selectedServiceNames ?? [];
+
+    if (serviceNames.length) {
+      return serviceNames.join(', ');
+    }
+
     return this.summaryProviderSelection?.serviceName ?? 'Sin servicio asociado';
+  }
+
+  protected get purchaseOrderLabel(): string {
+    if (this.purchaseOrderNumber) {
+      return this.purchaseOrderNumber;
+    }
+
+    if (this.isLoadingPurchaseOrderNumber) {
+      return 'Generando...';
+    }
+
+    if (this.purchaseOrderPreviewError) {
+      return 'No disponible';
+    }
+
+    return 'Pendiente de generacion';
   }
 
   protected get initialProductSelections(): ProductSelectionItem[] {
     if (
       !this.currentProviderSelection ||
       !this.summaryProviderSelection ||
-      this.currentProviderSelection.providerId !== this.summaryProviderSelection.providerId ||
-      this.currentProviderSelection.serviceId !== this.summaryProviderSelection.serviceId
+      this.currentProviderSelection.providerId !== this.summaryProviderSelection.providerId
     ) {
       return [];
     }
 
-    return this.summaryRows.map(({ code, description, unit, unitPrice, quantity }) => ({
-      sku: code,
-      name: description,
-      unit,
-      unitPrice,
-      quantity
-    }));
+    return this.summaryRows
+      .filter((row) => row.serviceId === this.currentProviderSelection?.serviceId)
+      .map(({ code, description, unit, unitPrice, quantity, serviceId, serviceName }) => ({
+        sku: code,
+        name: description,
+        unit,
+        unitPrice,
+        quantity,
+        serviceId,
+        serviceName
+      }));
   }
 
   protected logout(): void {
@@ -167,6 +205,18 @@ export class PortalHomePage {
   }
 
   protected onProviderSelected(selection: ProviderSelection): void {
+    if (
+      this.summaryProviderSelection &&
+      this.summaryProviderSelection.providerId !== selection.providerId
+    ) {
+      this.showServiceProviderModal = false;
+      this.showStatus(
+        'error',
+        'Solo puedes agregar productos del mismo proveedor dentro de la misma orden.'
+      );
+      return;
+    }
+
     this.showServiceProviderModal = false;
     this.currentProviderSelection = selection;
     this.showProductSelectionModal = true;
@@ -178,25 +228,51 @@ export class PortalHomePage {
   }
 
   protected onProductsConfirmed(items: ProductSelectionItem[]): void {
-    this.summaryProviderSelection = this.currentProviderSelection;
+    if (!this.currentProviderSelection) {
+      return;
+    }
 
-    this.rows = items.map((item) => ({
-      id: this.nextRowId++,
+    const currentSelection = this.currentProviderSelection;
+    const existingServiceIds = this.summaryProviderSelection?.selectedServiceIds ?? [];
+    const existingServiceNames = this.summaryProviderSelection?.selectedServiceNames ?? [];
+    const nextServiceIds = Array.from(new Set([...existingServiceIds, currentSelection.serviceId]));
+    const nextServiceNames = Array.from(
+      new Set([
+        ...existingServiceNames.filter((name) => name.trim().length > 0),
+        currentSelection.serviceName
+      ])
+    );
+
+    this.summaryProviderSelection = {
+      ...currentSelection,
+      selectedServiceIds: nextServiceIds,
+      selectedServiceNames: nextServiceNames
+    };
+
+    const rowsByService = this.rows.filter((row) => row.serviceId !== currentSelection.serviceId);
+    const nextRows = items.map((item) => ({
+      id: this.findExistingRowId(currentSelection.serviceId, item.sku),
       code: item.sku,
       description: item.name,
       unit: item.unit,
       unitPrice: item.unitPrice,
-      quantity: item.quantity
+      quantity: item.quantity,
+      serviceId: item.serviceId,
+      serviceName: item.serviceName
     }));
 
+    this.rows = [...rowsByService, ...nextRows];
+
     const providerName = this.summaryProviderSelection?.providerName;
+    const serviceName = currentSelection.serviceName;
 
     this.showProductSelectionModal = false;
     this.currentProviderSelection = null;
     this.persistSummaryState();
+    this.ensurePurchaseOrderNumber();
     this.showStatus(
       'success',
-      `Se agregaron ${items.length} producto(s)${providerName ? ` del proveedor ${providerName}` : ''}.`
+      `Se agregaron ${items.length} producto(s)${providerName ? ` del proveedor ${providerName}` : ''}${serviceName ? ` para ${serviceName}` : ''}.`
     );
   }
 
@@ -213,13 +289,10 @@ export class PortalHomePage {
       return;
     }
 
-    if (this.summaryRows.length === 1) {
-      this.showStatus('error', 'El resumen debe tener al menos un item. Usa "Volver a Seleccion" para reemplazarlo.');
-      return;
-    }
-
     this.rows = this.rows.filter((row) => row.id !== rowId);
+    this.syncSummaryProviderSelection();
     this.persistSummaryState();
+    this.syncPurchaseOrderPreviewState();
     this.showStatus('success', 'Item eliminado del resumen.');
   }
 
@@ -229,9 +302,9 @@ export class PortalHomePage {
 
   protected reopenSelection(): void {
     if (this.summaryProviderSelection) {
-      this.currentProviderSelection = this.summaryProviderSelection;
-      this.showServiceProviderModal = false;
-      this.showProductSelectionModal = true;
+      this.currentProviderSelection = null;
+      this.showProductSelectionModal = false;
+      this.showServiceProviderModal = true;
       return;
     }
 
@@ -244,6 +317,11 @@ export class PortalHomePage {
     this.deliverySite = 'Planta Central - Lima';
     this.deliveryArea = 'Area de Recepcion Principal';
     this.notes = '';
+    this.purchaseOrderNumber = '';
+    this.purchaseOrderPreviewError = '';
+    this.lastSubmittedOrderNumber = '';
+    this.isLoadingPurchaseOrderNumber = false;
+    this.isSubmittingOrder = false;
     this.rows = [];
     this.showServiceProviderModal = false;
     this.showProductSelectionModal = false;
@@ -262,7 +340,40 @@ export class PortalHomePage {
       return;
     }
 
-    this.showStatus('success', `Pedido confirmado con ${this.summaryRows.length} item(s).`);
+    if (!this.summaryProviderSelection) {
+      this.showStatus('error', 'Selecciona un proveedor antes de finalizar la orden de compra.');
+      return;
+    }
+
+    const request: PurchaseOrderRequest = {
+      purchaseOrderNumber: this.purchaseOrderNumber || undefined,
+      servicioId: this.summaryProviderSelection.selectedServiceIds?.[0] ?? this.summaryProviderSelection.serviceId,
+      servicioIds: this.summaryProviderSelection.selectedServiceIds?.length
+        ? this.summaryProviderSelection.selectedServiceIds
+        : [this.summaryProviderSelection.serviceId],
+      proveedorId: this.summaryProviderSelection.providerId,
+      fechaEntrega: this.dispatchDate,
+      local: this.deliverySite.trim(),
+      area: this.deliveryArea.trim(),
+      status: 'PENDIENTE',
+      details: this.summaryRows.map((row) => ({
+        descripcion: row.description.trim(),
+        cantidad: row.quantity
+      })),
+      notas: this.notes.trim() || undefined
+    };
+
+    this.isSubmittingOrder = true;
+    this.purchaseOrderService.createPurchaseOrder(request).subscribe(({ data, error }) => {
+      this.isSubmittingOrder = false;
+
+      if (error || !data) {
+        this.showStatus('error', error || 'No se pudo finalizar la orden de compra.');
+        return;
+      }
+
+      this.handleOrderCreated(data);
+    });
   }
 
   protected rowSubtotal(row: OrderRow): number {
@@ -295,8 +406,8 @@ export class PortalHomePage {
 
     const restoredRows = this.normalizeRows(parsed.rows);
 
-    this.rows = restoredRows;
     this.summaryProviderSelection = this.normalizeProviderSelection(parsed.summaryProviderSelection);
+    this.rows = this.hydrateRows(restoredRows, this.summaryProviderSelection);
 
     if (this.isDateInput(parsed.dispatchDate)) {
       this.dispatchDate = parsed.dispatchDate;
@@ -322,6 +433,7 @@ export class PortalHomePage {
         : nextByRows;
 
     this.nextRowId = Math.max(nextByRows, restoredNext);
+    this.ensurePurchaseOrderNumber();
   }
 
   private clearPersistedSummaryState(): void {
@@ -330,6 +442,10 @@ export class PortalHomePage {
 
   private hasDraftSummary(): boolean {
     return this.rows.some((row) => row.description.trim().length > 0 && row.quantity > 0);
+  }
+
+  private hasOrderSummaryReady(): boolean {
+    return this.summaryRows.length > 0 && this.summaryProviderSelection !== null;
   }
 
   private handleStartSelectionRequest(): void {
@@ -346,6 +462,47 @@ export class PortalHomePage {
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
+  }
+
+  private ensurePurchaseOrderNumber(): void {
+    if (!this.hasOrderSummaryReady() || this.purchaseOrderNumber || this.isLoadingPurchaseOrderNumber) {
+      return;
+    }
+
+    this.purchaseOrderPreviewError = '';
+    this.isLoadingPurchaseOrderNumber = true;
+
+    this.purchaseOrderService.previewNextPurchaseOrderNumber().subscribe(({ data, error }) => {
+      this.isLoadingPurchaseOrderNumber = false;
+
+      if (error) {
+        this.purchaseOrderPreviewError = error;
+        return;
+      }
+
+      this.purchaseOrderNumber = data;
+    });
+  }
+
+  private syncPurchaseOrderPreviewState(): void {
+    if (this.hasOrderSummaryReady()) {
+      this.ensurePurchaseOrderNumber();
+      return;
+    }
+
+    this.purchaseOrderNumber = '';
+    this.purchaseOrderPreviewError = '';
+  }
+
+  private handleOrderCreated(order: PurchaseOrderResponse): void {
+    const createdOrderNumber = order.purchaseOrderNumber;
+
+    this.resetOrder();
+    this.lastSubmittedOrderNumber = createdOrderNumber;
+    this.showStatus(
+      'success',
+      `Orden de compra ${createdOrderNumber} creada correctamente con ${order.details.length} item(s).`
+    );
   }
 
   private normalizeRows(value: unknown): OrderRow[] {
@@ -381,7 +538,9 @@ export class PortalHomePage {
       description,
       unit,
       unitPrice,
-      quantity
+      quantity,
+      serviceId: this.toPositiveInt(row.serviceId),
+      serviceName: typeof row.serviceName === 'string' ? row.serviceName : ''
     };
   }
 
@@ -403,7 +562,93 @@ export class PortalHomePage {
       serviceName: typeof provider.serviceName === 'string' ? provider.serviceName : '',
       providerId,
       providerName: typeof provider.providerName === 'string' ? provider.providerName : '',
-      providerRuc: typeof provider.providerRuc === 'string' ? provider.providerRuc : ''
+      providerRuc: typeof provider.providerRuc === 'string' ? provider.providerRuc : '',
+      selectedServiceIds: this.normalizeServiceIds(provider.selectedServiceIds, serviceId),
+      selectedServiceNames: this.normalizeServiceNames(
+        provider.selectedServiceNames,
+        typeof provider.serviceName === 'string' ? provider.serviceName : ''
+      )
+    };
+  }
+
+  private hydrateRows(rows: OrderRow[], providerSelection: ProviderSelection | null): OrderRow[] {
+    if (!providerSelection) {
+      return rows;
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      serviceId: row.serviceId || providerSelection.serviceId,
+      serviceName: row.serviceName || providerSelection.serviceName
+    }));
+  }
+
+  private normalizeServiceIds(value: unknown, fallbackServiceId: number): number[] {
+    if (!Array.isArray(value)) {
+      return fallbackServiceId ? [fallbackServiceId] : [];
+    }
+
+    const normalized = value
+      .map((serviceId) => this.toPositiveInt(serviceId))
+      .filter((serviceId) => serviceId > 0);
+
+    return normalized.length ? Array.from(new Set(normalized)) : fallbackServiceId ? [fallbackServiceId] : [];
+  }
+
+  private normalizeServiceNames(value: unknown, fallbackServiceName: string): string[] {
+    if (!Array.isArray(value)) {
+      return fallbackServiceName ? [fallbackServiceName] : [];
+    }
+
+    const normalized = value
+      .filter((serviceName): serviceName is string => typeof serviceName === 'string')
+      .map((serviceName) => serviceName.trim())
+      .filter((serviceName) => serviceName.length > 0);
+
+    return normalized.length ? Array.from(new Set(normalized)) : fallbackServiceName ? [fallbackServiceName] : [];
+  }
+
+  private findExistingRowId(serviceId: number, sku: string): number {
+    const existingRow = this.rows.find((row) => row.serviceId === serviceId && row.code === sku);
+
+    if (existingRow) {
+      return existingRow.id;
+    }
+
+    return this.nextRowId++;
+  }
+
+  private syncSummaryProviderSelection(): void {
+    if (!this.summaryProviderSelection) {
+      return;
+    }
+
+    const remainingRows = this.summaryRows;
+
+    if (!remainingRows.length) {
+      this.summaryProviderSelection = null;
+      this.purchaseOrderNumber = '';
+      this.purchaseOrderPreviewError = '';
+      return;
+    }
+
+    const selectedServiceIds = Array.from(new Set(remainingRows.map((row) => row.serviceId)));
+    const selectedServiceNames = Array.from(
+      new Set(
+        remainingRows
+          .map((row) => row.serviceName.trim())
+          .filter((serviceName) => serviceName.length > 0)
+      )
+    );
+    const primaryServiceId = selectedServiceIds[0] ?? this.summaryProviderSelection.serviceId;
+    const primaryServiceName = selectedServiceNames[0] ?? this.summaryProviderSelection.serviceName;
+
+    this.summaryProviderSelection = {
+      ...this.summaryProviderSelection,
+      serviceId: primaryServiceId,
+      serviceName: primaryServiceName,
+      selectedServiceIds,
+      selectedServiceNames
     };
   }
 

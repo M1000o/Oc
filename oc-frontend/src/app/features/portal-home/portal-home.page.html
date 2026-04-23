@@ -18,9 +18,32 @@
   @if (statusMessage) {
     <div class="feedback-banner" [class.success]="statusKind === 'success'">{{ statusMessage }}</div>
   }
+  @if (lastSubmittedOrderNumber) {
+    <div class="order-result-banner">
+      <span class="field-label">Ultima OC registrada</span>
+      <strong>{{ lastSubmittedOrderNumber }}</strong>
+    </div>
+  }
   <section class="summary-grid">
     <div class="summary-main">
       <div class="info-grid">
+        <article class="info-card">
+          <header>
+            <mat-icon aria-hidden="true">badge</mat-icon>
+            <h2>Orden de Compra</h2>
+          </header>
+          <div class="info-content">
+            <div>
+              <span class="field-label">Numero de OC</span>
+              <p class="field-main">{{ purchaseOrderLabel }}</p>
+              @if (purchaseOrderPreviewError) {
+                <p class="field-sub field-sub-error">{{ purchaseOrderPreviewError }}</p>
+              } @else {
+                <p class="field-sub">Se genera en backend y se confirma al finalizar la orden.</p>
+              }
+            </div>
+          </div>
+        </article>
         <article class="info-card">
           <header>
             <mat-icon aria-hidden="true">storefront</mat-icon>
@@ -41,53 +64,51 @@
             </div>
           </div>
         </article>
-        <!-- ...resto del contenido... -->
+        <article class="info-card">
+          <header>
+            <mat-icon aria-hidden="true">local_shipping</mat-icon>
+            <h2>Detalles de Entrega</h2>
+          </header>
 
-          <article class="info-card">
-            <header>
-              <mat-icon aria-hidden="true">local_shipping</mat-icon>
-              <h2>Detalles de Entrega</h2>
-            </header>
+          <div class="delivery-form">
+            <label>
+              <span>Fecha de Despacho</span>
+              <input
+                type="date"
+                [(ngModel)]="dispatchDate"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="persistSummaryDraft()"
+              />
+            </label>
 
-            <div class="delivery-form">
-              <label>
-                <span>Fecha de Despacho</span>
-                <input
-                  type="date"
-                  [(ngModel)]="dispatchDate"
-                  [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="persistSummaryDraft()"
-                />
-              </label>
+            <label>
+              <span>Sede Local</span>
+              <select
+                [(ngModel)]="deliverySite"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="persistSummaryDraft()"
+              >
+                <option value="Planta Central - Lima">Planta Central - Lima</option>
+                <option value="Almacen Norte - Trujillo">Almacen Norte - Trujillo</option>
+                <option value="Centro Sur - Arequipa">Centro Sur - Arequipa</option>
+              </select>
+            </label>
 
-              <label>
-                <span>Sede Local</span>
-                <select
-                  [(ngModel)]="deliverySite"
-                  [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="persistSummaryDraft()"
-                >
-                  <option value="Planta Central - Lima">Planta Central - Lima</option>
-                  <option value="Almacen Norte - Trujillo">Almacen Norte - Trujillo</option>
-                  <option value="Centro Sur - Arequipa">Centro Sur - Arequipa</option>
-                </select>
-              </label>
-
-              <label>
-                <span>Area de Recepcion</span>
-                <select
-                  [(ngModel)]="deliveryArea"
-                  [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="persistSummaryDraft()"
-                >
-                  <option value="Area de Recepcion Principal">Area de Recepcion Principal</option>
-                  <option value="Zona de Carga Liviana">Zona de Carga Liviana</option>
-                  <option value="Control de Calidad">Control de Calidad</option>
-                </select>
-              </label>
-            </div>
-          </article>
-        </div>
+            <label>
+              <span>Area de Recepcion</span>
+              <select
+                [(ngModel)]="deliveryArea"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="persistSummaryDraft()"
+              >
+                <option value="Area de Recepcion Principal">Area de Recepcion Principal</option>
+                <option value="Zona de Carga Liviana">Zona de Carga Liviana</option>
+                <option value="Control de Calidad">Control de Calidad</option>
+              </select>
+            </label>
+          </div>
+        </article>
+      </div>
 
         <section class="products-card">
           <header class="products-header">
@@ -177,7 +198,7 @@
               <strong>{{ formatCurrency(subtotalAmount) }}</strong>
             </div>
             <div>
-              <span>Impuestos (16%)</span>
+              <span>Impuestos (18%)</span>
               <strong>{{ formatCurrency(taxAmount) }}</strong>
             </div>
             <div>
@@ -191,8 +212,8 @@
             <p>{{ formatCurrency(totalAmount) }}</p>
           </div>
 
-          <button class="btn btn-emerald" type="button" (click)="saveOrder()">
-            Confirmar y Enviar
+          <button class="btn btn-emerald" type="button" (click)="saveOrder()" [disabled]="isSubmittingOrder">
+            {{ isSubmittingOrder ? 'Finalizando...' : 'Confirmar y Enviar' }}
             <mat-icon aria-hidden="true">send</mat-icon>
           </button>
         </section>
@@ -201,6 +222,7 @@
 
     <app-service-provider-modal
       *ngIf="showServiceProviderModal"
+      [lockedProviderSelection]="summaryProviderSelection"
       (closeRequest)="closeServiceProviderModal()"
       (providerSelected)="onProviderSelected($event)"
     ></app-service-provider-modal>

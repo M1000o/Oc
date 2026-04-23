@@ -10,6 +10,7 @@ export const environment = {
       services: '/api/v1/services',
       banks: '/api/v1/banks',
       products: '/api/v1/products',
+      purchaseOrders: '/api/v1/purchase-orders',
       supplierForm: '/api/v1/suppliers/form',
       activate: '/activate',
       setPassword: '/set-password',

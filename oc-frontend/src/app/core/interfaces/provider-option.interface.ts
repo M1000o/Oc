@@ -13,4 +13,6 @@ export interface ProviderSelection {
     providerId: number;
     providerName: string;
     providerRuc: string;
+    selectedServiceIds?: ServiceId[];
+    selectedServiceNames?: string[];
 }

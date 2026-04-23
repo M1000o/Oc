@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, HostListener, OnInit, Output, inject, signal, computed, DestroyRef } from '@angular/core';
+import { Component, EventEmitter, HostListener, OnInit, Output, inject, signal, computed, DestroyRef, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { switchMap, filter } from 'rxjs';
@@ -17,6 +17,8 @@ export class ServiceProviderModalComponent implements OnInit {
 
   private readonly svc = inject(ServiceProviderModal);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly lockedProviderSelection = input<ProviderSelection | null>(null);
 
   @Output() closeRequest = new EventEmitter<void>();
   @Output() providerSelected = new EventEmitter<ProviderSelection>();
@@ -44,14 +46,41 @@ export class ServiceProviderModalComponent implements OnInit {
     this.services().find(s => s.id === this.selectedServiceId())?.label ?? ''
   );
 
+  lockedProvider = computed(() => {
+    const selection = this.lockedProviderSelection();
+
+    if (!selection) {
+      return null;
+    }
+
+    return {
+      id: selection.providerId,
+      name: selection.providerName,
+      ruc: selection.providerRuc,
+      icon: 'store'
+    } satisfies ProviderOption;
+  });
+
+  lockedProviderAvailableForSelectedService = computed(() => {
+    const lockedProviderId = this.lockedProviderSelection()?.providerId ?? null;
+
+    if (lockedProviderId === null) {
+      return false;
+    }
+
+    return this.providers().some((provider) => provider.id === lockedProviderId);
+  });
+
   filteredProviders  = computed(() => {
     const search = this.searchTerm().toLocaleLowerCase().trim();
 
-    return this.providers().filter(provider =>
-      !search ||
-      provider.name.toLocaleLowerCase().includes(search) || 
-      provider.ruc.toLocaleLowerCase().includes(search)
-    );
+    return this.providers().filter(provider => {
+      return (
+        !search ||
+        provider.name.toLocaleLowerCase().includes(search) ||
+        provider.ruc.toLocaleLowerCase().includes(search)
+      );
+    });
   });
 
 
@@ -82,7 +111,14 @@ export class ServiceProviderModalComponent implements OnInit {
       this.services.set(data);
       this.servicesLoadError.set(error);
 
-      if(data.length) this.selectedServiceId.set(data[0].id);
+      if (data.length) {
+        const lockedServiceId = this.lockedProviderSelection()?.serviceId ?? null;
+        const defaultServiceId = lockedServiceId && data.some((service) => service.id === lockedServiceId)
+          ? lockedServiceId
+          : data[0].id;
+
+        this.selectedServiceId.set(defaultServiceId);
+      }
 
       this.setServicesLoading(false);
     });
@@ -111,12 +147,23 @@ export class ServiceProviderModalComponent implements OnInit {
 
     if(serviceId === null) return;
 
+    const lockedSelection = this.lockedProviderSelection();
+    const resolvedProvider = lockedSelection
+      ? {
+          id: lockedSelection.providerId,
+          name: lockedSelection.providerName,
+          ruc: lockedSelection.providerRuc
+        }
+      : provider;
+
     this.providerSelected.emit({
       serviceId,
       serviceName: this.selectedServiceName(),
-      providerId: provider.id,
-      providerName: provider.name,
-      providerRuc: provider.ruc
+      providerId: resolvedProvider.id,
+      providerName: resolvedProvider.name,
+      providerRuc: resolvedProvider.ruc,
+      selectedServiceIds: lockedSelection?.selectedServiceIds,
+      selectedServiceNames: lockedSelection?.selectedServiceNames
     });
   }
 

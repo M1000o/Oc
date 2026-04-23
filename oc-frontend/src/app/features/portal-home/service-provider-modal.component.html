@@ -44,7 +44,11 @@
         <div class="provider-panel-header">
           <div>
             <h3>Proveedores de {{ selectedServiceName() || 'un servicio' }}</h3>
-            <p>Selecciona un proveedor de la red autorizada</p>
+            @if (lockedProviderSelection(); as lockedSelection) {
+              <p>Solo puedes seguir agregando productos del proveedor {{ lockedSelection.providerName }}</p>
+            } @else {
+              <p>Selecciona un proveedor de la red autorizada</p>
+            }
           </div>
 
           <label class="search-box" aria-label="Buscar proveedor">
@@ -92,12 +96,34 @@
                   </div>
                 </div>
 
-                <button class="select-provider-btn" type="button" (click)="selectProvider(provider)">Seleccionar</button>
+                <button
+                  class="select-provider-btn"
+                  type="button"
+                  (click)="selectProvider(provider)"
+                  [disabled]="lockedProviderSelection() !== null && provider.id !== lockedProviderSelection()!.providerId"
+                >
+                  Seleccionar
+                </button>
               </article>
             }
 
             @if(!providersLoadError() && !filteredProviders().length && selectedServiceId() !== null && !providersLoading()){
-              <p class="empty-state">No hay proveedores que coincidan con tu busqueda.</p>
+              @if (lockedProviderSelection(); as lockedSelection) {
+                <p class="empty-state">El proveedor {{ lockedSelection.providerName }} no esta disponible para este servicio.</p>
+              } @else {
+                <p class="empty-state">No hay proveedores que coincidan con tu busqueda.</p>
+              }
+            }
+
+            @if (
+              lockedProviderSelection() !== null &&
+              !lockedProviderAvailableForSelectedService() &&
+              filteredProviders().length &&
+              !providersLoadError() &&
+              selectedServiceId() !== null &&
+              !providersLoading()
+            ) {
+              <p class="empty-state">El proveedor {{ lockedProviderSelection()!.providerName }} no esta disponible para este servicio.</p>
             }
   
             @if(providersLoadError() && selectedServiceId() !== null){

@@ -33,6 +33,7 @@ export class ProductSelectionModalComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly providerSelection = input<ProviderSelection | null>(null);
+  readonly initialSelections = input<ProductSelectionItem[]>([]);
 
   @Output() closeRequest = new EventEmitter<void>();
   @Output() productsConfirmed = new EventEmitter<ProductSelectionItem[]>();
@@ -78,7 +79,9 @@ export class ProductSelectionModalComponent {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(({ data, error }) => {
-        this.products.set(data.map((product) => this.toProductRow(product)));
+        this.products.set(
+          data.map((product) => this.toProductRow(product, this.initialSelections()))
+        );
         this.productsLoadError.set(error);
         this.productsLoading.set(false);
       });
@@ -145,14 +148,20 @@ export class ProductSelectionModalComponent {
     return this.products().find((product) => product.id === productId)?.quantity ?? 0;
   }
 
-  private toProductRow(product: ProductResponse): ProductRow {
+  private toProductRow(
+    product: ProductResponse,
+    initialSelections: ProductSelectionItem[]
+  ): ProductRow {
+    const sku = `${product.id}`.padStart(3, '0');
+    const existingSelection = initialSelections.find((item) => item.sku === sku);
+
     return {
       id: product.id,
-      sku: `${product.id}`.padStart(3, '0'),
+      sku,
       name: product.nombre,
       unit: 'UN',
       unitPrice: this.toNumber(product.precio),
-      quantity: 0
+      quantity: existingSelection?.quantity ?? 0
     };
   }
 

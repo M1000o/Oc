@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { PortalFooterComponent } from './portal-footer.component';
-import { PortalHeaderComponent } from './portal-header.component';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { AuthService } from '../../core/auth/auth.service';
 import { PortalSidebarComponent } from './portal-sidebar.component';
+import { PortalHeaderComponent } from './portal-header.component';
+import { PortalFooterComponent } from './portal-footer.component';
 
 @Component({
   selector: 'app-portal-layout',
   imports: [
     CommonModule,
+    RouterOutlet,
     PortalSidebarComponent,
     PortalHeaderComponent,
     PortalFooterComponent
@@ -18,6 +21,7 @@ import { PortalSidebarComponent } from './portal-sidebar.component';
 export class PortalLayoutComponent {
   @Input({ required: true }) title = '';
   @Output() logoutRequest = new EventEmitter<void>();
+  private readonly authService = inject(AuthService);
 
   protected sidebarVisible = true;
   protected readonly currentYear = new Date().getFullYear();
@@ -37,6 +41,6 @@ export class PortalLayoutComponent {
   }
 
   protected onLogoutClick(): void {
-    this.logoutRequest.emit();
+    this.authService.logout();
   }
 }

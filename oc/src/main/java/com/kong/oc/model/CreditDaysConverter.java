@@ -1,6 +1,7 @@
 package com.kong.oc.model;
 
 import com.kong.oc.common.exception.BadRequestException;
+import com.kong.oc.dto.CreditDays;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

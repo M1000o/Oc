@@ -60,6 +60,16 @@ export const routes: Routes = [
         canActivate: [nonProviderGuard],
         loadComponent: () => import('./features/sent-orders/sent-orders.page').then((m) => m.SentOrdersPage)
       },
+      {
+        path: 'productos',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/productos-registration/productos-registration').then((m) => m.ProductosRegistration)
+      },
+      {
+        path: 'proveedores',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/proveedores/proveedores').then((m) => m.Proveedores)
+      }
        // ...otras rutas hijas protegidas
     ]
   },

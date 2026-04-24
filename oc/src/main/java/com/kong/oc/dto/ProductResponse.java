@@ -8,8 +8,9 @@ public record ProductResponse(
         String nombre,
         BigDecimal precio,
         Long proveedorId,
-        String und_medida,
         String proveedorRuc,
+        String proveedorName,
+        String und_medida,
         Long servicioId,
         String servicioNombre
 ) {

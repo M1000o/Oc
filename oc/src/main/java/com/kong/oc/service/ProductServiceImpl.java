@@ -136,7 +136,7 @@ public class ProductServiceImpl implements IProductService {
         }
 
         productRepository.findByCodigoProductoIgnoreCaseAndIsDeletedFalse(normalizedProductCode)
-                .filter(existing -> currentProductId == null || !existing.getId().equals(currentProductId))
+                .filter(existing -> !existing.getId().equals(currentProductId))
                 .ifPresent(existing -> {
                     throw new BadRequestException("El codigo del producto ya existe");
                 });
@@ -156,8 +156,9 @@ public class ProductServiceImpl implements IProductService {
                 p.getNombre(),
                 p.getPrecio(),
                 p.getProveedor() == null ? null : p.getProveedor().getId(),
-                p.getUnd_medida() == null ? null : p.getUnd_medida().name(),
                 p.getProveedor() == null ? null : p.getProveedor().getRuc(),
+                p.getProveedor() == null ? null : p.getProveedor().getRazonSocial(),
+                p.getUnd_medida() == null ? null : p.getUnd_medida().name(),
                 p.getServicio() == null ? null : p.getServicio().getId(),
                 p.getServicio() == null ? null : p.getServicio().getNombre()
         );

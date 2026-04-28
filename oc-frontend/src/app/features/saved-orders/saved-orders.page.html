@@ -1,86 +1,103 @@
 <div layoutBody class="workspace-canvas">
   <section class="page-header">
     <h1>Ver Pedidos Guardados</h1>
-    <p>Gestiona y revisa tus pedidos que aun no han sido enviados.</p>
+    <p>Gestiona y revisa tus pedidos en estado borrador antes de enviarlos.</p>
   </section>
   <section class="saved-orders-card">
     <div class="list-header">
       <div>FECHA</div>
-      <div>RESUMEN DE ITEMS</div>
+      <div>PROVEEDOR / DESTINO</div>
       <div>ESTADO</div>
       <div class="align-right">ACCIONES</div>
     </div>
     <div class="orders-list">
-      @for (order of pagedOrders(); track order.id) {
-        <article class="order-row">
-          <div class="col date-col">
-            <strong>{{ order.date }}</strong>
-            <small>{{ order.time }}</small>
-          </div>
-          <div class="col summary-col">
-            <p>{{ order.summary }}</p>
-            <small>Ref: {{ order.reference }}</small>
-          </div>
-          <div class="col status-col">
-            <span class="status-chip">
-              <span class="status-dot"></span>
-              {{ order.status }}
-            </span>
-          </div>
-          <div class="col action-col">
-                <button class="mini-btn edit" type="button" (click)="editOrder(order)">
-                  <mat-icon aria-hidden="true">edit</mat-icon>
-                  Editar
-                </button>
-                <button class="mini-btn delete" type="button" (click)="deleteOrder(order.id)">
-                  <mat-icon aria-hidden="true">delete</mat-icon>
-                  Eliminar
-                </button>
-              </div>
-            </article>
-          } @empty {
-            <div class="empty-state">
-              <mat-icon aria-hidden="true">bookmark_remove</mat-icon>
-              <p>No se encontraron pedidos guardados con ese criterio de busqueda.</p>
-            </div>
-          }
+      @if (isLoading()) {
+        <div class="empty-state">
+          <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+          <p>Cargando pedidos guardados...</p>
         </div>
-
-        <footer class="pager">
-          <span>{{ rangeLabel() }}</span>
-
-          <div class="pager-controls">
-            <button
-              class="pager-btn"
-              type="button"
-              (click)="previousPage()"
-              [disabled]="currentPage() === 1"
-              aria-label="Pagina anterior"
-            >
-              <mat-icon aria-hidden="true">chevron_left</mat-icon>
-            </button>
-
-            @for (page of pageNumbers(); track page) {
-              <button
-                class="pager-number"
-                type="button"
-                [class.active]="currentPage() === page"
-                (click)="goToPage(page)"
-              >
-                {{ page }}
+      } @else if (errorMessage()) {
+        <div class="empty-state">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      } @else {
+        @for (order of pagedOrders(); track order.id) {
+          <article class="order-row">
+            <div class="col date-col">
+              <strong>{{ order.date }}</strong>
+              <small>{{ order.reference }}</small>
+            </div>
+            <div class="col summary-col">
+              <p>{{ order.supplierName }}</p>
+              <small>{{ order.destination }}</small>
+            </div>
+            <div class="col status-col">
+              <span class="status-chip">
+                <span class="status-dot"></span>
+                {{ order.status }}
+              </span>
+            </div>
+            <div class="col action-col">
+              <button class="mini-btn edit" type="button" (click)="editOrder(order)">
+                <mat-icon aria-hidden="true">edit</mat-icon>
+                Editar
               </button>
-            }
-
-            <button
-              class="pager-btn"
-              type="button"
-              (click)="nextPage()"
-              [disabled]="currentPage() === totalPages()"
-              aria-label="Pagina siguiente"
-            >
-              <mat-icon aria-hidden="true">chevron_right</mat-icon>
-            </button>
+              <button
+                class="mini-btn delete"
+                type="button"
+                (click)="deleteOrder(order.id)"
+                [disabled]="isCancellingOrderId() === order.id"
+              >
+                <mat-icon aria-hidden="true">delete</mat-icon>
+                {{ isCancellingOrderId() === order.id ? 'Eliminando...' : 'Eliminar' }}
+              </button>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <mat-icon aria-hidden="true">bookmark_remove</mat-icon>
+            <p>No hay pedidos guardados disponibles.</p>
           </div>
-        </footer>
-      </section>
-  </div>
+        }
+      }
+    </div>
+
+    <footer class="pager">
+      <span>{{ rangeLabel() }}</span>
+
+      <div class="pager-controls">
+        <button
+          class="pager-btn"
+          type="button"
+          (click)="previousPage()"
+          [disabled]="currentPage() === 1"
+          aria-label="Pagina anterior"
+        >
+          <mat-icon aria-hidden="true">chevron_left</mat-icon>
+        </button>
+
+        @for (page of pageNumbers(); track page) {
+          <button
+            class="pager-number"
+            type="button"
+            [class.active]="currentPage() === page"
+            (click)="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+        }
+
+        <button
+          class="pager-btn"
+          type="button"
+          (click)="nextPage()"
+          [disabled]="currentPage() === totalPages()"
+          aria-label="Pagina siguiente"
+        >
+          <mat-icon aria-hidden="true">chevron_right</mat-icon>
+        </button>
+      </div>
+    </footer>
+  </section>
+</div>

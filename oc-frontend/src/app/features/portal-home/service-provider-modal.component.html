@@ -11,6 +11,17 @@
       <aside class="service-panel">
         <h3>SERVICIO</h3>
 
+        <label class="search-box search-box--service" aria-label="Buscar servicio">
+          <mat-icon aria-hidden="true">search</mat-icon>
+          <input
+            type="text"
+            placeholder="Buscar servicio..."
+            [ngModel]="serviceSearchTerm()"
+            (ngModelChange)="serviceSearchTerm.set($event)"
+            [disabled]="servicesLoading() || !services().length"
+          />
+        </label>
+
         @if(servicesLoadingDelayed()){
           <div class="skeleton-grid">
             @for(i of [1,2,3,4]; track i){
@@ -21,9 +32,11 @@
           <p class="empty-state">{{ servicesLoadError() }}</p>
         } @else if(!services().length){
           <p class="empty-state">No hay servicios disponibles.</p>
+        } @else if(!filteredServices().length){
+          <p class="empty-state">No hay servicios que coincidan con tu busqueda.</p>
         } @else {
           <div class="service-grid">
-            @for(service of services(); track service.id){
+            @for(service of filteredServices(); track service.id){
               <button
                 class="service-card"
                 type="button"

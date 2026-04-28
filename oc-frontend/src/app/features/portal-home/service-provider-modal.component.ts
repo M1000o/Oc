@@ -24,6 +24,7 @@ export class ServiceProviderModalComponent implements OnInit {
   @Output() providerSelected = new EventEmitter<ProviderSelection>();
 
   searchTerm = signal('');
+  serviceSearchTerm = signal('');
   selectedServiceId = signal<ServiceId | null >(null);
 
   services = signal<ServiceOption[]>([]);
@@ -80,6 +81,14 @@ export class ServiceProviderModalComponent implements OnInit {
         provider.name.toLocaleLowerCase().includes(search) ||
         provider.ruc.toLocaleLowerCase().includes(search)
       );
+    });
+  });
+
+  filteredServices = computed(() => {
+    const search = this.serviceSearchTerm().toLocaleLowerCase().trim();
+
+    return this.services().filter((service) => {
+      return !search || service.label.toLocaleLowerCase().includes(search);
     });
   });
 

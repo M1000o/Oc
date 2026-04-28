@@ -83,6 +83,11 @@
   color: #5b6478;
 }
 
+.search-box--service {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
 .service-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

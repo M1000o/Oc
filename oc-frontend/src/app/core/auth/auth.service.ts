@@ -179,6 +179,7 @@ export class AuthService {
       'preferred_username',
       'unique_name',
       'username',
+      'user',
       'email',
       'sub'
     ]);

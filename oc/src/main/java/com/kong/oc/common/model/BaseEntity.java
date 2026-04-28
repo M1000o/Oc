@@ -26,7 +26,7 @@ public class BaseEntity {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        this.isDeleted = this.isDeleted != null && this.isDeleted;
+        if(this.isDeleted == null) this.isDeleted = false;
     }
 
     @PreUpdate

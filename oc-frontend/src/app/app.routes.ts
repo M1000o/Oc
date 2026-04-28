@@ -69,6 +69,11 @@ export const routes: Routes = [
         path: 'proveedores',
         canActivate: [nonProviderGuard],
         loadComponent: () => import('./features/proveedores/proveedores').then((m) => m.Proveedores)
+      },
+      {
+        path: 'proveedores/:id',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/proveedores/proveedores').then((m) => m.Proveedores)
       }
        // ...otras rutas hijas protegidas
     ]

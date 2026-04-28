@@ -16,4 +16,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByServicioAndProveedorAndIsDeletedFalse(Services servicio, Supplier proveedor);
     List<Product> findByIsDeletedFalse();
     Optional<Product> findByCodigoProductoIgnoreCaseAndIsDeletedFalse(String codigoProducto);
+    long countByProveedorAndIsDeletedFalse(Supplier proveedor);
 }

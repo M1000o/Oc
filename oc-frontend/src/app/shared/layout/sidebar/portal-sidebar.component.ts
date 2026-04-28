@@ -84,7 +84,7 @@ export class PortalSidebarComponent {
             label: 'Proveedores',
             icon: 'folder_shared',
             route: '/portal/proveedores',
-            exact: true
+            exact: false
           }
         ]
       }

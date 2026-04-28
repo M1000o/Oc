@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   PurchaseOrderRequest,
@@ -12,6 +13,9 @@ import {
   OrderSummaryDraftService,
   OrderSummaryDraftState
 } from '../../core/services/order-summary-draft.service';
+import { ProductResponse } from '../../core/interfaces/product-response.interface';
+import { AppNotificationService } from '../../core/services/app-notification.service';
+import { ProductCatalogService } from '../../core/services/product-catalog.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { PortalLayoutComponent } from '../../shared/layout/portal-layout.component';
 import { ServiceProviderModalComponent } from './service-provider-modal.component';
@@ -24,6 +28,7 @@ import {
 
 interface OrderRow {
   id: number;
+  productId: number;
   code: string;
   description: string;
   unit: UnitOption;
@@ -59,6 +64,8 @@ export class PortalHomePage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly draftService = inject(OrderSummaryDraftService);
+  private readonly notificationService = inject(AppNotificationService);
+  private readonly productCatalogService = inject(ProductCatalogService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
   private readonly validUnits: UnitOption[] = ['KG', 'UND', 'PAQ', 'DOC', 'GR', 'UN', 'CJ'];
   private readonly taxRate = 0.18;
@@ -70,19 +77,17 @@ export class PortalHomePage {
   });
 
   private nextRowId = 1;
-  private statusTimeoutId?: number;
+  private currentEditingOrderId: number | null = null;
 
   protected orderDate = this.toDateInputValue(new Date());
   protected dispatchDate = this.toDateInputValue(this.addDays(new Date(), 2));
   protected deliverySite = 'Planta Central - Lima';
   protected deliveryArea = 'Area de Recepcion Principal';
   protected notes = '';
-  protected statusMessage = '';
-  protected statusKind: 'success' | 'error' | '' = '';
-  protected purchaseOrderNumber = '';
   protected purchaseOrderPreviewError = '';
   protected isLoadingPurchaseOrderNumber = false;
   protected isSubmittingOrder = false;
+  protected isLoadingDraftOrder = false;
   protected lastSubmittedOrderNumber = '';
   protected showServiceProviderModal = false;
   protected showProductSelectionModal = false;
@@ -93,6 +98,7 @@ export class PortalHomePage {
   constructor() {
     this.restoreSummaryState();
     this.handleStartSelectionRequest();
+    this.handleDraftEditRequest();
     window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
   ngOnDestroy(): void {
@@ -137,22 +143,6 @@ export class PortalHomePage {
     return this.summaryProviderSelection?.serviceName ?? 'Sin servicio asociado';
   }
 
-  protected get purchaseOrderLabel(): string {
-    if (this.purchaseOrderNumber) {
-      return this.purchaseOrderNumber;
-    }
-
-    if (this.isLoadingPurchaseOrderNumber) {
-      return 'Generando...';
-    }
-
-    if (this.purchaseOrderPreviewError) {
-      return 'No disponible';
-    }
-
-    return 'Pendiente de generacion';
-  }
-
   protected get initialProductSelections(): ProductSelectionItem[] {
     if (
       !this.currentProviderSelection ||
@@ -164,7 +154,8 @@ export class PortalHomePage {
 
     return this.summaryRows
       .filter((row) => row.serviceId === this.currentProviderSelection?.serviceId)
-      .map(({ code, description, unit, unitPrice, quantity, serviceId, serviceName }) => ({
+      .map(({ productId, code, description, unit, unitPrice, quantity, serviceId, serviceName }) => ({
+        productId,
         sku: code,
         name: description,
         unit,
@@ -173,11 +164,6 @@ export class PortalHomePage {
         serviceId,
         serviceName
       }));
-  }
-
-  protected logout(): void {
-    this.clearPersistedSummaryState();
-    this.authService.logout();
   }
 
   confirmDiscardDraft(): boolean {
@@ -252,6 +238,7 @@ export class PortalHomePage {
     const rowsByService = this.rows.filter((row) => row.serviceId !== currentSelection.serviceId);
     const nextRows = items.map((item) => ({
       id: this.findExistingRowId(currentSelection.serviceId, item.sku),
+      productId: item.productId,
       code: item.sku,
       description: item.name,
       unit: item.unit,
@@ -269,7 +256,6 @@ export class PortalHomePage {
     this.showProductSelectionModal = false;
     this.currentProviderSelection = null;
     this.persistSummaryState();
-    this.ensurePurchaseOrderNumber();
     this.showStatus(
       'success',
       `Se agregaron ${items.length} producto(s)${providerName ? ` del proveedor ${providerName}` : ''}${serviceName ? ` para ${serviceName}` : ''}.`
@@ -292,7 +278,6 @@ export class PortalHomePage {
     this.rows = this.rows.filter((row) => row.id !== rowId);
     this.syncSummaryProviderSelection();
     this.persistSummaryState();
-    this.syncPurchaseOrderPreviewState();
     this.showStatus('success', 'Item eliminado del resumen.');
   }
 
@@ -317,11 +302,12 @@ export class PortalHomePage {
     this.deliverySite = 'Planta Central - Lima';
     this.deliveryArea = 'Area de Recepcion Principal';
     this.notes = '';
-    this.purchaseOrderNumber = '';
     this.purchaseOrderPreviewError = '';
     this.lastSubmittedOrderNumber = '';
     this.isLoadingPurchaseOrderNumber = false;
     this.isSubmittingOrder = false;
+    this.isLoadingDraftOrder = false;
+    this.currentEditingOrderId = null;
     this.rows = [];
     this.showServiceProviderModal = false;
     this.showProductSelectionModal = false;
@@ -332,48 +318,11 @@ export class PortalHomePage {
   }
 
   protected saveOrder(): void {
-    if (!this.summaryRows.length) {
-      this.showStatus(
-        'error',
-        'Selecciona productos con cantidad mayor a cero antes de confirmar el pedido.'
-      );
-      return;
-    }
+    this.submitOrder(false);
+  }
 
-    if (!this.summaryProviderSelection) {
-      this.showStatus('error', 'Selecciona un proveedor antes de finalizar la orden de compra.');
-      return;
-    }
-
-    const request: PurchaseOrderRequest = {
-      purchaseOrderNumber: this.purchaseOrderNumber || undefined,
-      servicioId: this.summaryProviderSelection.selectedServiceIds?.[0] ?? this.summaryProviderSelection.serviceId,
-      servicioIds: this.summaryProviderSelection.selectedServiceIds?.length
-        ? this.summaryProviderSelection.selectedServiceIds
-        : [this.summaryProviderSelection.serviceId],
-      proveedorId: this.summaryProviderSelection.providerId,
-      fechaEntrega: this.dispatchDate,
-      local: this.deliverySite.trim(),
-      area: this.deliveryArea.trim(),
-      status: 'PENDIENTE',
-      details: this.summaryRows.map((row) => ({
-        descripcion: row.description.trim(),
-        cantidad: row.quantity
-      })),
-      notas: this.notes.trim() || undefined
-    };
-
-    this.isSubmittingOrder = true;
-    this.purchaseOrderService.createPurchaseOrder(request).subscribe(({ data, error }) => {
-      this.isSubmittingOrder = false;
-
-      if (error || !data) {
-        this.showStatus('error', error || 'No se pudo finalizar la orden de compra.');
-        return;
-      }
-
-      this.handleOrderCreated(data);
-    });
+  protected saveDraft(): void {
+    this.submitOrder(true);
   }
 
   protected rowSubtotal(row: OrderRow): number {
@@ -433,7 +382,6 @@ export class PortalHomePage {
         : nextByRows;
 
     this.nextRowId = Math.max(nextByRows, restoredNext);
-    this.ensurePurchaseOrderNumber();
   }
 
   private clearPersistedSummaryState(): void {
@@ -446,6 +394,15 @@ export class PortalHomePage {
 
   private hasOrderSummaryReady(): boolean {
     return this.summaryRows.length > 0 && this.summaryProviderSelection !== null;
+  }
+
+  private handleDraftEditRequest(): void {
+    const draftId = this.toPositiveInt(this.route.snapshot.queryParamMap.get('draftId'));
+    if (!draftId) {
+      return;
+    }
+
+    this.loadDraftOrder(draftId);
   }
 
   private handleStartSelectionRequest(): void {
@@ -464,44 +421,209 @@ export class PortalHomePage {
     });
   }
 
-  private ensurePurchaseOrderNumber(): void {
-    if (!this.hasOrderSummaryReady() || this.purchaseOrderNumber || this.isLoadingPurchaseOrderNumber) {
-      return;
-    }
+  private loadDraftOrder(orderId: number): void {
+    this.isLoadingDraftOrder = true;
+    this.currentEditingOrderId = orderId;
 
-    this.purchaseOrderPreviewError = '';
-    this.isLoadingPurchaseOrderNumber = true;
+    this.purchaseOrderService
+      .getPurchaseOrder(orderId)
+      .pipe(
+        switchMap(({ data, error }) => {
+          if (error || !data) {
+            return of({
+              order: null,
+              products: [] as ProductResponse[],
+              error: error || 'No se pudo cargar el borrador.'
+            });
+          }
 
-    this.purchaseOrderService.previewNextPurchaseOrderNumber().subscribe(({ data, error }) => {
-      this.isLoadingPurchaseOrderNumber = false;
+          if (data.status !== 'BORRADOR') {
+            return of({
+              order: null,
+              products: [] as ProductResponse[],
+              error: 'Solo se pueden editar órdenes en estado BORRADOR.'
+            });
+          }
 
-      if (error) {
-        this.purchaseOrderPreviewError = error;
-        return;
-      }
+          return this.productCatalogService.listProductsBySupplier(data.supplierId).pipe(
+            map((response) => ({
+              order: data,
+              products: response.data ?? [],
+              error: ''
+            })),
+            catchError(() =>
+              of({
+                order: data,
+                products: [] as ProductResponse[],
+                error: ''
+              })
+            )
+          );
+        })
+      )
+      .subscribe(({ order, products, error }) => {
+        this.isLoadingDraftOrder = false;
 
-      this.purchaseOrderNumber = data;
+        if (error || !order) {
+          this.currentEditingOrderId = null;
+          this.showStatus('error', error || 'No se pudo cargar el borrador.');
+          this.clearDraftQueryParams();
+          return;
+        }
+
+        this.applyLoadedDraft(order, products);
+      });
+  }
+
+  private applyLoadedDraft(order: PurchaseOrderResponse, products: ProductResponse[]): void {
+    const productMap = new Map(products.map((product) => [product.id, product]));
+    const nextRows: OrderRow[] = order.details.map((detail, index) => {
+      const product = productMap.get(detail.productoId);
+
+      return {
+        id: index + 1,
+        productId: detail.productoId,
+        code: detail.codigoProducto,
+        description: detail.nombreProducto,
+        unit: this.toUnitOption(detail.unidadMedida),
+        unitPrice: this.toNonNegativeNumber(detail.precioUnitario),
+        quantity: this.toPositiveInt(detail.cantidad),
+        serviceId: product?.servicioId ?? 0,
+        serviceName: product?.servicioNombre ?? ''
+      };
+    });
+
+    const selectedServiceIds = Array.from(
+      new Set(nextRows.map((row) => row.serviceId).filter((serviceId) => serviceId > 0))
+    );
+    const selectedServiceNames = Array.from(
+      new Set(nextRows.map((row) => row.serviceName.trim()).filter((serviceName) => serviceName.length > 0))
+    );
+
+    this.orderDate = this.normalizeDateValue(order.orderDate, this.orderDate);
+    this.dispatchDate = this.normalizeDateValue(order.deliveryDate, this.dispatchDate);
+    this.deliverySite = order.sede;
+    this.deliveryArea = order.area;
+    this.notes = order.notas ?? '';
+    this.rows = nextRows;
+    this.summaryProviderSelection = {
+      serviceId: selectedServiceIds[0] ?? 0,
+      serviceName: selectedServiceNames[0] ?? '',
+      providerId: order.supplierId,
+      providerName: order.supplierName,
+      providerRuc: order.supplierRuc,
+      selectedServiceIds,
+      selectedServiceNames
+    };
+    this.nextRowId = nextRows.length ? Math.max(...nextRows.map((row) => row.id)) + 1 : 1;
+    this.persistSummaryState();
+    this.showStatus('success', `Borrador ${order.purchaseOrderNumber} cargado para edición.`);
+  }
+
+  private clearDraftQueryParams(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        draftId: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
   }
 
-  private syncPurchaseOrderPreviewState(): void {
-    if (this.hasOrderSummaryReady()) {
-      this.ensurePurchaseOrderNumber();
+  private handleOrderSaved(order: PurchaseOrderResponse): void {
+    this.handleOrderPersisted(order, false);
+  }
+
+  private submitOrder(saveDraft: boolean): void {
+    const validationError = this.getOrderValidationError(saveDraft);
+    if (validationError) {
+      this.showStatus('error', validationError);
       return;
     }
 
-    this.purchaseOrderNumber = '';
-    this.purchaseOrderPreviewError = '';
+    const request = this.buildPurchaseOrderRequest(saveDraft);
+    if (!request) {
+      this.showStatus('error', 'No se pudo preparar la orden de compra.');
+      return;
+    }
+
+    this.isSubmittingOrder = true;
+    const request$ = this.currentEditingOrderId
+      ? this.purchaseOrderService.updatePurchaseOrder(this.currentEditingOrderId, request)
+      : this.purchaseOrderService.createPurchaseOrder(request);
+
+    request$.subscribe(({ data, error }) => {
+      this.isSubmittingOrder = false;
+
+      if (error || !data) {
+        this.showStatus(
+          'error',
+          error ||
+            (saveDraft
+              ? 'No se pudo guardar el borrador de la orden de compra.'
+              : 'No se pudo finalizar la orden de compra.')
+        );
+        return;
+      }
+
+      this.handleOrderPersisted(data, saveDraft);
+    });
   }
 
-  private handleOrderCreated(order: PurchaseOrderResponse): void {
-    const createdOrderNumber = order.purchaseOrderNumber;
+  private getOrderValidationError(saveDraft: boolean): string {
+    if (!this.summaryRows.length) {
+      return saveDraft
+        ? 'Selecciona productos con cantidad mayor a cero antes de guardar el borrador.'
+        : 'Selecciona productos con cantidad mayor a cero antes de confirmar el pedido.';
+    }
+
+    if (!this.summaryProviderSelection) {
+      return saveDraft
+        ? 'Selecciona un proveedor antes de guardar el borrador de la orden de compra.'
+        : 'Selecciona un proveedor antes de finalizar la orden de compra.';
+    }
+
+    return '';
+  }
+
+  private buildPurchaseOrderRequest(saveDraft: boolean): PurchaseOrderRequest | null {
+    if (!this.summaryProviderSelection) {
+      return null;
+    }
+
+    return {
+      supplierId: this.summaryProviderSelection.providerId,
+      orderDate: this.orderDate,
+      deliveryDate: this.dispatchDate,
+      sede: this.deliverySite.trim(),
+      area: this.deliveryArea.trim(),
+      saveDraft,
+      details: this.summaryRows.map((row) => ({
+        productId: row.productId,
+        cantidad: row.quantity,
+        precioUnitario: row.unitPrice
+      })),
+      notas: this.notes.trim() || undefined
+    };
+  }
+
+  private handleOrderPersisted(order: PurchaseOrderResponse, saveDraft: boolean): void {
+    const savedOrderNumber = order.purchaseOrderNumber;
+    const wasEditing = this.currentEditingOrderId !== null;
 
     this.resetOrder();
-    this.lastSubmittedOrderNumber = createdOrderNumber;
+    this.lastSubmittedOrderNumber = savedOrderNumber;
+    this.clearDraftQueryParams();
     this.showStatus(
       'success',
-      `Orden de compra ${createdOrderNumber} creada correctamente con ${order.details.length} item(s).`
+      saveDraft
+        ? wasEditing
+          ? `Borrador ${savedOrderNumber} actualizado correctamente con ${order.details.length} item(s).`
+          : `Borrador ${savedOrderNumber} guardado correctamente con ${order.details.length} item(s).`
+        : wasEditing
+          ? `Borrador ${savedOrderNumber} actualizado y enviado correctamente con ${order.details.length} item(s).`
+          : `Orden de compra ${savedOrderNumber} creada correctamente con ${order.details.length} item(s).`
     );
   }
 
@@ -534,6 +656,7 @@ export class PortalHomePage {
 
     return {
       id,
+      productId: this.toPositiveInt(row.productId),
       code: typeof row.code === 'string' ? row.code : '',
       description,
       unit,
@@ -627,7 +750,7 @@ export class PortalHomePage {
 
     if (!remainingRows.length) {
       this.summaryProviderSelection = null;
-      this.purchaseOrderNumber = '';
+      //this.purchaseOrderNumber = '';
       this.purchaseOrderPreviewError = '';
       return;
     }
@@ -668,12 +791,21 @@ export class PortalHomePage {
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
   }
 
+  private toUnitOption(value: unknown): UnitOption {
+    const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+    return this.isUnitOption(normalized) ? normalized : 'UND';
+  }
+
   private isUnitOption(value: unknown): value is UnitOption {
     return typeof value === 'string' && this.validUnits.includes(value as UnitOption);
   }
 
   private isDateInput(value: unknown): value is string {
     return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  }
+
+  private normalizeDateValue(value: string, fallback: string): string {
+    return this.isDateInput(value) ? value : fallback;
   }
 
   private addDays(baseDate: Date, days: number): Date {
@@ -690,20 +822,15 @@ export class PortalHomePage {
   }
 
   private showStatus(kind: 'success' | 'error', message: string): void {
-    this.statusKind = kind;
-    this.statusMessage = message;
-
-    if (this.statusTimeoutId) {
-      window.clearTimeout(this.statusTimeoutId);
+    if (kind === 'success') {
+      this.notificationService.success(message, 4200);
+      return;
     }
 
-    this.statusTimeoutId = window.setTimeout(() => {
-      this.clearStatus();
-    }, 4200);
+    this.notificationService.error(message, 4200);
   }
 
   private clearStatus(): void {
-    this.statusKind = '';
-    this.statusMessage = '';
+    this.notificationService.dismiss();
   }
 }

@@ -10,40 +10,14 @@
       <button class="btn btn-secondary" type="button" (click)="reopenSelection()">
         Volver a Selección
       </button>
-      <button class="btn btn-primary" type="button" (click)="saveOrder()">
-        Confirmar Pedido
+      <button class="btn btn-primary" type="button" (click)="saveDraft()" [disabled]="isSubmittingOrder">
+        {{ isSubmittingOrder ? 'Guardando...' : 'Guardar Borrador' }}
       </button>
     </div>
   </section>
-  @if (statusMessage) {
-    <div class="feedback-banner" [class.success]="statusKind === 'success'">{{ statusMessage }}</div>
-  }
-  @if (lastSubmittedOrderNumber) {
-    <div class="order-result-banner">
-      <span class="field-label">Ultima OC registrada</span>
-      <strong>{{ lastSubmittedOrderNumber }}</strong>
-    </div>
-  }
   <section class="summary-grid">
     <div class="summary-main">
       <div class="info-grid">
-        <article class="info-card">
-          <header>
-            <mat-icon aria-hidden="true">badge</mat-icon>
-            <h2>Orden de Compra</h2>
-          </header>
-          <div class="info-content">
-            <div>
-              <span class="field-label">Numero de OC</span>
-              <p class="field-main">{{ purchaseOrderLabel }}</p>
-              @if (purchaseOrderPreviewError) {
-                <p class="field-sub field-sub-error">{{ purchaseOrderPreviewError }}</p>
-              } @else {
-                <p class="field-sub">Se genera en backend y se confirma al finalizar la orden.</p>
-              }
-            </div>
-          </div>
-        </article>
         <article class="info-card">
           <header>
             <mat-icon aria-hidden="true">storefront</mat-icon>

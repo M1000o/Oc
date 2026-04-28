@@ -586,22 +586,6 @@
   transform: none;
 }
 
-.feedback-banner {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e4c9c9;
-  background: #fff3f3;
-  color: #8f4242;
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-
-.feedback-banner.success {
-  border-color: #bfe8d8;
-  background: #edfbf5;
-  color: #196649;
-}
-
 @media (max-width: 1120px) {
   .summary-grid {
     grid-template-columns: 1fr;

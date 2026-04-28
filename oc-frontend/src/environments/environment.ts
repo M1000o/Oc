@@ -8,6 +8,7 @@ export const environment = {
       refresh: '/api/v1/auth/refresh',
       logout: '/api/v1/auth/logout',
       services: '/api/v1/services',
+      suppliers: '/api/v1/suppliers',
       banks: '/api/v1/banks',
       products: '/api/v1/products',
       purchaseOrders: '/api/v1/purchase-orders',

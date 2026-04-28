@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  LOCALE_ID,
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection
 } from '@angular/core';
@@ -11,6 +12,7 @@ import { jwtInterceptor } from './core/auth/jwt.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: LOCALE_ID, useValue: 'es-PE' },
     provideHttpClient(withInterceptors([jwtInterceptor])),
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),

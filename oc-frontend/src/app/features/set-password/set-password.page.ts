@@ -3,16 +3,13 @@ import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { AppNotificationService } from '../../core/services/app-notification.service';
 import { AuthService } from '../../core/auth/auth.service';
-
-interface StatusMessage {
-  type: 'success' | 'error';
-  text: string;
-}
+import { AppToastHostComponent } from '../../shared/components/app-toast-host/app-toast-host.component';
 
 @Component({
   selector: 'app-set-password-page',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppToastHostComponent],
   templateUrl: './set-password.page.html',
   styleUrl: './set-password.page.css'
 })
@@ -21,6 +18,7 @@ export class SetPasswordPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly notificationService = inject(AppNotificationService);
   private readonly destroyRef = inject(DestroyRef);
   private statusTimerId: number | null = null;
 
@@ -31,7 +29,6 @@ export class SetPasswordPage {
   protected readonly resendAttempted = signal(false);
   protected readonly isSubmitting = signal(false);
   protected readonly isResending = signal(false);
-  protected readonly statusMessage = signal<StatusMessage | null>(null);
 
   protected readonly token = computed(() => this.route.snapshot.queryParamMap.get('token') ?? '');
 
@@ -51,7 +48,7 @@ export class SetPasswordPage {
   protected submitPassword(): void {
     this.submitAttempted.set(true);
     this.clearStatusTimer();
-    this.statusMessage.set(null);
+    this.notificationService.dismiss();
 
     if (!this.token()) {
       this.showError(
@@ -88,7 +85,7 @@ export class SetPasswordPage {
   protected resendActivation(): void {
     this.resendAttempted.set(true);
     this.clearStatusTimer();
-    this.statusMessage.set(null);
+    this.notificationService.dismiss();
 
     if (this.resendForm.invalid) {
       this.resendForm.markAllAsTouched();
@@ -108,11 +105,6 @@ export class SetPasswordPage {
           this.showError(message);
         }
       });
-  }
-
-  protected dismissStatusMessage(): void {
-    this.clearStatusTimer();
-    this.statusMessage.set(null);
   }
 
   protected hasPasswordError(
@@ -146,25 +138,19 @@ export class SetPasswordPage {
   }
 
   private showSuccessAndRedirect(message: string): void {
-    this.statusMessage.set({ type: 'success', text: message });
+    this.notificationService.success(message, SetPasswordPage.SUCCESS_FEEDBACK_MS);
     this.statusTimerId = window.setTimeout(() => {
-      this.statusMessage.set(null);
+      this.notificationService.dismiss();
       this.router.navigate(['/login']);
     }, SetPasswordPage.SUCCESS_FEEDBACK_MS);
   }
 
   private showSuccess(message: string): void {
-    this.statusMessage.set({ type: 'success', text: message });
-    this.statusTimerId = window.setTimeout(() => {
-      this.statusMessage.set(null);
-    }, SetPasswordPage.SUCCESS_FEEDBACK_MS);
+    this.notificationService.success(message, SetPasswordPage.SUCCESS_FEEDBACK_MS);
   }
 
   private showError(message: string): void {
-    this.statusMessage.set({ type: 'error', text: message });
-    this.statusTimerId = window.setTimeout(() => {
-      this.statusMessage.set(null);
-    }, SetPasswordPage.ERROR_FEEDBACK_MS);
+    this.notificationService.error(message, SetPasswordPage.ERROR_FEEDBACK_MS);
   }
 
   private clearStatusTimer(): void {

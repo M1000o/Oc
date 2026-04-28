@@ -4,6 +4,7 @@ import { UnitOption } from '../../features/portal-home/product-selection-modal.c
 
 export interface OrderSummaryDraftRow {
   id: number;
+  productId: number;
   code: string;
   description: string;
   unit: UnitOption;

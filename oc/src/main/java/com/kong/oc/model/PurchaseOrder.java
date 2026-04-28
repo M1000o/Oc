@@ -6,6 +6,7 @@ import com.kong.oc.dto.Status;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,14 +31,7 @@ public class PurchaseOrder extends BaseEntity {
     @JoinColumn(name = "proveedor_id")
     private Supplier supplier;
 
-    @ManyToMany
-    @JoinTable(
-            name = "purchase_order_services",
-            joinColumns = @JoinColumn(name = "purchase_order_id"),
-            inverseJoinColumns = @JoinColumn(name = "service_id")
-    )
-    private List<Services> service;
-
+    @Column(nullable = false)
     private LocalDate orderDate;
 
     private LocalDate deliveryDate;
@@ -52,12 +46,34 @@ public class PurchaseOrder extends BaseEntity {
 
     private String notas;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user_id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User usuario;
+
+    @Column(nullable = false)
+    private BigDecimal subtotal;
+
+    @Column(nullable = false)
+    private BigDecimal igv;
+
+    @Column(nullable = false)
+    private BigDecimal total;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<PurchaseOrderDetail> details = new ArrayList<>();
+
+    public void addDetail(PurchaseOrderDetail detail) {
+        if(details == null) details = new ArrayList<>();
+
+        details.add(detail);
+        detail.setPurchaseOrder(this);
+    }
+
+    public void removeDetail(PurchaseOrderDetail detail) {
+        details.remove(detail);
+        detail.setPurchaseOrder(null);
+    }
 
     @PrePersist
     protected void onCreatePurchaseOrder() {

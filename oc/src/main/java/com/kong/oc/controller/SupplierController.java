@@ -3,6 +3,8 @@ package com.kong.oc.controller;
 import com.kong.oc.dto.ApiResponse;
 import com.kong.oc.dto.ProveedorResponse;
 import com.kong.oc.dto.ServicioResponse;
+import com.kong.oc.dto.SupplierDirectoryDetailResponse;
+import com.kong.oc.dto.SupplierDirectoryItemResponse;
 import com.kong.oc.dto.SupplierFormRequest;
 import com.kong.oc.interfaces.ISupplierService;
 import com.kong.oc.model.Supplier;
@@ -24,6 +26,20 @@ public class SupplierController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ProveedorResponse>>> listAll(){
         return ResponseEntity.ok(new ApiResponse<>("Proveedores obtenidos exitosamente", supplierService.listAll()));
+    }
+
+    @GetMapping("/directory")
+    public ResponseEntity<ApiResponse<List<SupplierDirectoryItemResponse>>> listDirectory() {
+        return ResponseEntity.ok(
+                new ApiResponse<>("Directorio de proveedores obtenido exitosamente", supplierService.listDirectory())
+        );
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<SupplierDirectoryDetailResponse>> getDirectoryDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                new ApiResponse<>("Detalle del proveedor obtenido exitosamente", supplierService.getDirectoryDetail(id))
+        );
     }
 
     @GetMapping("/{id}/servicios")

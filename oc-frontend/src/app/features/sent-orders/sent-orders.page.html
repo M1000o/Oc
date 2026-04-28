@@ -2,7 +2,7 @@
   <section class="page-headline">
     <div>
       <h1>Ver Pedidos Enviados</h1>
-      <p>Monitoreo y seguimiento de envios en transito y entregados.</p>
+      <p>Seguimiento de órdenes enviadas y aprobadas desde el backend.</p>
     </div>
     <button class="export-btn" type="button" (click)="exportReport()">
       <mat-icon aria-hidden="true">download</mat-icon>
@@ -12,72 +12,84 @@
   <section class="sent-card">
     <div class="sent-grid-header">
       <div>Nº PEDIDO</div>
-      <div>FECHA DE ENVIO</div>
+      <div>FECHA DE REGISTRO</div>
       <div>DESTINO</div>
       <div class="align-right">TOTAL</div>
       <div class="align-right">ESTADO</div>
     </div>
     <div class="sent-list">
-      @for (order of pagedOrders(); track order.id) {
-        <article class="sent-row">
-          <div class="row-col order-col">{{ order.orderNumber }}</div>
-          <div class="row-col date-col">{{ order.shipmentDate }}</div>
-          <div class="row-col destination-col">
-            <span class="location-icon">
-              <mat-icon aria-hidden="true">location_on</mat-icon>
-            </span>
-            <div>
-              <strong>{{ order.destination }}</strong>
-              <small>Cliente: {{ order.client }}</small>
-                </div>
-              </div>
-
-              <div class="row-col total-col">{{ toCurrency(order.total) }}</div>
-
-              <div class="row-col status-col">
-                @if (order.status === 'En Camino') {
-                  <span class="status-chip transit">
-                    <span class="dot"></span>
-                    En Camino
-                  </span>
-                } @else {
-                  <span class="status-chip delivered">
-                    <mat-icon aria-hidden="true">check_circle</mat-icon>
-                    Entregado
-                  </span>
-                }
-              </div>
-            </article>
-          } @empty {
-            <div class="empty-state">
-              <mat-icon aria-hidden="true">inventory_2</mat-icon>
-              <p>No hay pedidos enviados que coincidan con la busqueda.</p>
-            </div>
-          }
+      @if (isLoading()) {
+        <div class="empty-state">
+          <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+          <p>Cargando pedidos enviados...</p>
         </div>
+      } @else if (errorMessage()) {
+        <div class="empty-state">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      } @else {
+        @for (order of pagedOrders(); track order.id) {
+          <article class="sent-row">
+            <div class="row-col order-col">{{ order.orderNumber }}</div>
+            <div class="row-col date-col">{{ order.shipmentDate }}</div>
+            <div class="row-col destination-col">
+              <span class="location-icon">
+                <mat-icon aria-hidden="true">location_on</mat-icon>
+              </span>
+              <div>
+                <strong>{{ order.destination }}</strong>
+                <small>Proveedor: {{ order.supplierName }}</small>
+              </div>
+            </div>
 
-        <footer class="pager">
-          <span>Mostrando {{ visibleCount() }} de {{ filteredOrders().length }} pedidos</span>
-          <div class="pager-controls">
-            <button
-              class="pager-btn"
-              type="button"
-              (click)="previousPage()"
-              [disabled]="currentPage() === 1"
-              aria-label="Pagina anterior"
-            >
-              <mat-icon aria-hidden="true">chevron_left</mat-icon>
-            </button>
-            <button
-              class="pager-btn"
-              type="button"
-              (click)="nextPage()"
-              [disabled]="currentPage() === totalPages()"
-              aria-label="Pagina siguiente"
-            >
-              <mat-icon aria-hidden="true">chevron_right</mat-icon>
-            </button>
+            <div class="row-col total-col">{{ toCurrency(order.total) }}</div>
+
+            <div class="row-col status-col">
+              @if (order.status === 'PENDIENTE') {
+                <span class="status-chip transit">
+                  <span class="dot"></span>
+                  {{ resolveStatusLabel(order.status) }}
+                </span>
+              } @else {
+                <span class="status-chip delivered">
+                  <mat-icon aria-hidden="true">check_circle</mat-icon>
+                  {{ resolveStatusLabel(order.status) }}
+                </span>
+              }
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <mat-icon aria-hidden="true">inventory_2</mat-icon>
+            <p>No hay pedidos enviados disponibles.</p>
           </div>
-        </footer>
-      </section>
-  </div>
+        }
+      }
+    </div>
+
+    <footer class="pager">
+      <span>Mostrando {{ visibleCount() }} de {{ orders().length }} pedidos</span>
+      <div class="pager-controls">
+        <button
+          class="pager-btn"
+          type="button"
+          (click)="previousPage()"
+          [disabled]="currentPage() === 1"
+          aria-label="Pagina anterior"
+        >
+          <mat-icon aria-hidden="true">chevron_left</mat-icon>
+        </button>
+        <button
+          class="pager-btn"
+          type="button"
+          (click)="nextPage()"
+          [disabled]="currentPage() === totalPages()"
+          aria-label="Pagina siguiente"
+        >
+          <mat-icon aria-hidden="true">chevron_right</mat-icon>
+        </button>
+      </div>
+    </footer>
+  </section>
+</div>

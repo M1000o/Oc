@@ -1,146 +1,55 @@
-import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { AuthService } from '../../core/auth/auth.service';
-import { PortalLayoutComponent } from '../../shared/layout/portal-layout.component';
+import {
+  PurchaseOrderStatus,
+  PurchaseOrderSummary
+} from '../../core/interfaces/purchase-order.interface';
+import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 
-type ShipmentStatus = 'En Camino' | 'Entregado';
+type ShipmentStatus = 'PENDIENTE' | 'APROBADO';
 
-interface SentOrder {
+interface SentOrderView {
   id: number;
   orderNumber: string;
   shipmentDate: string;
   destination: string;
-  client: string;
+  supplierName: string;
   total: number;
   status: ShipmentStatus;
 }
 
 @Component({
   selector: 'app-sent-orders-page',
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, MatIconModule],
+  providers: [DatePipe, CurrencyPipe],
   templateUrl: './sent-orders.page.html',
   styleUrl: './sent-orders.page.css'
 })
-export class SentOrdersPage {
-  private readonly authService = inject(AuthService);
+export class SentOrdersPage implements OnInit {
+  private readonly purchaseOrderService = inject(PurchaseOrderService);
+  private readonly datePipe = inject(DatePipe);
+  private readonly currencyPipe = inject(CurrencyPipe);
 
   protected readonly pageSize = 4;
-
-  protected readonly searchTerm = signal('');
   protected readonly currentPage = signal(1);
+  protected readonly isLoading = signal(true);
+  protected readonly errorMessage = signal('');
+  protected readonly orders = signal<SentOrderView[]>([]);
 
-  protected readonly orders = signal<SentOrder[]>([
-    {
-      id: 1,
-      orderNumber: '#ORD-99382',
-      shipmentDate: '24 Oct, 2023',
-      destination: 'Av. Reforma 221, CDMX',
-      client: 'Grupo Modelo',
-      total: 4520,
-      status: 'En Camino'
-    },
-    {
-      id: 2,
-      orderNumber: '#ORD-99381',
-      shipmentDate: '22 Oct, 2023',
-      destination: 'Parque Industrial, MTY',
-      client: 'Industrias ACME',
-      total: 12850.5,
-      status: 'Entregado'
-    },
-    {
-      id: 3,
-      orderNumber: '#ORD-99375',
-      shipmentDate: '19 Oct, 2023',
-      destination: 'Plaza Mayor, Leon',
-      client: 'Calzado Flexi',
-      total: 1200,
-      status: 'Entregado'
-    },
-    {
-      id: 4,
-      orderNumber: '#ORD-99390',
-      shipmentDate: '25 Oct, 2023',
-      destination: 'Zona Rio, Tijuana',
-      client: 'Distribuidora Norte',
-      total: 8940.25,
-      status: 'En Camino'
-    },
-    {
-      id: 5,
-      orderNumber: '#ORD-99402',
-      shipmentDate: '27 Oct, 2023',
-      destination: 'Centro Historico, Puebla',
-      client: 'Textiles MX',
-      total: 5630,
-      status: 'En Camino'
-    },
-    {
-      id: 6,
-      orderNumber: '#ORD-99354',
-      shipmentDate: '17 Oct, 2023',
-      destination: 'Zona Empresarial, Queretaro',
-      client: 'TecnoPartes',
-      total: 3420,
-      status: 'Entregado'
-    },
-    {
-      id: 7,
-      orderNumber: '#ORD-99347',
-      shipmentDate: '15 Oct, 2023',
-      destination: 'Norte 45, Azcapotzalco',
-      client: 'Fabrica Delta',
-      total: 7215.9,
-      status: 'Entregado'
-    },
-    {
-      id: 8,
-      orderNumber: '#ORD-99341',
-      shipmentDate: '14 Oct, 2023',
-      destination: 'Corredor Industrial, Toluca',
-      client: 'Insumos Prime',
-      total: 990.4,
-      status: 'En Camino'
-    }
-  ]);
-
-  protected readonly filteredOrders = computed(() => {
-    const query = this.searchTerm().trim().toLowerCase();
-
-    if (!query) {
-      return this.orders();
-    }
-
-    return this.orders().filter(
-      (order) =>
-        order.orderNumber.toLowerCase().includes(query) ||
-        order.shipmentDate.toLowerCase().includes(query) ||
-        order.destination.toLowerCase().includes(query) ||
-        order.client.toLowerCase().includes(query) ||
-        order.status.toLowerCase().includes(query)
-    );
-  });
-
-  protected readonly totalPages = computed(() => {
-    return Math.max(1, Math.ceil(this.filteredOrders().length / this.pageSize));
-  });
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.orders().length / this.pageSize))
+  );
 
   protected readonly pagedOrders = computed(() => {
     const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredOrders().slice(start, start + this.pageSize);
+    return this.orders().slice(start, start + this.pageSize);
   });
 
   protected readonly visibleCount = computed(() => this.pagedOrders().length);
 
-  protected logout(): void {
-    this.authService.logout();
-  }
-
-  protected updateSearch(value: string): void {
-    this.searchTerm.set(value);
-    this.currentPage.set(1);
+  ngOnInit(): void {
+    this.loadOrders();
   }
 
   protected previousPage(): void {
@@ -156,14 +65,14 @@ export class SentOrdersPage {
   }
 
   protected exportReport(): void {
-    const header = ['Pedido', 'FechaEnvio', 'Destino', 'Cliente', 'Total', 'Estado'];
-    const rows = this.filteredOrders().map((order) => [
+    const header = ['Pedido', 'FechaRegistro', 'Destino', 'Proveedor', 'Total', 'Estado'];
+    const rows = this.orders().map((order) => [
       order.orderNumber,
       order.shipmentDate,
       order.destination,
-      order.client,
+      order.supplierName,
       this.toCurrency(order.total),
-      order.status
+      this.resolveStatusLabel(order.status)
     ]);
 
     const csv = [header, ...rows]
@@ -180,10 +89,57 @@ export class SentOrdersPage {
   }
 
   protected toCurrency(value: number): string {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      minimumFractionDigits: 2
-    }).format(value);
+    return this.currencyPipe.transform(value, 'PEN', 'symbol', '1.2-2') ?? `${value}`;
+  }
+
+  protected resolveStatusLabel(status: ShipmentStatus): string {
+    return status === 'APROBADO' ? 'Aprobado' : 'Pendiente';
+  }
+
+  private loadOrders(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    this.purchaseOrderService
+      .listPurchaseOrdersPage({}, 0, 50)
+      .subscribe(({ data, error }) => {
+        this.isLoading.set(false);
+
+        if (error || !data) {
+          this.orders.set([]);
+          this.errorMessage.set(error || 'No se pudieron cargar los pedidos enviados.');
+          return;
+        }
+
+        this.orders.set(
+          (data.content ?? [])
+            .filter((order) => this.isSentOrderStatus(order.status))
+            .map((order) => this.toSentOrderView(order))
+        );
+        this.currentPage.set(1);
+      });
+  }
+
+  private isSentOrderStatus(status: PurchaseOrderStatus): status is ShipmentStatus {
+    const normalizedStatus = `${status}`.trim().toUpperCase();
+    return normalizedStatus === 'PENDIENTE' || normalizedStatus === 'APROBADO';
+  }
+
+  private toSentOrderView(order: PurchaseOrderSummary): SentOrderView {
+    const normalizedStatus = `${order.status}`.trim().toUpperCase();
+
+    return {
+      id: order.id,
+      orderNumber: order.purchaseOrderNumber,
+      shipmentDate: this.formatDate(order.orderDate),
+      destination: `${order.sede} · ${order.area}`,
+      supplierName: order.supplierName,
+      total: Number(order.total ?? 0),
+      status: normalizedStatus === 'APROBADO' ? 'APROBADO' : 'PENDIENTE'
+    };
+  }
+
+  private formatDate(value: string): string {
+    return this.datePipe.transform(value, 'dd MMM yyyy') ?? value;
   }
 }

@@ -4,273 +4,291 @@ import com.kong.oc.common.exception.BadRequestException;
 import com.kong.oc.common.exception.ResourceNotFoundException;
 import com.kong.oc.auth.model.User;
 import com.kong.oc.auth.repository.UserRepository;
-import com.kong.oc.dto.PurchaseOrderDetailResponse;
-import com.kong.oc.dto.PurchaseOrderRequest;
-import com.kong.oc.dto.PurchaseOrderResponse;
+import com.kong.oc.dto.*;
 import com.kong.oc.interfaces.IPurchaseOrderService;
-import com.kong.oc.model.PurchaseOrder;
-import com.kong.oc.model.PurchaseOrderDetail;
-import com.kong.oc.model.Services;
-import com.kong.oc.dto.Status;
-import com.kong.oc.model.Supplier;
+import com.kong.oc.mapper.PurchaseOrderMapper;
+import com.kong.oc.model.*;
+import com.kong.oc.repository.ProductRepository;
 import com.kong.oc.repository.PurchaseOrderRepository;
-import com.kong.oc.repository.ServicesRepository;
 import com.kong.oc.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
+    private static final BigDecimal IGV_RATE = new BigDecimal("0.18");
+
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final SupplierRepository supplierRepository;
-    private final ServicesRepository servicesRepository;
+    private final ProductRepository productRepository;
+    private final PurchaseOrderMapper mapper;
     private final UserRepository userRepository;
 
-    private static final DateTimeFormatter ORDER_NUMBER_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-    @Override
-    @Transactional(readOnly = true)
-    public String previewNextPurchaseOrderNumber() {
-        return generateUniqueOrderNumber();
-    }
 
     @Override
     @Transactional
     public PurchaseOrderResponse create(PurchaseOrderRequest request, Long userId){
-        Supplier supplier = findSupplier(request.proveedorId());
-        List<Services> servicios = findServices(request);
-        User user = findUser(userId);
 
-        validateBusinessRules(request, supplier, servicios);
+        boolean isDraft = Boolean.TRUE.equals(request.saveDraft());
 
-        PurchaseOrder purchaseOrder = PurchaseOrder.builder()
-                .purchaseOrderNumber(resolvePurchaseOrderNumber(request.purchaseOrderNumber()))
+        Supplier supplier = findSupplierOrThrow(request.supplierId());
+        User user = findUserOrThrow(userId);
+
+        validateDates(request);
+
+        List<Long> productIds = request.details().stream()
+                .map(PurchaseOrderDetailRequest::productId)
+                .toList();
+
+        Map<Long, Product> productMap = loadAndValidateProducts(productIds, supplier.getId(), isDraft);
+
+        PurchaseOrder order = PurchaseOrder.builder()
+                .purchaseOrderNumber(generateOrderNumber())
                 .supplier(supplier)
-                .service(servicios)
-                .deliveryDate(request.fechaEntrega())
-                .sede(request.local().trim())
+                .orderDate(LocalDate.now())
+                .deliveryDate(request.deliveryDate())
+                .sede(request.sede().trim())
                 .area(request.area().trim())
-                .status(resolveStatus(request.status()))
-                .notas(normalizeNotes(request.notas()))
-                .user_id(user)
+                .notas(request.notas())
+                .status(isDraft ? Status.BORRADOR : Status.PENDIENTE)
+                .usuario(user)
+                .subtotal(BigDecimal.ZERO)
+                .igv(BigDecimal.ZERO)
+                .total(BigDecimal.ZERO)
                 .build();
 
-        purchaseOrder.setDetails(buildDetails(request, purchaseOrder));
+        buildAndAttachDetails(order, request.details(), productMap);
+        calculateTotals(order);
 
-        PurchaseOrder saved = purchaseOrderRepository.save(purchaseOrder);
-        return toDto(saved);
+        PurchaseOrder saved = purchaseOrderRepository.save(order);
+        return mapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public PurchaseOrderResponse update(Long id, PurchaseOrderRequest request) {
-        PurchaseOrder current = findActiveById(id);
-        Supplier supplier = findSupplier(request.proveedorId());
-        List<Services> servicios = findServices(request);
 
-        validateBusinessRules(request, supplier, servicios);
+        PurchaseOrder order = findOrderWithDetailsOrThrow(id);
 
-        current.setSupplier(supplier);
-        current.setService(servicios);
-        current.setDeliveryDate(request.fechaEntrega());
-        current.setSede(request.local().trim());
-        current.setArea(request.area().trim());
-        current.setStatus(resolveStatus(request.status()));
-        current.setNotas(normalizeNotes(request.notas()));
+        if(order.getStatus() != Status.BORRADOR){
+            throw new BadRequestException(
+                    "Solo se puede modificar órdenes en estado BORRADOR. Estado actual: " + order.getStatus()
+            );
+        }
 
-        current.getDetails().clear();
-        current.getDetails().addAll(buildDetails(request, current));
+        boolean isDraft = Boolean.TRUE.equals(request.saveDraft());
 
-        return toDto(current);
-    }
+        if(!order.getSupplier().getId().equals(request.supplierId())){
+            Supplier newSupplier = findSupplierOrThrow(request.supplierId());
+            order.setSupplier(newSupplier);
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public PurchaseOrderResponse getById(Long id) {
-        return toDto(findActiveById(id));
-    }
+        validateDates(request);
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PurchaseOrderResponse> listAll() {
-        return purchaseOrderRepository.findByIsDeletedFalse().stream().map(this::toDto).toList();
-    }
+        List<Long> productIds = request.details().stream()
+                .map(PurchaseOrderDetailRequest::productId)
+                .toList();
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PurchaseOrderResponse> listBySupplierId(Long supplierId) {
-        findSupplier(supplierId);
-        return purchaseOrderRepository.findBySupplier_IdAndIsDeletedFalse(supplierId).stream().map(this::toDto).toList();
+        Map<Long, Product> productMap = loadAndValidateProducts(productIds, order.getSupplier().getId(), isDraft);
+
+        order.getDetails().clear();
+        buildAndAttachDetails(order, request.details(), productMap);
+
+        order.setOrderDate(request.orderDate());
+        order.setDeliveryDate(request.deliveryDate());
+        order.setSede(request.sede().trim());
+        order.setArea(request.area().trim());
+        order.setNotas(request.notas());
+        order.setStatus(isDraft ? Status.BORRADOR : Status.PENDIENTE);
+
+        calculateTotals(order);
+
+        return mapper.toResponse(purchaseOrderRepository.save(order));
     }
 
     @Override
     @Transactional
-    public void softDelete(Long id) {
-        PurchaseOrder purchaseOrder = findActiveById(id);
-        purchaseOrder.softDelete();
-    }
+    public PurchaseOrderResponse changeStatus(Long id, PurchaseOrderStatus statusDTO) {
 
-    private PurchaseOrder findActiveById(Long id) {
-        return purchaseOrderRepository.findById(id)
-                .filter(po -> !Boolean.TRUE.equals(po.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException("La orden de compra no existe"));
-    }
+        PurchaseOrder order = findOrderOrThrow(id);
 
-    private Supplier findSupplier(Long supplierId) {
-        return supplierRepository.findById(supplierId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
-    }
+        validateStatusTransition(order.getStatus(), statusDTO.status());
 
-    private Services findService(Long serviceId) {
-        return servicesRepository.findById(serviceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
-    }
+        order.setStatus(statusDTO.status());
 
-    private List<Services> findServices(PurchaseOrderRequest request) {
-        List<Long> serviceIds = normalizeServiceIds(request);
-
-        if (serviceIds.isEmpty()) {
-            throw new BadRequestException("Debe seleccionar al menos un servicio");
+        // Si cancela, podemos guardar el motivo en notas (opcional)
+        if (statusDTO.status() == Status.CANCELADO && statusDTO.motivo() != null) {
+            String notasCancelacion = "[CANCELADO] " + statusDTO.motivo();
+            order.setNotas(order.getNotas() != null
+                    ? order.getNotas() + "\n" + notasCancelacion
+                    : notasCancelacion);
         }
 
-        return serviceIds.stream()
-                .map(this::findService)
-                .toList();
+        return mapper.toResponse(purchaseOrderRepository.save(order));
     }
 
-    private User findUser(Long userId) {
-        if (userId == null) {
-            return null;
-        }
-
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+    @Override
+    @Transactional(readOnly = true)
+    public PurchaseOrderResponse findById(Long id) {
+        return mapper.toResponse(findOrderWithDetailsOrThrow(id));
     }
 
-    private void validateBusinessRules(PurchaseOrderRequest request, Supplier supplier, List<Services> servicios) {
-        if (request.local() != null && request.local().isBlank()) {
-            throw new BadRequestException("El local es obligatorio");
-        }
-        if (request.area() != null && request.area().isBlank()) {
-            throw new BadRequestException("El area es obligatoria");
-        }
-        if (request.fechaEntrega() != null && request.fechaEntrega().isBefore(LocalDate.now())) {
-            throw new BadRequestException("La fecha de entrega no puede ser anterior a hoy");
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PurchaseOrderSummary> findAll(PurchaseOrderFilter filter, Pageable pageable){
+
+        if(filter.fechaDesde() != null && filter.fechaHasta() != null && filter.fechaDesde().isAfter(filter.fechaHasta())){
+            throw new BadRequestException("La fecha desde no puede ser posterior a la fecha hasta");
         }
 
-        if (supplier.getServicios() == null || supplier.getServicios().isEmpty()) {
-            throw new BadRequestException("El proveedor no tiene servicios asociados");
-        }
-
-        boolean hasInvalidService = servicios.stream()
-                .map(Services::getId)
-                .anyMatch(serviceId -> supplier.getServicios().stream().noneMatch(s -> s.getId().equals(serviceId)));
-
-        if (hasInvalidService) {
-            throw new BadRequestException("Todos los servicios seleccionados deben pertenecer al mismo proveedor");
-        }
+        return purchaseOrderRepository.findAllWithFilters(
+                filter.supplierId(),
+                filter.status(),
+                filter.fechaDesde(),
+                filter.fechaHasta(),
+                filter.sede(),
+                filter.area(),
+                pageable
+        ).map(mapper::toSummary);
     }
 
-    private Status resolveStatus(Status status) {
-        return status == null ? Status.BORRADOR : status;
-    }
+    private Map<Long, Product> loadAndValidateProducts(List<Long> productIds, Long supplierId, boolean isDraft) {
 
-    private String resolvePurchaseOrderNumber(String previewNumber) {
-        if (previewNumber != null && !previewNumber.isBlank()) {
-            String normalized = previewNumber.trim().toUpperCase();
-            if (!purchaseOrderRepository.existsByPurchaseOrderNumber(normalized)) {
-                return normalized;
+        Set<Long> seen = new HashSet<>();
+        Set<Long> duplicates = productIds.stream()
+                .filter(id -> !seen.add(id))
+                .collect(Collectors.toSet());
+
+        if (!duplicates.isEmpty()) {
+            throw new BadRequestException(
+                    "Hay productos duplicados en los detalles: " + duplicates
+            );
+        }
+
+        List<Product> products = productRepository.findAllById(productIds);
+
+        if(products.size() != productIds.size()){
+            Set<Long> foundIds = products.stream().map(Product::getId).collect(Collectors.toSet());
+            Set<Long> missing = productIds.stream()
+                    .filter(pid -> !foundIds.contains(pid))
+                    .collect(Collectors.toSet());
+            throw new BadRequestException("Los siguientes productos no existen: " + missing);
+        }
+
+        if(!isDraft){
+            List<Long> wrongSupplier = products.stream()
+                    .filter(p -> !p.getProveedor().getId().equals(supplierId))
+                    .map(Product::getId)
+                    .toList();
+
+            if(!wrongSupplier.isEmpty()){
+                throw new BadRequestException(
+                        "Los siguientes productos no pertenecen al proveedor seleccionado: " + wrongSupplier
+                );
             }
         }
 
-        return generateUniqueOrderNumber();
+        return products.stream().collect(Collectors.toMap(Product::getId, p -> p));
     }
 
-    private String generateUniqueOrderNumber() {
-        String prefix = "OC-" + LocalDate.now().format(ORDER_NUMBER_FORMATTER);
-        int attempt = 1;
-        String candidate;
+    private void buildAndAttachDetails(
+            PurchaseOrder order,
+            List<PurchaseOrderDetailRequest> detalles,
+            Map<Long,Product> productMap){
 
-        do {
-            candidate = prefix + "-" + String.format("%04d", attempt++);
-        } while (purchaseOrderRepository.existsByPurchaseOrderNumber(candidate));
+        detalles.forEach(dto -> {
+            Product product = productMap.get(dto.productId());
 
-        return candidate;
+            PurchaseOrderDetail detail = PurchaseOrderDetail.builder()
+                    .product(product)
+                    .cantidad(dto.cantidad())
+                    .precioUnitario(dto.precioUnitario())
+                    .subtotal(dto.precioUnitario()
+                            .multiply(BigDecimal.valueOf(dto.cantidad()))
+                            .setScale(2, RoundingMode.HALF_UP))
+                    .build();
+
+            order.addDetail(detail);
+        });
     }
 
-    private String normalizeNotes(String notas) {
-        if (notas == null) {
-            return null;
+
+    private void calculateTotals(PurchaseOrder order){
+        BigDecimal subtotal = order.getDetails().stream()
+                .map(PurchaseOrderDetail::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal igv = subtotal.multiply(IGV_RATE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal total = subtotal.add(igv).setScale(2, RoundingMode.HALF_UP);
+
+        order.setSubtotal(subtotal);
+        order.setIgv(igv);
+        order.setTotal(total);
+    }
+
+
+    private void validateDates(PurchaseOrderRequest request) {
+        if (request.deliveryDate() != null
+                && request.deliveryDate().isBefore(request.orderDate())) {
+            throw new BadRequestException(
+                    "La fecha de entrega no puede ser anterior a la fecha de la orden"
+            );
         }
-
-        String trimmed = notas.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private PurchaseOrderResponse toDto(PurchaseOrder p){
-        Long serviceId = null;
-        if (p.getService() != null && !p.getService().isEmpty()) {
-            serviceId = p.getService().get(0).getId();
+
+    private void validateStatusTransition(Status current, Status next) {
+        boolean valid = switch (current) {
+            case BORRADOR    -> next == Status.PENDIENTE  || next == Status.CANCELADO;
+            case PENDIENTE  -> next == Status.APROBADO || next == Status.CANCELADO;
+            case APROBADO -> false;
+            case CANCELADO -> false;
+        };
+
+        if (!valid) {
+            throw new BadRequestException(
+                    "Transición de estado no permitida: " + current + " → " + next
+            );
         }
-
-        return new PurchaseOrderResponse(
-                p.getId(),
-                p.getPurchaseOrderNumber(),
-                p.getSupplier() == null ? null : p.getSupplier().getId(),
-                serviceId,
-                p.getService() == null ? List.of() : p.getService().stream().map(Services::getId).toList(),
-                p.getStatus() == null ? null : p.getStatus().name(),
-                p.getOrderDate(),
-                p.getDeliveryDate(),
-                p.getSede(),
-                p.getArea(),
-                p.getNotas(),
-                p.getDetails() == null ? List.of() : p.getDetails().stream().map(this::toDetailDto).toList(),
-                p.getCreatedAt()
-        );
     }
 
-    private List<PurchaseOrderDetail> buildDetails(PurchaseOrderRequest request, PurchaseOrder purchaseOrder) {
-        return request.details().stream()
-                .map(d -> PurchaseOrderDetail.builder()
-                        .descripcion(d.descripcion().trim())
-                        .cantidad(d.cantidad())
-                        .purchaseOrder(purchaseOrder)
-                        .build())
-                .filter(d -> Objects.nonNull(d.getCantidad()))
-                .toList();
+    private String generateOrderNumber() {
+        String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+        return "OC-" + uuid;
     }
 
-    private List<Long> normalizeServiceIds(PurchaseOrderRequest request) {
-        LinkedHashSet<Long> serviceIds = new LinkedHashSet<>();
-
-        if (request.servicioIds() != null) {
-            request.servicioIds().stream()
-                    .filter(Objects::nonNull)
-                    .forEach(serviceIds::add);
-        }
-
-        if (request.servicioId() != null) {
-            serviceIds.add(request.servicioId());
-        }
-
-        return serviceIds.stream().toList();
+    private PurchaseOrder findOrderOrThrow(Long id) {
+        return purchaseOrderRepository.findByIdWithSupplierAndUser(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Orden de compra no encontrada con ID: " + id));
     }
 
-    private PurchaseOrderDetailResponse toDetailDto(PurchaseOrderDetail d) {
-        return new PurchaseOrderDetailResponse(
-                d.getId(),
-                d.getDescripcion(),
-                d.getCantidad()
-        );
+    private PurchaseOrder findOrderWithDetailsOrThrow(Long id) {
+        return purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Orden de compra no encontrada con ID: " + id));
+    }
+
+    private Supplier findSupplierOrThrow(Long id) {
+        return supplierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Proveedor no encontrado con ID: " + id));
+    }
+
+    private User findUserOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Usuario no encontrado con ID: " + id));
     }
 }

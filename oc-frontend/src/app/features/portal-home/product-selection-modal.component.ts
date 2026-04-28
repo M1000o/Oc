@@ -11,6 +11,7 @@ import { ProductCatalogService } from '../../core/services/product-catalog.servi
 export type UnitOption = 'KG' | 'UND' | 'PAQ' | 'DOC' | 'GR' | 'UN' | 'CJ';
 
 export interface ProductSelectionItem {
+  productId: number;
   sku: string;
   name: string;
   unit: UnitOption;
@@ -132,7 +133,8 @@ export class ProductSelectionModalComponent {
   protected confirmSelection(): void {
     const selectedProducts = this.products()
       .filter((product) => product.quantity > 0)
-      .map(({ sku, name, unit, unitPrice, quantity, serviceId, serviceName }) => ({
+      .map(({ id, sku, name, unit, unitPrice, quantity, serviceId, serviceName }) => ({
+        productId: id,
         sku,
         name,
         unit,
@@ -162,6 +164,7 @@ export class ProductSelectionModalComponent {
 
     return {
       id: product.id,
+      productId: product.id,
       sku,
       name: product.nombre,
       unit: this.toUnitOption(product.und_medida),

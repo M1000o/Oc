@@ -6,6 +6,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ApiResponse } from '../../core/interfaces/api-response.interface';
 import { ServiceResponse } from '../../core/interfaces/services.interface';
 import { BankResponse } from '../../core/interfaces/bank-response.interface';
@@ -13,15 +14,11 @@ import { SupplierFormPayload } from '../../core/interfaces/supplier.interface';
 import { AccountType } from '../../core/interfaces/account-type.type';
 import { OnlyNumbers } from '../../directives/only-numbers.directive';
 import { OnlyLetters } from '../../directives/only-letters.directive';
-
-interface StatusMessage {
-  type: 'success' | 'error';
-  text: string;
-}
+import { AppToastHostComponent } from '../../shared/components/app-toast-host/app-toast-host.component';
 
 @Component({
   selector: 'app-supplier-registration-page',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, OnlyNumbers, OnlyLetters],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, OnlyNumbers, OnlyLetters, AppToastHostComponent],
   templateUrl: './supplier-registration.page.html',
   styleUrl: './supplier-registration.page.css'
 })
@@ -30,6 +27,7 @@ export class SupplierRegistrationPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly notificationService = inject(AppNotificationService);
   private statusTimerId: number | null = null;
 
   private static readonly SUCCESS_FEEDBACK_MS = 2200;
@@ -42,7 +40,6 @@ export class SupplierRegistrationPage implements OnInit {
   protected readonly loadingError = signal('');
   protected readonly isSubmitting = signal(false);
   protected readonly submitAttempted = signal(false);
-  protected readonly statusMessage = signal<StatusMessage | null>(null);
 
   protected readonly accountTypeOptions: Array<{ value: AccountType; label: string }> = [
     { value: 'CUENTA_AHORRO', label: 'Ahorros' },
@@ -215,13 +212,13 @@ export class SupplierRegistrationPage implements OnInit {
     });
     this.serviceQuery.set('');
     this.submitAttempted.set(false);
-    this.statusMessage.set(null);
+    this.notificationService.dismiss();
   }
 
   protected submit(): void {
     this.submitAttempted.set(true);
     this.clearStatusTimer();
-    this.statusMessage.set(null);
+    this.notificationService.dismiss();
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -276,11 +273,6 @@ export class SupplierRegistrationPage implements OnInit {
           this.showError(message);
         }
       });
-  }
-
-  protected dismissStatusMessage(): void {
-    this.clearStatusTimer();
-    this.statusMessage.set(null);
   }
 
   protected hasError(
@@ -376,17 +368,17 @@ export class SupplierRegistrationPage implements OnInit {
   }
 
   private showSuccessAndRedirect(message: string): void {
-    this.statusMessage.set({ type: 'success', text: message });
+    this.notificationService.success(message, SupplierRegistrationPage.SUCCESS_FEEDBACK_MS);
     this.statusTimerId = window.setTimeout(() => {
-      this.statusMessage.set(null);
+      this.notificationService.dismiss();
       this.router.navigate(['/login']);
     }, SupplierRegistrationPage.SUCCESS_FEEDBACK_MS);
   }
 
   private showError(message: string): void {
-    this.statusMessage.set({ type: 'error', text: message });
+    this.notificationService.error(message, SupplierRegistrationPage.ERROR_FEEDBACK_MS);
     this.statusTimerId = window.setTimeout(() => {
-      this.statusMessage.set(null);
+      this.notificationService.dismiss();
     }, SupplierRegistrationPage.ERROR_FEEDBACK_MS);
   }
 

@@ -1,4 +1,6 @@
 <main class="page-shell">
+  <app-toast-host></app-toast-host>
+
   <section class="hero">
     <h1>Registro de Proveedores</h1>
     <p class="hero-links">
@@ -6,18 +8,6 @@
       <a class="app-link" [routerLink]="['/set-password']">Cambiar contraseña con token</a>
     </p>
   </section>
-
-  @if (statusMessage(); as message) {
-    <section class="toast-container" aria-live="polite" aria-atomic="true">
-      <div class="toast" [class.success]="message.type === 'success'" [class.error]="message.type === 'error'" role="status">
-        <span class="toast-icon" aria-hidden="true">{{ message.type === 'success' ? 'OK' : '!' }}</span>
-        <p>{{ message.text }}</p>
-        <button type="button" class="toast-close" (click)="dismissStatusMessage()" aria-label="Cerrar notificacion">
-          Cerrar
-        </button>
-      </div>
-    </section>
-  }
 
   @if (loadingError()) {
     <div class="feedback-banner error">

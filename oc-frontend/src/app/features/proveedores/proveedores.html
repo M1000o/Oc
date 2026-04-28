@@ -1,6 +1,390 @@
 <div layoutBody class="workspace-canvas">
-    <section class="proveedores-card">
-      <p>proveedores-home works!</p>
+  @if (isDetailView) {
+    <section class="detail-shell">
+      <div class="detail-topbar">
+        <button class="ghost-btn" type="button" (click)="goBackToDirectory()">
+          <mat-icon aria-hidden="true">arrow_back</mat-icon>
+          Volver al directorio
+        </button>
+        @if (selectedSupplier) {
+          <span class="detail-register">Alta {{ formatDate(selectedSupplier.fechaRegistro) }}</span>
+        }
+      </div>
+
+      @if (loadingDetail) {
+        <section class="state-card">
+          <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+          <p>Cargando perfil del proveedor...</p>
+        </section>
+      } @else if (detailError) {
+        <section class="state-card error">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <p>{{ detailError }}</p>
+          <button class="primary-btn" type="button" (click)="retryDetail()">Reintentar</button>
+        </section>
+      } @else if (selectedSupplier; as supplier) {
+        <section class="detail-hero">
+          <div class="detail-hero-copy">
+            <span class="eyebrow section-badge">Perfil de proveedor</span>
+            <h1>{{ supplier.razonSocial }}</h1>
+            <p>RUC {{ supplier.ruc }}</p>
+            <div class="detail-actions">
+              <button class="primary-btn" type="button">
+                <mat-icon aria-hidden="true">mail</mat-icon>
+                Contactar
+              </button>
+              <button class="secondary-btn" type="button" (click)="exportCsv()">
+                <mat-icon aria-hidden="true">download</mat-icon>
+                Exportar base
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats-grid detail-stats">
+          <article class="stat-card">
+            <p>Productos vinculados</p>
+            <div>
+              <strong>{{ supplier.totalProductos }}</strong>
+            </div>
+          </article>
+          <article class="stat-card">
+            <p>Categorías</p>
+            <div>
+              <strong>{{ supplier.categorias.length }}</strong>
+            </div>
+          </article>
+          <article class="stat-card">
+            <p>Días de crédito</p>
+            <div>
+              <strong>{{ supplier.diasCredito ?? 0 }}</strong>
+            </div>
+          </article>
+          <article class="stat-card">
+            <p>Detracción</p>
+            <div>
+              <strong>{{ supplier.tieneCuentaDetraccion ? 'Sí' : 'No' }}</strong>
+              <span>{{ supplier.tieneCuentaDetraccion ? 'Cuenta registrada' : 'Sin cuenta asociada' }}</span>
+            </div>
+          </article>
+        </section>
+
+        <section class="detail-content-card">
+          <div class="detail-content-head">
+            <div>
+              <h2>Resumen operacional</h2>
+            </div>
+            <button class="icon-btn" type="button" aria-label="Actualizar perfil" (click)="retryDetail()">
+              <mat-icon aria-hidden="true">refresh</mat-icon>
+            </button>
+          </div>
+
+          <div class="detail-grid">
+            <article class="info-panel">
+              <h3>Contacto principal</h3>
+              <dl>
+                <div>
+                  <dt>Nombre</dt>
+                  <dd>{{ supplier.contactoNombre || 'No registrado' }}</dd>
+                </div>
+                <div>
+                  <dt>Correo</dt>
+                  <dd>{{ supplier.contactoEmail || 'No registrado' }}</dd>
+                </div>
+                <div>
+                  <dt>Teléfono</dt>
+                  <dd>{{ supplier.contactoTelefono || 'No registrado' }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="info-panel">
+              <h3>Información administrativa</h3>
+              <dl>
+                <div>
+                  <dt>Correo constancias</dt>
+                  <dd>{{ supplier.correoConstancias || 'No registrado' }}</dd>
+                </div>
+                <div>
+                  <dt>Cuenta detracción</dt>
+                  <dd>{{ supplier.cuentaDetraccion || 'No registrada' }}</dd>
+                </div>
+                <div>
+                  <dt>Fecha alta</dt>
+                  <dd>{{ formatDate(supplier.fechaRegistro) }}</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+
+          <div class="services-strip">
+            <div class="services-copy">
+              <span class="eyebrow soft section-badge">Cobertura del proveedor</span>
+              <h3>Categorías y alcance comercial</h3>
+              <p>
+                Este proveedor participa actualmente en {{ supplier.categorias.length }}
+                categoría{{ supplier.categorias.length === 1 ? '' : 's' }}.
+              </p>
+            </div>
+            <div class="tag-cloud">
+              @for (categoria of supplier.categorias; track categoria) {
+                <span class="category-chip">{{ categoria }}</span>
+              } @empty {
+                <span class="category-chip muted">Sin categorías asignadas</span>
+              }
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-content-card supplier-products-card">
+          <div class="detail-content-head">
+            <div>
+              <h2>Productos del proveedor</h2>
+              <p>Vista referencial del catálogo que ofrece este proveedor.</p>
+            </div>
+          </div>
+
+          <div class="table-wrap detail-table-wrap">
+            <table class="supplier-table product-table">
+              <thead>
+                <tr>
+                  <th>Código de producto</th>
+                  <th>Nombre del producto</th>
+                  <th>Categoría</th>
+                  <th>Unidad de medida</th>
+                  <th class="actions-col">Precio</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (loadingDetail) {
+                  <tr>
+                    <td colspan="5">
+                      <div class="empty-state compact">
+                        <p>Cargando productos del proveedor...</p>
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
+                  @for (product of supplierProducts; track product.id) {
+                    <tr>
+                      <td>
+                        <span class="sku-chip small">{{ product.codigo }}</span>
+                      </td>
+                      <td>
+                        <div class="product-name-cell">
+                          <p>{{ product.nombre }}</p>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="category-chip">{{ product.categoria }}</span>
+                      </td>
+                      <td>{{ product.unidad }}</td>
+                      <td class="actions-col product-price">{{ formatCurrency(product.precio) }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5">
+                        <div class="empty-state compact">
+                          <mat-icon aria-hidden="true">inventory_2</mat-icon>
+                          <p>Este proveedor aún no tiene productos registrados.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
     </section>
+  } @else {
+    <section class="page-head">
+      <div>
+        <h1>Directorio de Proveedores</h1>
+        <p>
+          Gestiona y monitorea el ecosistema de socios estratégicos con una vista
+          consolidada de categorías, contactos y actividad operativa.
+        </p>
+      </div>
+      <div class="page-actions">
+        <label class="search-box">
+          <mat-icon aria-hidden="true">search</mat-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchTermChange()"
+            placeholder="Buscar por proveedor, contacto, RUC o categoría"
+          />
+        </label>
+        <button class="ghost-btn" type="button">
+          <mat-icon aria-hidden="true">filter_list</mat-icon>
+          Filtros
+        </button>
+        <button class="primary-btn" type="button" (click)="exportCsv()">
+          <mat-icon aria-hidden="true">download</mat-icon>
+          Exportar CSV
+        </button>
+      </div>
+    </section>
+
+    @if (loadingDirectory) {
+      <section class="state-card">
+        <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+        <p>Cargando directorio de proveedores...</p>
+      </section>
+    } @else if (directoryError) {
+      <section class="state-card error">
+        <mat-icon aria-hidden="true">error</mat-icon>
+        <p>{{ directoryError }}</p>
+        <button class="primary-btn" type="button" (click)="retryDirectory()">Reintentar</button>
+      </section>
+    } @else {
+      <section class="stats-grid">
+        <article class="stat-card">
+          <p>Total proveedores</p>
+          <div>
+            <strong>{{ totalSuppliersCount }}</strong>
+            <span>Base registrada</span>
+          </div>
+        </article>
+        <article class="stat-card">
+          <p>Categorías activas</p>
+          <div>
+            <strong>{{ totalCategoriesCount }}</strong>
+            <span>Verticales conectadas</span>
+          </div>
+        </article>
+        <article class="stat-card">
+          <p>Salud operativa</p>
+          <div>
+            <strong>{{ healthRatio }}</strong>
+            <span>Proveedores activos</span>
+          </div>
+        </article>
+        <article class="stat-card">
+          <p>Revisiones pendientes</p>
+          <div>
+            <strong>{{ pendingReviewsCount }}</strong>
+            <span>Requieren validación</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="directory-card">
+        <div class="directory-filters">
+          <div class="filter-pills">
+            @for (category of visibleCategoryFilters; track category) {
+              <button
+                type="button"
+                class="filter-pill"
+                [class.active]="activeCategory === category"
+                (click)="setCategory(category)"
+              >
+                {{ category }}
+              </button>
+            }
+          </div>
+          <span class="directory-meta">{{ filteredSuppliers.length }} proveedor(es) visibles</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="supplier-table">
+            <thead>
+              <tr>
+                <th>Proveedor</th>
+                <th>Categorías</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+                <th class="actions-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (supplier of paginatedSuppliers; track trackBySupplierId($index, supplier)) {
+                <tr class="clickable-row" (click)="openSupplierProfile(supplier)">
+                  <td>
+                    <div class="supplier-main">
+                      <div class="supplier-avatar">{{ getSupplierInitials(supplier.razonSocial) }}</div>
+                      <div>
+                        <p>{{ supplier.razonSocial }}</p>
+                        <span>RUC: {{ supplier.ruc }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="tag-cloud compact">
+                      @for (categoria of supplier.categorias.slice(0, 3); track categoria) {
+                        <span class="category-chip">{{ categoria }}</span>
+                      }
+                      @if (supplier.categorias.length > 3) {
+                        <span class="category-chip muted">+{{ supplier.categorias.length - 3 }} más</span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <p class="contact-name">{{ supplier.contactoNombre || 'Sin contacto' }}</p>
+                    <span class="contact-meta">{{ supplier.contactoEmail || 'Sin correo registrado' }}</span>
+                  </td>
+                  <td>{{ supplier.contactoTelefono || 'Sin teléfono' }}</td>
+                  <td>
+                    <span [class]="getStatusClass(supplier.estado)">
+                      <span class="dot"></span>
+                      {{ getStatusLabel(supplier.estado) }}
+                    </span>
+                  </td>
+                  <td class="actions-col">
+                    <button class="table-action" type="button" (click)="openSupplierProfile(supplier); $event.stopPropagation()">
+                      Ver perfil
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6">
+                    <div class="empty-state">
+                      <mat-icon aria-hidden="true">search_off</mat-icon>
+                      <p>No hay proveedores que coincidan con la búsqueda actual.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="table-footer">
+          <p>Mostrando {{ startItem }} - {{ endItem }} de {{ filteredSuppliers.length }} proveedores</p>
+          <div class="pager">
+            <button class="pager-btn" type="button" (click)="previousPage()" [disabled]="currentPage === 1">
+              <mat-icon aria-hidden="true">chevron_left</mat-icon>
+            </button>
+            @for (item of pageItems; track item) {
+              @if (item === '...') {
+                <span class="pager-ellipsis">...</span>
+              } @else {
+                <button
+                  class="pager-btn page-number"
+                  type="button"
+                  [class.active]="currentPage === item"
+                  (click)="setPage(+item)"
+                >
+                  {{ item }}
+                </button>
+              }
+            }
+            <button
+              class="pager-btn"
+              type="button"
+              (click)="nextPage()"
+              [disabled]="currentPage === totalPages"
+            >
+              <mat-icon aria-hidden="true">chevron_right</mat-icon>
+            </button>
+          </div>
+        </footer>
+      </section>
+    }
+  }
 </div>
   

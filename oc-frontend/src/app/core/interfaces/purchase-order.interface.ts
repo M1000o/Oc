@@ -3,15 +3,15 @@ import {
   PurchaseOrderDetailResponse
 } from './purchase-order-detail.interface';
 
+export type PurchaseOrderStatus = 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'CANCELADO';
+
 export interface PurchaseOrderRequest {
-  purchaseOrderNumber?: string;
-  servicioId?: number;
-  servicioIds?: number[];
-  proveedorId: number;
-  fechaEntrega: string;
-  local: string;
+  supplierId: number;
+  orderDate: string;
+  deliveryDate: string;
+  sede: string;
   area: string;
-  status?: 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'EN_PROCESO' | 'COMPLETADO';
+  saveDraft?: boolean;
   details: PurchaseOrderDetailRequest[];
   notas?: string;
 }
@@ -20,14 +20,43 @@ export interface PurchaseOrderResponse {
   id: number;
   purchaseOrderNumber: string;
   supplierId: number;
-  serviceId: number;
-  serviceIds?: number[];
-  status: string;
+  supplierRuc: string;
+  supplierName: string;
   orderDate: string;
   deliveryDate: string;
   sede: string;
   area: string;
+  status: PurchaseOrderStatus;
   notas: string | null;
+  createdBy: string;
+  subtotal: number;
+  igv: number;
+  total: number;
   details: PurchaseOrderDetailResponse[];
-  createdAt: string;
+}
+
+export interface PurchaseOrderSummary {
+  id: number;
+  purchaseOrderNumber: string;
+  supplierName: string;
+  orderDate: string;
+  deliveryDate: string;
+  sede: string;
+  area: string;
+  status: PurchaseOrderStatus;
+  total: number;
+}
+
+export interface PurchaseOrderFilter {
+  status?: PurchaseOrderStatus;
+  supplierId?: number;
+  fechaDesde?: string;
+  fechaHasta?: string;
+  sede?: string;
+  area?: string;
+}
+
+export interface PurchaseOrderStatusPayload {
+  status: PurchaseOrderStatus;
+  motivo?: string;
 }

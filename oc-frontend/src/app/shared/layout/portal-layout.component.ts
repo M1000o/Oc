@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { AppToastHostComponent } from '../components/app-toast-host/app-toast-host.component';
 import { PortalSidebarComponent } from './sidebar/portal-sidebar.component';
 import { PortalHeaderComponent } from './header/portal-header.component';
 import { PortalFooterComponent } from './footer/portal-footer.component';
@@ -11,6 +12,7 @@ import { PortalFooterComponent } from './footer/portal-footer.component';
   imports: [
     CommonModule,
     RouterOutlet,
+    AppToastHostComponent,
     PortalSidebarComponent,
     PortalHeaderComponent,
     PortalFooterComponent

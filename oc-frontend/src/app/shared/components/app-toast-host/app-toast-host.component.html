@@ -1,0 +1,11 @@
+@if (notification(); as message) {
+  <section class="toast-container" aria-live="polite" aria-atomic="true">
+    <div class="toast" [class.success]="message.kind === 'success'" [class.error]="message.kind === 'error'" role="status">
+      <span class="toast-icon" aria-hidden="true">{{ message.kind === 'success' ? 'OK' : '!' }}</span>
+      <p>{{ message.message }}</p>
+      <button type="button" class="toast-close" (click)="dismiss()" aria-label="Cerrar notificacion">
+        Cerrar
+      </button>
+    </div>
+  </section>
+}

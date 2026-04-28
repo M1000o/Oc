@@ -1,6 +1,321 @@
 <div layoutBody class="workspace-canvas">
-    <section class="productos-card">
-      <p>productos-home works!</p>
+  <section class="catalog-shell">
+    <header class="page-header">
+      <div class="page-header__copy">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span>Admin</span>
+          <span class="breadcrumb__separator">/</span>
+          <span>Inventario</span>
+        </nav>
+
+        <div class="title-block">
+          <h1>Catalogo de Productos</h1>
+          <p>
+            Gestiona tu stock global de productos, visualiza categorias clave y
+            mantén el control sobre proveedores y precios.
+          </p>
+        </div>
+      </div>
+
+      <div class="page-header__actions">
+        <button type="button" class="btn btn-secondary">
+          <span class="btn__icon" aria-hidden="true">↓</span>
+          <span>Exportar</span>
+        </button>
+        <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+          <span class="btn__icon" aria-hidden="true">+</span>
+          <span>Nuevo Registro</span>
+        </button>
+      </div>
+    </header>
+    <section class="stats-grid" aria-label="Resumen del inventario">
+      <article class="stat-card">
+        <span class="stat-card__label">Total Productos Registrados</span>
+        <strong class="stat-card__value">{{ totalProductsCount }}</strong>
+        <p class="stat-card__meta is-positive">Productos cargados en el sistema</p>
+      </article>
+
+      <article class="stat-card">
+        <span class="stat-card__label">Proveedores Activos</span>
+        <strong class="stat-card__value">{{ activeSuppliersCount }}</strong>
+        <p class="stat-card__meta is-positive">Proveedores con productos asociados</p>
+      </article>
+
+      <article class="stat-card">
+        <span class="stat-card__label">Servicios Vinculados</span>
+        <strong class="stat-card__value">{{ linkedServicesCount }}</strong>
+        <p class="stat-card__meta">Categorias disponibles en catalogo</p>
+      </article>
+
+      <article class="stat-card">
+        <span class="stat-card__label">Productos sin Precio</span>
+        <strong class="stat-card__value is-danger">{{ productsWithoutPriceCount }}</strong>
+        <p class="stat-card__meta is-danger">Datos incompletos</p>
+      </article>
     </section>
-  </div>
-  
+
+    <section class="table-card">
+      <div class="table-toolbar">
+        <label class="search-box" aria-label="Buscar productos">
+          <span class="search-box__icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            [ngModel]="searchTerm"
+            (ngModelChange)="onSearchChange($event)"
+            placeholder="Buscar por SKU, producto, categoria o proveedor"
+          />
+        </label>
+
+        <span class="results-counter">
+          {{ filteredProducts.length }} resultado{{ filteredProducts.length === 1 ? '' : 's' }}
+        </span>
+      </div>
+
+      @if (tableError) {
+      <div class="panel-message panel-message--error">
+        <span>{{ tableError }}</span>
+        <button type="button" class="panel-message__action" (click)="retryLoad()">Reintentar</button>
+      </div>
+      }
+
+      <div class="table-wrap">
+        <table class="catalog-table">
+          <colgroup>
+            <col class="col-sku" />
+            <col class="col-product" />
+            <col class="col-category" />
+            <col class="col-provider" />
+            <col class="col-price" />
+            <col class="col-unit" />
+            <col class="col-actions" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Producto</th>
+              <th>Categoria</th>
+              <th>Proveedor</th>
+              <th class="price-column">Precio</th>
+              <th>Unidad</th>
+              <th class="actions-column">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loadingTable) {
+            <tr>
+              <td colspan="7" class="empty-state">Cargando productos...</td>
+            </tr>
+            } @else {
+              @for (product of paginatedProducts; track trackBySku($index, product)) {
+              <tr>
+                <td>
+                  <span class="sku-chip">{{ product.sku }}</span>
+                </td>
+                <td>
+                  <div class="product-cell">
+                    <span class="product-name">{{ product.name }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="tag" [class]=" 'tag ' + product.tagClass ">{{ product.category }}</span>
+                </td>
+                <td class="muted-cell">{{ product.provider }}</td>
+                <td class="price-column price-cell">{{ formatPrice(product.price) }}</td>
+                <td class="muted-cell">{{ product.unit }}</td>
+                <td class="actions-column">
+                  <div class="row-actions">
+                    <button
+                      type="button"
+                      class="icon-action"
+                      (click)="openEditModal(product)"
+                      [attr.aria-label]="'Editar producto ' + product.sku"
+                    >
+                      <span class="material-icons" aria-hidden="true">edit</span>
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-action icon-action--danger"
+                      [disabled]="isDeletingId === product.id"
+                      (click)="openDeleteModal(product)"
+                      [attr.aria-label]="'Eliminar producto ' + product.sku"
+                    >
+                      <span class="material-icons" aria-hidden="true">delete</span>
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="7" class="empty-state">
+                  No encontramos productos con ese criterio de busqueda.
+                </td>
+              </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="table-footer">
+        <span>
+          Mostrando {{ startItem }} a {{ endItem }} de {{ filteredProducts.length }} registros
+        </span>
+        <div class="pagination" aria-label="Paginacion">
+          <button
+            type="button"
+            class="page-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+            aria-label="Pagina anterior"
+          >
+            ‹
+          </button>
+
+          @for (item of pageItems; track $index) {
+            @if (item === '...') {
+              <span class="page-dots">...</span>
+            } @else {
+              <button
+                type="button"
+                class="page-btn"
+                [class.page-btn--active]="currentPage === item"
+                (click)="setPage(+item)"
+              >
+                {{ item }}
+              </button>
+            }
+          }
+
+          <button
+            type="button"
+            class="page-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+            aria-label="Pagina siguiente"
+          >
+            ›
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    @if (isModalOpen) {
+    <div class="product-modal-backdrop" (click)="onModalBackdropClick($event)">
+      <section class="product-modal" role="dialog" aria-modal="true" aria-labelledby="productCrudModalTitle">
+        <header class="product-modal__header">
+          <div>
+            <h2 id="productCrudModalTitle">
+              {{ modalMode === 'create' ? 'Nuevo producto' : 'Editar producto' }}
+            </h2>
+            <p>
+              {{ modalMode === 'create'
+                ? 'Completa los datos para registrar un nuevo producto.'
+                : 'Actualiza los datos principales del producto seleccionado.' }}
+            </p>
+          </div>
+          <button type="button" class="modal-close" (click)="closeModal()" aria-label="Cerrar modal">×</button>
+        </header>
+
+        <div class="product-modal__content">
+          @if (catalogsError && !suppliers.length && !services.length) {
+          <div class="panel-message panel-message--error">
+            {{ catalogsError }}
+          </div>
+          }
+
+          @if (formError) {
+          <div class="panel-message panel-message--error">{{ formError }}</div>
+          }
+
+          <div class="form-grid">
+            <label class="field">
+              <span>Codigo</span>
+              <input [(ngModel)]="form.codigo_producto" maxlength="30" placeholder="Ej. INV-1001" />
+            </label>
+
+            <label class="field">
+              <span>Nombre</span>
+              <input [(ngModel)]="form.nombre" maxlength="120" placeholder="Nombre del producto" />
+            </label>
+
+            <label class="field">
+              <span>Precio</span>
+              <input [(ngModel)]="form.precio" type="number" min="0.01" step="0.01" placeholder="0.00" />
+            </label>
+
+            <label class="field">
+              <span>Unidad</span>
+              <select [(ngModel)]="form.und_medida">
+                @for (unit of unitOptions; track unit.value) {
+                <option [value]="unit.value">{{ unit.label }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Proveedor</span>
+              <select [ngModel]="form.proveedorId" (ngModelChange)="onSupplierChange($event)">
+                <option [ngValue]="null">Selecciona un proveedor</option>
+                @for (supplier of suppliers; track supplier.id) {
+                <option [ngValue]="supplier.id">{{ supplier.razon_social }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Categoria</span>
+              <select [(ngModel)]="form.servicioId" [disabled]="!form.proveedorId || loadingSupplierServices">
+                <option [ngValue]="null">
+                  {{ loadingSupplierServices ? 'Cargando categorias...' : 'Selecciona una categoria' }}
+                </option>
+                @for (service of supplierServices; track service.id) {
+                <option [ngValue]="service.id">{{ service.nombre }}</option>
+                }
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <footer class="product-modal__footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
+          <button type="button" class="btn btn-primary" [disabled]="isSaving || loadingCatalogs" (click)="saveProduct()">
+            <span>{{ isSaving ? 'Guardando...' : (modalMode === 'create' ? 'Crear producto' : 'Guardar cambios') }}</span>
+          </button>
+        </footer>
+      </section>
+    </div>
+    }
+
+    @if (deleteTarget) {
+    <div class="product-modal-backdrop" (click)="closeDeleteModal()">
+      <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="deleteProductModalTitle" (click)="$event.stopPropagation()">
+        <header class="confirm-modal__header">
+          <div class="confirm-modal__icon" aria-hidden="true">!</div>
+          <div>
+            <h2 id="deleteProductModalTitle">Eliminar producto</h2>
+            <p>Esta accion ocultará el producto del catalogo activo.</p>
+          </div>
+        </header>
+
+        <div class="confirm-modal__content">
+          <p>
+            ¿Deseas eliminar <strong>{{ deleteTarget.name }}</strong>
+            <span class="confirm-modal__sku">({{ deleteTarget.sku }})</span>?
+          </p>
+        </div>
+
+        <footer class="confirm-modal__footer">
+          <button type="button" class="btn btn-secondary" [disabled]="isDeletingId !== null" (click)="closeDeleteModal()">
+            Cancelar
+          </button>
+          <button type="button" class="btn btn-danger" [disabled]="isDeletingId !== null" (click)="confirmDeleteProduct()">
+            <span>{{ isDeletingId !== null ? 'Eliminando...' : 'Eliminar producto' }}</span>
+          </button>
+        </footer>
+      </section>
+    </div>
+    }
+  </section>
+</div>

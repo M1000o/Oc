@@ -1,18 +1,18 @@
 package com.kong.oc.controller;
 
-import com.kong.oc.dto.ApiResponse;
-import com.kong.oc.dto.PurchaseOrderRequest;
-import com.kong.oc.dto.PurchaseOrderResponse;
+import com.kong.oc.common.exception.BadRequestException;
+import com.kong.oc.dto.*;
 import com.kong.oc.interfaces.IPurchaseOrderService;
-import com.kong.oc.interfaces.ISupplierService;
-import com.kong.oc.security.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/purchase-orders")
@@ -20,21 +20,17 @@ import java.util.List;
 public class PurchaseOrderController {
 
     private final IPurchaseOrderService purchaseOrderService;
-    private final ISupplierService supplierService;
 
-    @GetMapping("/next-number")
-    public ResponseEntity<ApiResponse<String>> previewNextPurchaseOrderNumber() {
-        return ResponseEntity.ok(
-                new ApiResponse<>("Siguiente numero de orden generado", purchaseOrderService.previewNextPurchaseOrderNumber())
-        );
-    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> create(
             @Valid @RequestBody PurchaseOrderRequest request,
-            @AuthenticationPrincipal UserDetailsImpl userDetails
-    ) {
-        Long userId = userDetails != null ? userDetails.getId() : null;
+            @AuthenticationPrincipal Jwt jwt
+            ) {
+
+        if(jwt == null) throw new BadRequestException("Usuario no autenticado");
+        Long userId = Long.parseLong(jwt.getSubject());
+
         return ResponseEntity.ok(new ApiResponse<>("Orden de compra creada", purchaseOrderService.create(request, userId)));
     }
 
@@ -45,30 +41,28 @@ public class PurchaseOrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(new ApiResponse<>("Orden de compra obtenida", purchaseOrderService.getById(id)));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
-        purchaseOrderService.softDelete(id);
-        return ResponseEntity.ok(new ApiResponse<>("Orden de compra eliminada", null));
+        return ResponseEntity.ok(new ApiResponse<>("Orden de compra obtenida", purchaseOrderService.findById(id)));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PurchaseOrderResponse>>> list(@AuthenticationPrincipal UserDetailsImpl userDetails){
-        if (userDetails != null) {
-            boolean isProveedor = userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_PROVEEDOR"));
-            if (isProveedor) {
-                Long userId = userDetails.getId();
-                var supplierOpt = supplierService.findByUserId(userId);
-                if (supplierOpt.isEmpty()) {
-                    return ResponseEntity.ok(new ApiResponse<>("No se encontraron ordenes para este proveedor", List.of()));
-                }
-                Long supplierId = supplierOpt.get().getId();
-                return ResponseEntity.ok(new ApiResponse<>("Ordenes del proveedor obtenidas", purchaseOrderService.listBySupplierId(supplierId)));
-            }
-        }
+    public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> findAll(
+            @ModelAttribute PurchaseOrderFilter filter,
+            @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
+            ) {
+                Page<PurchaseOrderSummary> result = purchaseOrderService.findAll(filter, pageable);
+                return ResponseEntity.ok(new ApiResponse<>("Listado de órdenes de compra", result));
+    }
 
-        return ResponseEntity.ok(new ApiResponse<>("Ordenes obtenidas", purchaseOrderService.listAll()));
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<PurchaseOrderResponse>> changeStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody PurchaseOrderStatus statusDTO
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Estado de orden de compra actualizado",
+                        purchaseOrderService.changeStatus(id, statusDTO)
+                )
+        );
     }
 }

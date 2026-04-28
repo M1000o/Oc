@@ -29,6 +29,7 @@ public class SupplierServiceImpl implements ISupplierService {
     private final ContactsRepository contactsRepository;
     private final CuentasBancariasRepository cuentasRepository;
     private final BanksRepository banksRepository;
+    private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ActivationService activationService;
@@ -42,12 +43,127 @@ public class SupplierServiceImpl implements ISupplierService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<SupplierDirectoryItemResponse> listDirectory() {
+        return supplierRepository.findAll()
+                .stream()
+                .filter(supplier -> !Boolean.TRUE.equals(supplier.getIsDeleted()))
+                .map(this::toDirectoryItem)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SupplierDirectoryDetailResponse getDirectoryDetail(Long supplierId) {
+        Supplier supplier = supplierRepository.findByIdAndIsDeletedFalse(supplierId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+
+        Contacts primaryContact = contactsRepository
+                .findFirstBySupplier_IdAndIsDeletedFalseOrderByIdAsc(supplierId)
+                .orElse(null);
+
+        long totalProductos = productRepository.countByProveedorAndIsDeletedFalse(supplier);
+        List<String> categorias = extractCategoryNames(supplier);
+        String estado = resolveStatus(supplier, primaryContact, totalProductos, categorias);
+
+        return new SupplierDirectoryDetailResponse(
+                supplier.getId(),
+                supplier.getRazonSocial(),
+                supplier.getRuc(),
+                supplier.getCreditDays() != null ? supplier.getCreditDays().getDays() : null,
+                supplier.getCreditDays() != null ? supplier.getCreditDays().getDays() + " días" : "No configurado",
+                supplier.isTiene_cuenta_detraccion(),
+                supplier.getCuenta_detraccion(),
+                supplier.getCorreoConstancias(),
+                buildContactName(primaryContact),
+                primaryContact != null ? primaryContact.getEmail() : null,
+                primaryContact != null ? primaryContact.getPhone() : null,
+                categorias,
+                totalProductos,
+                estado,
+                supplier.getCreatedAt()
+        );
+    }
+
     private ProveedorResponse toDto(Supplier s){
         return new ProveedorResponse(
                 s.getId(),
                 s.getRazonSocial(),
                 s.getRuc()
         );
+    }
+
+    private SupplierDirectoryItemResponse toDirectoryItem(Supplier supplier) {
+        Contacts primaryContact = contactsRepository
+                .findFirstBySupplier_IdAndIsDeletedFalseOrderByIdAsc(supplier.getId())
+                .orElse(null);
+        long totalProductos = productRepository.countByProveedorAndIsDeletedFalse(supplier);
+        List<String> categorias = extractCategoryNames(supplier);
+        String estado = resolveStatus(supplier, primaryContact, totalProductos, categorias);
+
+        return new SupplierDirectoryItemResponse(
+                supplier.getId(),
+                supplier.getRazonSocial(),
+                supplier.getRuc(),
+                buildContactName(primaryContact),
+                primaryContact != null ? primaryContact.getEmail() : null,
+                primaryContact != null ? primaryContact.getPhone() : null,
+                categorias,
+                totalProductos,
+                estado
+        );
+    }
+
+    private List<String> extractCategoryNames(Supplier supplier) {
+        if (supplier.getServicios() == null) {
+            return List.of();
+        }
+
+        return supplier.getServicios()
+                .stream()
+                .filter(service -> !Boolean.TRUE.equals(service.getIsDeleted()))
+                .map(Services::getNombre)
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    private String buildContactName(Contacts contact) {
+        if (contact == null) {
+            return null;
+        }
+
+        return String.join(" ",
+                        contact.getName(),
+                        contact.getApellido_paterno(),
+                        contact.getApellido_materno() != null ? contact.getApellido_materno() : "")
+                .trim()
+                .replaceAll("\\s+", " ");
+    }
+
+    private String resolveStatus(
+            Supplier supplier,
+            Contacts primaryContact,
+            long totalProductos,
+            List<String> categorias
+    ) {
+        if (Boolean.TRUE.equals(supplier.getIsDeleted())) {
+            return "INACTIVO";
+        }
+
+        boolean hasContactInfo = primaryContact != null
+                && primaryContact.getPhone() != null
+                && !primaryContact.getPhone().isBlank()
+                && primaryContact.getEmail() != null
+                && !primaryContact.getEmail().isBlank();
+
+        boolean hasCategories = categorias != null && !categorias.isEmpty();
+
+        if (!hasContactInfo || !hasCategories || totalProductos == 0) {
+            return "REVISION";
+        }
+
+        return "ACTIVO";
     }
 
     @Override

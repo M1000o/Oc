@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
 import {
   PurchaseOrderRequest,
   PurchaseOrderResponse
@@ -17,7 +16,6 @@ import { ProductResponse } from '../../core/interfaces/product-response.interfac
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ProductCatalogService } from '../../core/services/product-catalog.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
-import { PortalLayoutComponent } from '../../shared/layout/portal-layout.component';
 import { ServiceProviderModalComponent } from './service-provider-modal.component';
 import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
 import {
@@ -60,7 +58,6 @@ export class PortalHomePage {
     return undefined;
   };
 
-  private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly draftService = inject(OrderSummaryDraftService);

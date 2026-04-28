@@ -1,42 +1,35 @@
 package com.kong.oc.dto;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.FutureOrPresent;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public record PurchaseOrderRequest(
 
-        String purchaseOrderNumber,
-
-        Long servicioId,
-
-        List<Long> servicioIds,
-
         @NotNull(message = "El proveedor es obligatorio")
-        Long proveedorId,
+        Long supplierId,
 
         @NotNull(message = "La fecha de entrega es obligatoria")
         @FutureOrPresent(message = "La fecha de entrega no puede ser anterior a hoy")
-        LocalDate fechaEntrega,
+        LocalDate orderDate,
+
+        LocalDate deliveryDate,
 
         @NotBlank(message = "El local es obligatorio")
-        String local,
+        String sede,
 
         @NotBlank(message = "El area es obligatoria")
         String area,
 
-        Status status,
+        Boolean saveDraft,
 
-        @NotNull(message = "Los detalles de la orden son obligatorios")
-        @Size(min = 1, message = "Los detalles de la orden no pueden estar vacios")
+        @NotEmpty(message = "La orden debe tener al menos un detalle")
         @Valid
         List<PurchaseOrderDetailRequest> details,
 
+        @Size(max = 500, message = "Las notas no pueden superar 500 caracteres")
         String notas
 
 ) { }

@@ -1,22 +1,25 @@
 package com.kong.oc.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public record PurchaseOrderResponse(
         Long id,
         String purchaseOrderNumber,
         Long supplierId,
-        Long serviceId,
-        List<Long> serviceIds,
-        String status,
+        String supplierRuc,
+        String supplierName,
         LocalDate orderDate,
         LocalDate deliveryDate,
         String sede,
         String area,
+        String status,
         String notas,
-        List<PurchaseOrderDetailResponse> details,
-        LocalDateTime createdAt
+        String createdBy,
+        BigDecimal subtotal,
+        BigDecimal igv,
+        BigDecimal total,
+        List<PurchaseOrderDetailResponse> details
 ) {
 }

@@ -21,4 +21,7 @@ public interface IPurchaseOrderService {
 
     /** Listado paginado con filtros opcionales. */
     Page<PurchaseOrderSummary> findAll(PurchaseOrderFilter filter, Pageable pageable);
+
+    /** Envía por correo la orden de compra registrada. */
+    PurchaseOrderEmailResponse sendEmail(Long orderId, PurchaseOrderEmailRequest request, Long userId);
 }

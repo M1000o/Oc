@@ -34,6 +34,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     private final ProductRepository productRepository;
     private final PurchaseOrderMapper mapper;
     private final UserRepository userRepository;
+    private final PurchaseOrderEmailService purchaseOrderEmailService;
 
 
     @Override
@@ -163,6 +164,16 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         ).map(mapper::toSummary);
     }
 
+    @Override
+    @Transactional
+    public PurchaseOrderEmailResponse sendEmail(Long orderId, PurchaseOrderEmailRequest request, Long userId) {
+        PurchaseOrder order = findOrderWithDetailsOrThrow(orderId);
+        findUserOrThrow(userId);
+        validateOrderCanBeSent(order);
+
+        return purchaseOrderEmailService.sendPurchaseOrderEmail(order, request);
+    }
+
     private Map<Long, Product> loadAndValidateProducts(List<Long> productIds, Long supplierId, boolean isDraft) {
 
         Set<Long> seen = new HashSet<>();
@@ -260,6 +271,16 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
             throw new BadRequestException(
                     "Transición de estado no permitida: " + current + " → " + next
             );
+        }
+    }
+
+    private void validateOrderCanBeSent(PurchaseOrder order) {
+        if (order.getStatus() == Status.BORRADOR) {
+            throw new BadRequestException("No se puede enviar por correo una orden en estado BORRADOR.");
+        }
+
+        if (order.getStatus() == Status.CANCELADO) {
+            throw new BadRequestException("No se puede enviar por correo una orden en estado CANCELADO.");
         }
     }
 

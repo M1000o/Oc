@@ -35,6 +35,22 @@ export interface PurchaseOrderResponse {
   details: PurchaseOrderDetailResponse[];
 }
 
+export type PurchaseOrderEmailStatus = 'QUEUED' | 'SENT' | 'FAILED';
+
+export interface PurchaseOrderEmailRequest {
+  message: string;
+}
+
+export interface PurchaseOrderEmailResponse {
+  orderId: number;
+  purchaseOrderNumber: string;
+  recipientEmail: string;
+  status: PurchaseOrderEmailStatus;
+  sentAt: string;
+  pdfFileName: string | null;
+  pdfStoredPath: string | null;
+}
+
 export interface PurchaseOrderSummary {
   id: number;
   purchaseOrderNumber: string;

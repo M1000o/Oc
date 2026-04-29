@@ -1,0 +1,415 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.pdf-workspace {
+  min-height: 100vh;
+  padding: 18px 20px 28px;
+  background:
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 28%),
+    #eff2f6;
+}
+
+.pdf-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid rgba(212, 220, 234, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  margin-bottom: 20px;
+}
+
+.pdf-topbar h1 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.pdf-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.topbar-action {
+  border: 0;
+  background: transparent;
+  color: #526075;
+  font-size: 0.86rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.topbar-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #617089;
+}
+
+.pdf-canvas {
+  display: flex;
+  justify-content: center;
+}
+
+.pdf-page {
+  width: min(100%, 850px);
+  min-height: 1100px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 28px 64px rgba(20, 30, 48, 0.14);
+  padding: 44px 44px 40px;
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding-bottom: 32px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #e8ebf1;
+}
+
+.company-block {
+  display: block;
+}
+
+.company-block h2,
+.document-meta h3,
+.section-title h4,
+.summary-total strong {
+  margin: 0;
+}
+
+.company-block h2 {
+  color: #1e293b;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.company-block p,
+.document-meta p,
+.data-stack p,
+.notes-card p,
+.generated-copy {
+  margin: 0;
+}
+
+.company-block p {
+  color: #69768d;
+  font-size: 0.92rem;
+}
+
+.document-meta {
+  text-align: right;
+}
+
+.document-meta h3 {
+  color: #10b981;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  margin-bottom: 10px;
+}
+
+.document-chip {
+  display: inline-grid;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #f5f6f8;
+}
+
+.document-chip span {
+  color: #7a8597;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.document-chip strong {
+  color: #1e293b;
+  font-size: 1.22rem;
+  font-weight: 900;
+}
+
+.document-meta p {
+  margin-top: 14px;
+  color: #5e687a;
+  font-size: 0.9rem;
+}
+
+.document-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-bottom: 30px;
+}
+
+.document-card {
+  display: grid;
+  gap: 14px;
+}
+
+.section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding-right: 18px;
+  border-bottom: 2px solid #10b981;
+}
+
+.section-title mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  color: #10b981;
+}
+
+.section-title h4 {
+  color: #1e293b;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.data-stack {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.supplier-name {
+  color: #111827;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.table-panel {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid #e5eaf0;
+}
+
+.document-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.document-table thead tr {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.document-table th,
+.document-table td {
+  padding: 14px 16px;
+  font-size: 0.84rem;
+}
+
+.document-table th {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.document-table tbody tr {
+  border-top: 1px solid #ecf0f5;
+}
+
+.document-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.mono {
+  font-family: Consolas, 'Courier New', monospace;
+  color: #64748b;
+}
+
+.description {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.align-center {
+  text-align: center;
+}
+
+.align-right {
+  text-align: right;
+}
+
+.strong {
+  font-weight: 800;
+}
+
+.summary-block {
+  width: min(100%, 300px);
+  margin: 28px 0 0 auto;
+  display: grid;
+  gap: 12px;
+}
+
+.summary-block div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.92rem;
+}
+
+.summary-block span {
+  color: #667085;
+  font-weight: 600;
+}
+
+.summary-block strong {
+  color: #1e293b;
+  font-weight: 800;
+}
+
+.summary-total {
+  padding-top: 12px;
+  border-top: 2px solid #1e293b;
+}
+
+.summary-total span {
+  color: #1e293b;
+  font-size: 0.96rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.summary-total strong {
+  color: #10b981;
+  font-size: 1.45rem;
+}
+
+.document-footer {
+  margin-top: 48px;
+}
+
+.notes-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f5f6f8;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-style: italic;
+  margin-bottom: 28px;
+}
+.generated-copy {
+  color: #7b8798;
+}
+
+.generated-copy {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pdf-floating-actions {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.ghost-btn,
+.download-btn {
+  border: 0;
+  border-radius: 999px;
+  min-height: 48px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.14);
+}
+
+.ghost-btn {
+  background: #ffffff;
+  color: #334155;
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #16c28e, #0f9e72);
+  color: #ffffff;
+}
+
+@media (max-width: 980px) {
+  .pdf-page {
+    padding: 28px 22px 30px;
+    border-radius: 20px;
+  }
+
+  .document-header,
+  .pdf-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .document-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .document-meta {
+    text-align: left;
+  }
+
+  .summary-block {
+    width: 100%;
+  }
+
+  .pdf-floating-actions {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+
+  .pdf-workspace {
+    background: #ffffff;
+    padding: 0;
+  }
+
+  .pdf-page {
+    width: 100%;
+    max-width: none;
+    min-height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 22px 18px;
+  }
+}

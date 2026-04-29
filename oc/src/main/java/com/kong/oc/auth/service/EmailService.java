@@ -1,15 +1,17 @@
 package com.kong.oc.auth.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kong.oc.common.exception.PurchaseOrderEmailDispatchException;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
 
 @Service
@@ -28,6 +30,41 @@ public class EmailService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void sendActivationEmailPlain(String toEmail, String subject, String htmlContent) {
+        sendHtmlEmail(toEmail, subject, htmlContent, "Error enviando email");
+    }
+
+    public void sendPurchaseOrderEmail(String toEmail, String subject, String htmlContent) {
+        sendHtmlEmail(toEmail, subject, htmlContent, "No se pudo enviar el correo de la orden de compra");
+    }
+
+    public void sendPurchaseOrderEmail(
+            String toEmail,
+            String subject,
+            String htmlContent,
+            byte[] attachmentBytes,
+            String attachmentFileName
+    ) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "utf-8");
+            helper.setText(htmlContent, true);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setFrom(fromEmail);
+            helper.addAttachment(
+                    attachmentFileName,
+                    new ByteArrayResource(attachmentBytes),
+                    "application/pdf"
+            );
+            mailSender.send(message);
+            log.info("Email con adjunto enviado a {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("Error enviando email con adjunto", e);
+            throw new PurchaseOrderEmailDispatchException("No se pudo enviar el correo de la orden de compra", e);
+        }
+    }
+
+    private void sendHtmlEmail(String toEmail, String subject, String htmlContent, String errorMessage) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
@@ -39,7 +76,7 @@ public class EmailService {
             log.info("Email enviado a {}", toEmail);
         } catch (MessagingException e) {
             log.error("Error enviando email", e);
-            throw new RuntimeException("Error enviando email");
+            throw new PurchaseOrderEmailDispatchException(errorMessage, e);
         }
     }
 

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of, switchMap } from 'rxjs';
 import {
+  PurchaseOrderEmailResponse,
   PurchaseOrderRequest,
   PurchaseOrderResponse
 } from '../../core/interfaces/purchase-order.interface';
@@ -16,8 +17,14 @@ import { ProductResponse } from '../../core/interfaces/product-response.interfac
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ProductCatalogService } from '../../core/services/product-catalog.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
+import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
 import { ServiceProviderModalComponent } from './service-provider-modal.component';
 import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
+import {
+  SendOrderModalComponent,
+  SendOrderModalPreviewPayload,
+  SendOrderModalSubmitPayload
+} from './send-order-modal.component';
 import {
   ProductSelectionItem,
   ProductSelectionModalComponent,
@@ -43,7 +50,8 @@ interface OrderRow {
     FormsModule,
     MatIconModule,
     ServiceProviderModalComponent,
-    ProductSelectionModalComponent
+    ProductSelectionModalComponent,
+    SendOrderModalComponent
   ],
   templateUrl: './portal-home.page.html',
   styleUrl: './portal-home.page.css'
@@ -64,6 +72,7 @@ export class PortalHomePage {
   private readonly notificationService = inject(AppNotificationService);
   private readonly productCatalogService = inject(ProductCatalogService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
+  private readonly supplierDirectoryService = inject(SupplierDirectoryService);
   private readonly validUnits: UnitOption[] = ['KG', 'UND', 'PAQ', 'DOC', 'GR', 'UN', 'CJ'];
   private readonly taxRate = 0.18;
   private readonly currencyFormatter = new Intl.NumberFormat('es-PE', {
@@ -75,6 +84,8 @@ export class PortalHomePage {
 
   private nextRowId = 1;
   private currentEditingOrderId: number | null = null;
+  private pendingEmailOrderId: number | null = null;
+  private pendingEmailOrderNumber = '';
 
   protected orderDate = this.toDateInputValue(new Date());
   protected dispatchDate = this.toDateInputValue(this.addDays(new Date(), 2));
@@ -88,9 +99,15 @@ export class PortalHomePage {
   protected lastSubmittedOrderNumber = '';
   protected showServiceProviderModal = false;
   protected showProductSelectionModal = false;
+  protected showSendOrderModal = false;
   protected currentProviderSelection: ProviderSelection | null = null;
   protected summaryProviderSelection: ProviderSelection | null = null;
   protected rows: OrderRow[] = [];
+  protected recipientEmail = '';
+  protected emailSubject = '';
+  protected emailMessage = '';
+  protected attachmentName = '';
+  protected isLoadingRecipientEmail = false;
 
   constructor() {
     this.restoreSummaryState();
@@ -305,17 +322,184 @@ export class PortalHomePage {
     this.isSubmittingOrder = false;
     this.isLoadingDraftOrder = false;
     this.currentEditingOrderId = null;
+    this.pendingEmailOrderId = null;
+    this.pendingEmailOrderNumber = '';
     this.rows = [];
     this.showServiceProviderModal = false;
     this.showProductSelectionModal = false;
+    this.showSendOrderModal = false;
     this.currentProviderSelection = null;
     this.summaryProviderSelection = null;
+    this.recipientEmail = '';
+    this.emailSubject = '';
+    this.emailMessage = '';
+    this.attachmentName = '';
+    this.isLoadingRecipientEmail = false;
     this.clearPersistedSummaryState();
     this.clearStatus();
   }
 
-  protected saveOrder(): void {
-    this.submitOrder(false);
+  protected openSendOrderModal(): void {
+    const validationError = this.getOrderValidationError(false);
+    if (validationError) {
+      this.showStatus('error', validationError);
+      return;
+    }
+
+    this.showSendOrderModal = true;
+    this.emailSubject = this.buildEmailSubject();
+    this.emailMessage = this.buildEmailMessage();
+    this.attachmentName = this.buildAttachmentName();
+
+    const providerEmail = this.summaryProviderSelection?.providerEmail?.trim() ?? '';
+    if (providerEmail) {
+      this.recipientEmail = providerEmail;
+      return;
+    }
+
+    const providerId = this.summaryProviderSelection?.providerId ?? 0;
+    if (!providerId) {
+      this.recipientEmail = '';
+      return;
+    }
+
+    this.isLoadingRecipientEmail = true;
+    this.supplierDirectoryService.getSupplierDetail(providerId).subscribe({
+      next: (response) => {
+        const email = response.data?.contactoEmail?.trim() ?? '';
+        this.recipientEmail = email;
+
+        if (this.summaryProviderSelection) {
+          this.summaryProviderSelection = {
+            ...this.summaryProviderSelection,
+            providerEmail: email
+          };
+          this.persistSummaryState();
+        }
+      },
+      error: () => {
+        this.recipientEmail = '';
+        this.isLoadingRecipientEmail = false;
+      },
+      complete: () => {
+        this.isLoadingRecipientEmail = false;
+      }
+    });
+  }
+
+  protected closeSendOrderModal(): void {
+    if (this.isSubmittingOrder) {
+      return;
+    }
+
+    this.showSendOrderModal = false;
+  }
+
+  protected onSendOrderRequested(payload: SendOrderModalSubmitPayload): void {
+    this.recipientEmail = payload.recipientEmail;
+    this.emailSubject = payload.emailSubject;
+    this.emailMessage = payload.emailMessage;
+
+    const validationError = this.getOrderValidationError(false);
+    if (validationError) {
+      this.showStatus('error', validationError);
+      return;
+    }
+
+    if (!payload.emailMessage.trim()) {
+      this.showStatus('error', 'Escribe un mensaje antes de enviar la orden.');
+      return;
+    }
+
+    if (this.pendingEmailOrderId) {
+      this.sendPurchaseOrderEmail(this.pendingEmailOrderId, this.pendingEmailOrderNumber, payload.emailMessage);
+      return;
+    }
+
+    this.createAndSendPurchaseOrder(payload.emailMessage);
+  }
+
+  protected openPdfPreview(payload: SendOrderModalPreviewPayload): void {
+    const orderId = this.pendingEmailOrderId;
+    if (orderId) {
+      const urlTree = this.router.createUrlTree(['/portal/pedido/pdf-preview'], {
+        queryParams: {
+          orderId,
+          previewData: null,
+          attachmentName: payload.attachmentName || this.buildAttachmentName()
+        }
+      });
+
+      const previewUrl = this.router.serializeUrl(urlTree);
+      window.open(previewUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const previewWindow = window.open('', '_blank');
+    const providerId = this.summaryProviderSelection?.providerId ?? 0;
+
+    const openPreview = (supplierContact: string, paymentTerms: string): void => {
+      const previewData = JSON.stringify({
+        orderNumber: this.pendingEmailOrderNumber || this.toPreviewOrderCode(),
+        supplierName: this.summaryProviderSelection?.providerName || '',
+        supplierRuc: this.summaryProviderSelection?.providerRuc || '',
+        supplierEmail: this.recipientEmail || this.summaryProviderSelection?.providerEmail || '',
+        supplierContact,
+        deliverySite: this.deliverySite,
+        deliveryArea: this.deliveryArea,
+        deliveryDate: this.dispatchDate,
+        paymentTerms,
+        notes: this.notes || '',
+        generatedBy: 'Generado por Grupo Kong Sistemas',
+        lineItems: this.summaryRows.map((row, index) => ({
+          item: `${index + 1}`.padStart(2, '0'),
+          sku: row.code,
+          description: row.description,
+          unit: row.unit,
+          quantity: row.quantity,
+          unitPrice: row.unitPrice,
+          total: this.rowSubtotal(row)
+        })),
+        subtotal: this.subtotalAmount,
+        igv: this.taxAmount,
+        total: this.totalAmount
+      });
+
+      const urlTree = this.router.createUrlTree(['/portal/pedido/pdf-preview'], {
+        queryParams: {
+          orderId: null,
+          previewData,
+          attachmentName: payload.attachmentName || this.buildAttachmentName()
+        }
+      });
+
+      const previewUrl = this.router.serializeUrl(urlTree);
+      if (previewWindow) {
+        previewWindow.location.href = previewUrl;
+        previewWindow.focus();
+        return;
+      }
+
+      window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    };
+
+    if (!providerId) {
+      openPreview('No registrado', 'No configurado');
+      return;
+    }
+
+    this.supplierDirectoryService.getSupplierDetail(providerId).subscribe({
+      next: (response) => {
+        const supplier = response.data;
+        openPreview(
+          supplier?.contactoNombre?.trim() || 'No registrado',
+          supplier?.diasCreditoLabel?.trim() || 'No configurado'
+        );
+      },
+      error: () => {
+        openPreview('No registrado', 'No configurado');
+      }
+    });
   }
 
   protected saveDraft(): void {
@@ -568,6 +752,75 @@ export class PortalHomePage {
     });
   }
 
+  private createAndSendPurchaseOrder(customMessage: string): void {
+    const request = this.buildPurchaseOrderRequest(false);
+    if (!request) {
+      this.showStatus('error', 'No se pudo preparar la orden de compra.');
+      return;
+    }
+
+    this.isSubmittingOrder = true;
+    const request$ = this.currentEditingOrderId
+      ? this.purchaseOrderService.updatePurchaseOrder(this.currentEditingOrderId, request)
+      : this.purchaseOrderService.createPurchaseOrder(request);
+
+    request$.subscribe(({ data, error }) => {
+      if (error || !data) {
+        this.isSubmittingOrder = false;
+        this.showStatus('error', error || 'No se pudo finalizar la orden de compra.');
+        return;
+      }
+
+      this.pendingEmailOrderId = data.id;
+      this.pendingEmailOrderNumber = data.purchaseOrderNumber;
+      this.emailSubject = this.buildEmailSubject(data.purchaseOrderNumber);
+      this.attachmentName = `${data.purchaseOrderNumber}.pdf`;
+
+      this.sendPurchaseOrderEmail(data.id, data.purchaseOrderNumber, customMessage);
+    });
+  }
+
+  private sendPurchaseOrderEmail(orderId: number, orderNumber: string, customMessage: string): void {
+    this.isSubmittingOrder = true;
+
+    this.purchaseOrderService.sendPurchaseOrderEmail(orderId, { message: customMessage }).subscribe(({ data, error }) => {
+      this.isSubmittingOrder = false;
+
+      if (error || !data) {
+        this.pendingEmailOrderId = orderId;
+        this.pendingEmailOrderNumber = orderNumber;
+        this.emailSubject = this.buildEmailSubject(orderNumber);
+        this.attachmentName = `${orderNumber}.pdf`;
+        this.showStatus(
+          'error',
+          error || `La orden ${orderNumber} fue registrada, pero no se pudo enviar el correo. Puedes reintentar.`
+        );
+        return;
+      }
+
+      this.handleSuccessfulEmailDelivery(orderNumber, data);
+    });
+  }
+
+  private handleSuccessfulEmailDelivery(
+    orderNumber: string,
+    emailResponse: PurchaseOrderEmailResponse
+  ): void {
+    const wasEditing = this.currentEditingOrderId !== null;
+    const itemCount = this.summaryRows.length;
+    const pdfName = emailResponse.pdfFileName ?? `${orderNumber}.pdf`;
+
+    this.resetOrder();
+    this.lastSubmittedOrderNumber = orderNumber;
+    this.clearDraftQueryParams();
+    this.showStatus(
+      'success',
+      wasEditing
+        ? `Borrador ${orderNumber} actualizado y enviado correctamente con ${itemCount} item(s). PDF: ${pdfName}.`
+        : `Orden de compra ${orderNumber} creada y enviada correctamente con ${itemCount} item(s). PDF: ${pdfName}.`
+    );
+  }
+
   private getOrderValidationError(saveDraft: boolean): string {
     if (!this.summaryRows.length) {
       return saveDraft
@@ -683,6 +936,7 @@ export class PortalHomePage {
       providerId,
       providerName: typeof provider.providerName === 'string' ? provider.providerName : '',
       providerRuc: typeof provider.providerRuc === 'string' ? provider.providerRuc : '',
+      providerEmail: typeof provider.providerEmail === 'string' ? provider.providerEmail : '',
       selectedServiceIds: this.normalizeServiceIds(provider.selectedServiceIds, serviceId),
       selectedServiceNames: this.normalizeServiceNames(
         provider.selectedServiceNames,
@@ -829,5 +1083,39 @@ export class PortalHomePage {
 
   private clearStatus(): void {
     this.notificationService.dismiss();
+  }
+
+  private buildEmailSubject(orderNumber?: string): string {
+    const providerName = this.summaryProviderSelection?.providerName?.trim() || 'Proveedor';
+    const resolvedOrderNumber =
+      orderNumber?.trim() || (this.currentEditingOrderId ? 'borrador en edición' : this.toPreviewOrderCode());
+    return `Orden de Compra ${resolvedOrderNumber} - ${providerName}`;
+  }
+
+  private buildEmailMessage(): string {
+    const providerName = this.summaryProviderSelection?.providerName?.trim() || 'proveedor';
+    const orderCode = this.toPreviewOrderCode();
+    const itemCount = this.summaryRows.length;
+    const itemsLabel = itemCount === 1 ? '1 item' : `${itemCount} items`;
+
+    return [
+      `Estimado equipo de ${providerName},`,
+      '',
+      `Adjunto enviamos la orden de compra ${orderCode} correspondiente a ${itemsLabel} programados para despacho el ${this.dispatchDate}.`,
+      '',
+      'Por favor, confirmen la recepcion de este documento y la fecha estimada de entrega.',
+      '',
+      'Atentamente,',
+      'Departamento de Compras'
+    ].join('\n');
+  }
+
+  private buildAttachmentName(): string {
+    return `${this.pendingEmailOrderNumber || this.toPreviewOrderCode()}.pdf`;
+  }
+
+  private toPreviewOrderCode(): string {
+    const providerId = `${this.summaryProviderSelection?.providerId ?? 0}`.padStart(3, '0');
+    return `PO-${new Date().getFullYear()}-${providerId}`;
   }
 }

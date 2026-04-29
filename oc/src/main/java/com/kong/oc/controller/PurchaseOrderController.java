@@ -65,4 +65,21 @@ public class PurchaseOrderController {
                 )
         );
     }
+
+    @PostMapping("/{id}/send-email")
+    public ResponseEntity<ApiResponse<PurchaseOrderEmailResponse>> sendEmail(
+            @PathVariable Long id,
+            @Valid @RequestBody PurchaseOrderEmailRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
+        Long userId = Long.parseLong(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Correo de orden de compra enviado",
+                        purchaseOrderService.sendEmail(id, request, userId)
+                )
+        );
+    }
 }

@@ -2,11 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, HostListener, OnInit, Output, inject, signal, computed, DestroyRef, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { switchMap, filter } from 'rxjs';
+import { of, switchMap, filter, map, catchError } from 'rxjs';
 import { ServiceOption, ServiceId } from '../../core/interfaces/services.interface';
 import { ProviderOption, ProviderSelection } from '../../core/interfaces/provider-option.interface';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ServiceProviderModal } from '../../core/services/service-provider-modal.service';
+import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
+
 @Component({
   selector: 'app-service-provider-modal',
   imports: [CommonModule, FormsModule, MatIconModule],
@@ -17,6 +19,7 @@ export class ServiceProviderModalComponent implements OnInit {
 
   private readonly svc = inject(ServiceProviderModal);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly supplierDirectoryService = inject(SupplierDirectoryService);
 
   readonly lockedProviderSelection = input<ProviderSelection | null>(null);
 
@@ -161,19 +164,38 @@ export class ServiceProviderModalComponent implements OnInit {
       ? {
           id: lockedSelection.providerId,
           name: lockedSelection.providerName,
-          ruc: lockedSelection.providerRuc
+          ruc: lockedSelection.providerRuc,
+          email: lockedSelection.providerEmail ?? ''
         }
-      : provider;
+      : {
+          id: provider.id,
+          name: provider.name,
+          ruc: provider.ruc,
+          email: ''
+        };
 
-    this.providerSelected.emit({
-      serviceId,
-      serviceName: this.selectedServiceName(),
-      providerId: resolvedProvider.id,
-      providerName: resolvedProvider.name,
-      providerRuc: resolvedProvider.ruc,
-      selectedServiceIds: lockedSelection?.selectedServiceIds,
-      selectedServiceNames: lockedSelection?.selectedServiceNames
-    });
+    const providerEmail$ =
+      lockedSelection?.providerEmail?.trim()
+        ? of(lockedSelection.providerEmail.trim())
+        : this.supplierDirectoryService.getSupplierDetail(resolvedProvider.id).pipe(
+            map((response) => response.data?.contactoEmail?.trim() ?? ''),
+            catchError(() => of(''))
+          );
+
+    providerEmail$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((providerEmail) => {
+        this.providerSelected.emit({
+          serviceId,
+          serviceName: this.selectedServiceName(),
+          providerId: resolvedProvider.id,
+          providerName: resolvedProvider.name,
+          providerRuc: resolvedProvider.ruc,
+          providerEmail,
+          selectedServiceIds: lockedSelection?.selectedServiceIds,
+          selectedServiceNames: lockedSelection?.selectedServiceNames
+        });
+      });
   }
 
   private setServicesLoading(value: boolean): void {

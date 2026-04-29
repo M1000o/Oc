@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 14mm;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #1e293b;
+        background: #ffffff;
+        font-size: 12px;
+      }
+
+      .pdf-page {
+        background: #ffffff;
+      }
+
+      .document-header {
+        width: 100%;
+        border-bottom: 1px solid #e8ebf1;
+        padding-bottom: 24px;
+        margin-bottom: 24px;
+      }
+
+      .header-table,
+      .document-grid,
+      .summary-table,
+      .signatures-table,
+      .terms-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .company-block {
+        vertical-align: top;
+      }
+
+      .company-copy {
+        display: block;
+        vertical-align: top;
+      }
+
+      .company-copy h2,
+      .document-meta h3,
+      .section-title h4,
+      .summary-total strong {
+        margin: 0;
+      }
+
+      .company-copy h2 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin-bottom: 6px;
+      }
+
+      .company-copy p,
+      .document-meta p,
+      .data-stack p,
+      .notes-card p,
+      .generated-copy,
+      .terms-list {
+        margin: 0;
+      }
+
+      .company-copy p,
+      .document-meta p {
+        color: #69768d;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .document-meta {
+        text-align: right;
+        vertical-align: top;
+      }
+
+      .document-meta h3 {
+        color: #10b981;
+        font-size: 30px;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .document-chip {
+        display: inline-block;
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: #f5f6f8;
+        text-align: left;
+      }
+
+      .document-chip span {
+        display: block;
+        color: #7a8597;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .document-chip strong {
+        color: #1e293b;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .document-grid td {
+        width: 50%;
+        vertical-align: top;
+        padding-right: 16px;
+        padding-bottom: 24px;
+      }
+
+      .document-card {
+        display: block;
+      }
+
+      .section-title {
+        display: inline-block;
+        padding-bottom: 6px;
+        padding-right: 18px;
+        border-bottom: 2px solid #10b981;
+        margin-bottom: 12px;
+      }
+
+      .section-title h4 {
+        color: #1e293b;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .data-stack {
+        color: #334155;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      .supplier-name {
+        color: #111827;
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      .table-panel {
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid #e5eaf0;
+        margin-bottom: 18px;
+      }
+
+      .document-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .document-table thead tr {
+        background: #1e293b;
+        color: #ffffff;
+      }
+
+      .document-table th,
+      .document-table td {
+        padding: 10px 12px;
+        font-size: 11px;
+      }
+
+      .document-table th {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        text-align: left;
+      }
+
+      .document-table tbody tr {
+        border-top: 1px solid #ecf0f5;
+      }
+
+      .mono {
+        font-family: "Courier New", monospace;
+        color: #64748b;
+      }
+
+      .description {
+        color: #1e293b;
+        font-weight: 700;
+      }
+
+      .align-center {
+        text-align: center;
+      }
+
+      .align-right {
+        text-align: right;
+      }
+
+      .strong {
+        font-weight: 700;
+      }
+
+      .summary-table {
+        width: 300px;
+        margin-left: auto;
+        margin-bottom: 24px;
+      }
+
+      .summary-table td {
+        padding: 6px 0;
+        font-size: 12px;
+      }
+
+      .summary-table .label {
+        color: #667085;
+        font-weight: 600;
+      }
+
+      .summary-table .value {
+        color: #1e293b;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .summary-total td {
+        border-top: 2px solid #1e293b;
+        padding-top: 12px;
+      }
+
+      .summary-total .label {
+        color: #1e293b;
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .summary-total .value,
+      .summary-total strong {
+        color: #10b981;
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .document-footer {
+        margin-top: 32px;
+      }
+
+      .terms-table td {
+        vertical-align: top;
+      }
+
+      .terms-table .terms-column {
+        width: 64%;
+        padding-right: 18px;
+      }
+
+      .terms-table .notes-column {
+        width: 36%;
+      }
+
+      .terms-title {
+        color: #6b7280;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin: 0 0 10px;
+      }
+
+      .terms-list {
+        color: #6b7280;
+        font-size: 10px;
+        line-height: 1.6;
+        padding-left: 18px;
+      }
+
+      .notes-card {
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: #f5f6f8;
+        color: #6b7280;
+        font-size: 10px;
+        font-style: italic;
+        line-height: 1.5;
+      }
+
+      .signatures-table {
+        margin-top: 34px;
+        border-top: 1px solid #e8ebf1;
+        padding-top: 24px;
+      }
+
+      .signature-block {
+        width: 50%;
+        text-align: center;
+        vertical-align: top;
+        padding: 0 16px;
+      }
+
+      .signature-line {
+        height: 2px;
+        background: #dde3eb;
+        margin-bottom: 8px;
+      }
+
+      .signature-block strong {
+        display: block;
+        color: #1e293b;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .signature-block span,
+      .generated-copy {
+        color: #7b8798;
+      }
+
+      .signature-block span {
+        font-size: 10px;
+      }
+
+      .generated-copy {
+        margin-top: 18px;
+        text-align: center;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <article class="pdf-page">
+      <header class="document-header">
+        <table class="header-table">
+          <tr>
+            <td class="company-block">
+              <div class="company-copy">
+                <h2>{{companyName}}</h2>
+                <p>RUC: {{companyRuc}}</p>
+                <p>{{companyAddress}}</p>
+              </div>
+            </td>
+            <td class="document-meta">
+              <h3>ORDEN DE COMPRA</h3>
+              <div class="document-chip">
+                <span>N° DOCUMENTO</span>
+                <strong>{{documentNumber}}</strong>
+              </div>
+              <p>Fecha de Emision: <strong>{{issueDate}}</strong></p>
+            </td>
+          </tr>
+        </table>
+      </header>
+
+      <table class="document-grid">
+        <tr>
+          <td>
+            <div class="document-card">
+              <div class="section-title">
+                <h4>Proveedor</h4>
+              </div>
+              <div class="data-stack">
+                <p class="supplier-name">{{supplierName}}</p>
+                <p><strong>RUC:</strong> {{supplierRuc}}</p>
+                <p><strong>Contacto:</strong> {{supplierContact}}</p>
+                <p><strong>Email:</strong> {{supplierEmail}}</p>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="document-card">
+              <div class="section-title">
+                <h4>Entrega</h4>
+              </div>
+              <div class="data-stack">
+                <p><strong>Sede:</strong> {{deliverySite}}</p>
+                <p><strong>Area:</strong> {{deliveryArea}}</p>
+                <p><strong>Fecha Requerida:</strong> {{requiredDate}}</p>
+                <p><strong>Condicion de Pago:</strong> {{paymentTerms}}</p>
+                <p><strong>Moneda:</strong> {{currencyLabel}}</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <section class="table-panel">
+        <table class="document-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>SKU/Code</th>
+              <th>Descripcion</th>
+              <th>Unidad</th>
+              <th class="align-center">Cant.</th>
+              <th class="align-right">Precio Unit.</th>
+              <th class="align-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{lineItemsRows}}
+          </tbody>
+        </table>
+      </section>
+
+      <table class="summary-table">
+        <tr>
+          <td class="label">Subtotal</td>
+          <td class="value">{{subtotal}}</td>
+        </tr>
+        <tr>
+          <td class="label">IGV (18%)</td>
+          <td class="value">{{igv}}</td>
+        </tr>
+        <tr class="summary-total">
+          <td class="label">Total General</td>
+          <td class="value">{{total}}</td>
+        </tr>
+      </table>
+
+      <footer class="document-footer">
+        <div class="notes-card">
+          <p>Observaciones: {{notes}}</p>
+        </div>
+
+        <p class="generated-copy">{{generatedBy}}</p>
+      </footer>
+    </article>
+  </body>
+</html>

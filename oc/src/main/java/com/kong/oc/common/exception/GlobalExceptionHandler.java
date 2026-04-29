@@ -112,5 +112,47 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(PurchaseOrderRecipientException.class)
+    public ResponseEntity<ErrorResponse> handlePurchaseOrderRecipient(PurchaseOrderRecipientException ex) {
+        log.warn("Purchase order recipient error: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "PURCHASE_ORDER_RECIPIENT_ERROR",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(PurchaseOrderEmailDispatchException.class)
+    public ResponseEntity<ErrorResponse> handlePurchaseOrderEmailDispatch(PurchaseOrderEmailDispatchException ex) {
+        log.error("Purchase order email error: {}", ex.getMessage(), ex);
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "PURCHASE_ORDER_EMAIL_ERROR",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(PurchaseOrderPdfException.class)
+    public ResponseEntity<ErrorResponse> handlePurchaseOrderPdf(PurchaseOrderPdfException ex) {
+        log.error("Purchase order PDF error: {}", ex.getMessage(), ex);
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "PURCHASE_ORDER_PDF_ERROR",
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
 
 }

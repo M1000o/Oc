@@ -46,6 +46,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/portal-home/portal-home.page').then((m) => m.PortalHomePage)
       },
       {
+        path: 'pedido/pdf-preview',
+        canActivate: [nonProviderGuard],
+        loadComponent: () =>
+          import('./features/purchase-order-pdf/purchase-order-pdf.page').then(
+            (m) => m.PurchaseOrderPdfPage
+          )
+      },
+      {
         path: 'proveedor',
         canActivate: [providerOnlyGuard],
         loadComponent: () => import('./features/provider-home/provider-home.page').then((m) => m.ProviderHomePage)

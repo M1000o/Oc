@@ -4,6 +4,8 @@ import { catchError, EMPTY, expand, forkJoin, map, Observable, of, reduce } from
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../interfaces/api-response.interface';
 import {
+  PurchaseOrderEmailRequest,
+  PurchaseOrderEmailResponse,
   PurchaseOrderFilter,
   PurchaseOrderRequest,
   PurchaseOrderResponse,
@@ -95,6 +97,27 @@ export class PurchaseOrderService {
             error?.error?.message ||
             error?.error?.error ||
             'No se pudo actualizar el estado de la orden.'
+        })
+      )
+    );
+  }
+
+  sendPurchaseOrderEmail(
+    id: number,
+    request: PurchaseOrderEmailRequest
+  ): Observable<{ data: PurchaseOrderEmailResponse | null; error: string }> {
+    return this.http.post<ApiResponse<PurchaseOrderEmailResponse>>(`${this.endpoint}/${id}/send-email`, request).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo enviar el correo de la orden de compra.'
         })
       )
     );

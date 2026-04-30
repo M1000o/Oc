@@ -1,6 +1,8 @@
 package com.kong.oc.service;
 
 import com.kong.oc.common.exception.BadRequestException;
+import com.kong.oc.common.exception.PurchaseOrderEmailDispatchException;
+import com.kong.oc.common.exception.PurchaseOrderRecipientException;
 import com.kong.oc.common.exception.ResourceNotFoundException;
 import com.kong.oc.auth.model.User;
 import com.kong.oc.auth.repository.UserRepository;
@@ -63,6 +65,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                 .area(request.area().trim())
                 .notas(request.notas())
                 .status(isDraft ? Status.BORRADOR : Status.PENDIENTE)
+                .emailStatus(PurchaseOrderEmailStatus.PENDIENTE_ENVIO)
                 .usuario(user)
                 .subtotal(BigDecimal.ZERO)
                 .igv(BigDecimal.ZERO)
@@ -112,6 +115,9 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         order.setArea(request.area().trim());
         order.setNotas(request.notas());
         order.setStatus(isDraft ? Status.BORRADOR : Status.PENDIENTE);
+        if (isDraft) {
+            order.setEmailStatus(PurchaseOrderEmailStatus.PENDIENTE_ENVIO);
+        }
 
         calculateTotals(order);
 
@@ -165,13 +171,45 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = {PurchaseOrderEmailDispatchException.class, PurchaseOrderRecipientException.class})
     public PurchaseOrderEmailResponse sendEmail(Long orderId, PurchaseOrderEmailRequest request, Long userId) {
         PurchaseOrder order = findOrderWithDetailsOrThrow(orderId);
         findUserOrThrow(userId);
         validateOrderCanBeSent(order);
 
-        return purchaseOrderEmailService.sendPurchaseOrderEmail(order, request);
+        try {
+            PurchaseOrderEmailResponse response = purchaseOrderEmailService.sendPurchaseOrderEmail(order, request);
+            order.setEmailStatus(PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR);
+            order.setStatus(Status.APROBADO);
+            purchaseOrderRepository.save(order);
+            return response;
+        } catch (PurchaseOrderRecipientException | PurchaseOrderEmailDispatchException ex) {
+            order.setEmailStatus(PurchaseOrderEmailStatus.ERROR_ENVIO);
+            purchaseOrderRepository.save(order);
+            throw ex;
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PurchaseOrderSummary> findSentOrdersForSupplierUser(Long userId, Pageable pageable) {
+        findUserOrThrow(userId);
+        return purchaseOrderRepository
+                .findBySupplierUserAndEmailStatus(userId, PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR, pageable)
+                .map(mapper::toSummary);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PurchaseOrderResponse findSentOrderDetailForSupplierUser(Long orderId, Long userId) {
+        findUserOrThrow(userId);
+        PurchaseOrder order = purchaseOrderRepository.findByIdForSupplierUserWithDetails(
+                        orderId,
+                        userId,
+                        PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR
+                )
+                .orElseThrow(() -> new ResourceNotFoundException("Orden de compra no encontrada para el proveedor autenticado."));
+        return mapper.toResponse(order);
     }
 
     private Map<Long, Product> loadAndValidateProducts(List<Long> productIds, Long supplierId, boolean isDraft) {
@@ -282,11 +320,21 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         if (order.getStatus() == Status.CANCELADO) {
             throw new BadRequestException("No se puede enviar por correo una orden en estado CANCELADO.");
         }
+
+        PurchaseOrderEmailStatus emailStatus = order.getEmailStatus() != null
+                ? order.getEmailStatus()
+                : PurchaseOrderEmailStatus.PENDIENTE_ENVIO;
+        if (emailStatus == PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR) {
+            throw new BadRequestException("La orden ya fue enviada al proveedor.");
+        }
     }
 
     private String generateOrderNumber() {
-        String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
-        return "OC-" + uuid;
+        return UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 10)
+                .toUpperCase();
     }
 
     private PurchaseOrder findOrderOrThrow(Long id) {

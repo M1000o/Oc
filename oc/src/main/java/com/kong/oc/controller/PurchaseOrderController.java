@@ -77,8 +77,40 @@ public class PurchaseOrderController {
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
-                        "Correo de orden de compra enviado",
+                        "Correo de orden de compra enviado al proveedor y OC aprobada",
                         purchaseOrderService.sendEmail(id, request, userId)
+                )
+        );
+    }
+
+    @GetMapping("/supplier-view")
+    public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> getSupplierSentOrders(
+            @AuthenticationPrincipal Jwt jwt,
+            @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
+        Long userId = Long.parseLong(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Órdenes enviadas al proveedor autenticado",
+                        purchaseOrderService.findSentOrdersForSupplierUser(userId, pageable)
+                )
+        );
+    }
+
+    @GetMapping("/supplier-view/{id}")
+    public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getSupplierSentOrderDetail(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
+        Long userId = Long.parseLong(jwt.getSubject());
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Detalle de orden enviada al proveedor autenticado",
+                        purchaseOrderService.findSentOrderDetailForSupplierUser(id, userId)
                 )
         );
     }

@@ -30,6 +30,82 @@
   user-select: none;
 }
 
+.email-error-banner {
+  margin-bottom: 4px;
+  padding: 14px 18px;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  background: #fef2f2;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.08);
+  animation: slideInDown 0.3s ease-out;
+}
+
+.email-error-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.email-error-content mat-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.email-error-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.email-error-text p {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.retry-badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  background: #fee2e2;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: #b91c1c;
+  width: fit-content;
+}
+
+.btn-retry {
+  background: #dc2626;
+  color: white;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  height: 34px;
+}
+
+.btn-retry:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.rotating {
+  animation: rotate 1.5s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 .header-actions {
   display: flex;
   gap: 10px;

@@ -2,6 +2,7 @@ package com.kong.oc.model;
 
 import com.kong.oc.auth.model.User;
 import com.kong.oc.common.model.BaseEntity;
+import com.kong.oc.dto.PurchaseOrderEmailStatus;
 import com.kong.oc.dto.Status;
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,6 +45,10 @@ public class PurchaseOrder extends BaseEntity {
     @Column(nullable = false)
     private Status status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private PurchaseOrderEmailStatus emailStatus;
+
     private String notas;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -79,6 +84,9 @@ public class PurchaseOrder extends BaseEntity {
     protected void onCreatePurchaseOrder() {
         if(this.orderDate == null){
             this.orderDate = LocalDate.now();
+        }
+        if (this.emailStatus == null) {
+            this.emailStatus = PurchaseOrderEmailStatus.PENDIENTE_ENVIO;
         }
     }
 }

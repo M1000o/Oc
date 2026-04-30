@@ -1,0 +1,22 @@
+<div class="confirm-modal">
+  <header class="confirm-modal__header">
+    <div class="confirm-modal__icon" aria-hidden="true">!</div>
+    <div class="confirm-modal__title-group">
+      <h2 class="confirm-modal__title">Confirmar salida</h2>
+      <p class="confirm-modal__subtitle">Perderás los cambios no guardados.</p>
+    </div>
+  </header>
+
+  <div class="confirm-modal__content">
+    <p>Vas a salir del resumen actual y perderás la información. ¿Deseas continuar?</p>
+  </div>
+
+  <footer class="confirm-modal__footer">
+    <button type="button" class="btn btn-secondary" (click)="onCancel()">
+      Cancelar
+    </button>
+    <button type="button" class="btn btn-danger" (click)="onConfirm()">
+      Continuar
+    </button>
+  </footer>
+</div>

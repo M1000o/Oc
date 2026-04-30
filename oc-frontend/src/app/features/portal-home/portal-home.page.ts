@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import {
   PurchaseOrderEmailResponse,
   PurchaseOrderRequest,
@@ -30,6 +31,7 @@ import {
   ProductSelectionModalComponent,
   UnitOption
 } from './product-selection-modal.component';
+import { ConfirmExitModalComponent } from '../../shared/components/confirm-exit-modal/confirm-exit-modal.component';
 
 interface OrderRow {
   id: number;
@@ -49,6 +51,7 @@ interface OrderRow {
     CommonModule,
     FormsModule,
     MatIconModule,
+    MatDialogModule,
     ServiceProviderModalComponent,
     ProductSelectionModalComponent,
     SendOrderModalComponent
@@ -68,6 +71,7 @@ export class PortalHomePage {
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
   private readonly draftService = inject(OrderSummaryDraftService);
   private readonly notificationService = inject(AppNotificationService);
   private readonly productCatalogService = inject(ProductCatalogService);
@@ -86,6 +90,7 @@ export class PortalHomePage {
   private currentEditingOrderId: number | null = null;
   private pendingEmailOrderId: number | null = null;
   private pendingEmailOrderNumber = '';
+  private pendingEmailMessage = '';
 
   protected orderDate = this.toDateInputValue(new Date());
   protected dispatchDate = this.toDateInputValue(this.addDays(new Date(), 2));
@@ -96,6 +101,9 @@ export class PortalHomePage {
   protected isLoadingPurchaseOrderNumber = false;
   protected isSubmittingOrder = false;
   protected isLoadingDraftOrder = false;
+  protected emailSendError = false;
+  protected isRetryingEmail = false;
+  protected emailRetryCount = 0;
   protected lastSubmittedOrderNumber = '';
   protected showServiceProviderModal = false;
   protected showProductSelectionModal = false;
@@ -113,6 +121,7 @@ export class PortalHomePage {
     this.restoreSummaryState();
     this.handleStartSelectionRequest();
     this.handleDraftEditRequest();
+    this.handleOrderDetailRequest();
     window.addEventListener('beforeunload', this.beforeUnloadHandler);
   }
   ngOnDestroy(): void {
@@ -180,20 +189,26 @@ export class PortalHomePage {
       }));
   }
 
-  confirmDiscardDraft(): boolean {
+  confirmDiscardDraft(): Observable<boolean> | boolean {
     if (!this.hasDraftSummary()) {
       return true;
     }
 
-    const shouldDiscard = window.confirm(
-      'Vas a salir del resumen actual y perderas toda la informacion registrada. ¿Deseas continuar?'
-    );
-
-    if (shouldDiscard) {
-      this.clearPersistedSummaryState();
-    }
-
-    return shouldDiscard;
+    return this.dialog
+      .open(ConfirmExitModalComponent, {
+        width: '460px',
+        disableClose: true,
+        panelClass: 'app-confirm-dialog',
+      })
+      .afterClosed()
+      .pipe(
+        map((result) => !!result),
+        tap((shouldDiscard) => {
+          if (shouldDiscard) {
+            this.clearPersistedSummaryState();
+          }
+        })
+      );
   }
 
   protected openServiceProviderModal(): void {
@@ -321,9 +336,13 @@ export class PortalHomePage {
     this.isLoadingPurchaseOrderNumber = false;
     this.isSubmittingOrder = false;
     this.isLoadingDraftOrder = false;
+    this.emailSendError = false;
+    this.isRetryingEmail = false;
+    this.emailRetryCount = 0;
     this.currentEditingOrderId = null;
     this.pendingEmailOrderId = null;
     this.pendingEmailOrderNumber = '';
+    this.pendingEmailMessage = '';
     this.rows = [];
     this.showServiceProviderModal = false;
     this.showProductSelectionModal = false;
@@ -337,6 +356,19 @@ export class PortalHomePage {
     this.isLoadingRecipientEmail = false;
     this.clearPersistedSummaryState();
     this.clearStatus();
+  }
+
+  protected retryEmailSend(): void {
+    if (!this.pendingEmailOrderId || !this.pendingEmailMessage) {
+      return;
+    }
+
+    this.sendPurchaseOrderEmail(
+      this.pendingEmailOrderId,
+      this.pendingEmailOrderNumber,
+      this.pendingEmailMessage,
+      true
+    );
   }
 
   protected openSendOrderModal(): void {
@@ -411,7 +443,7 @@ export class PortalHomePage {
       return;
     }
 
-    if (this.pendingEmailOrderId) {
+    if (this.pendingEmailOrderId && !this.currentEditingOrderId) {
       this.sendPurchaseOrderEmail(this.pendingEmailOrderId, this.pendingEmailOrderNumber, payload.emailMessage);
       return;
     }
@@ -583,7 +615,7 @@ export class PortalHomePage {
       return;
     }
 
-    this.loadDraftOrder(draftId);
+    this.loadOrder(draftId);
   }
 
   private handleStartSelectionRequest(): void {
@@ -602,9 +634,18 @@ export class PortalHomePage {
     });
   }
 
-  private loadDraftOrder(orderId: number): void {
+  private handleOrderDetailRequest(): void {
+    const orderId = this.toPositiveInt(this.route.snapshot.queryParamMap.get('orderId'));
+    if (!orderId) {
+      return;
+    }
+
+    this.loadOrder(orderId);
+  }
+
+  private loadOrder(orderId: number): void {
     this.isLoadingDraftOrder = true;
-    this.currentEditingOrderId = orderId;
+    this.currentEditingOrderId = null;
 
     this.purchaseOrderService
       .getPurchaseOrder(orderId)
@@ -614,15 +655,7 @@ export class PortalHomePage {
             return of({
               order: null,
               products: [] as ProductResponse[],
-              error: error || 'No se pudo cargar el borrador.'
-            });
-          }
-
-          if (data.status !== 'BORRADOR') {
-            return of({
-              order: null,
-              products: [] as ProductResponse[],
-              error: 'Solo se pueden editar órdenes en estado BORRADOR.'
+              error: error || 'No se pudo cargar la orden.'
             });
           }
 
@@ -646,17 +679,15 @@ export class PortalHomePage {
         this.isLoadingDraftOrder = false;
 
         if (error || !order) {
-          this.currentEditingOrderId = null;
-          this.showStatus('error', error || 'No se pudo cargar el borrador.');
-          this.clearDraftQueryParams();
+          this.showStatus('error', error || 'No se pudo cargar la orden.');
           return;
         }
 
-        this.applyLoadedDraft(order, products);
+        this.applyLoadedOrder(order, products);
       });
   }
 
-  private applyLoadedDraft(order: PurchaseOrderResponse, products: ProductResponse[]): void {
+  private applyLoadedOrder(order: PurchaseOrderResponse, products: ProductResponse[]): void {
     const productMap = new Map(products.map((product) => [product.id, product]));
     const nextRows: OrderRow[] = order.details.map((detail, index) => {
       const product = productMap.get(detail.productoId);
@@ -697,8 +728,15 @@ export class PortalHomePage {
       selectedServiceNames
     };
     this.nextRowId = nextRows.length ? Math.max(...nextRows.map((row) => row.id)) + 1 : 1;
+    this.pendingEmailOrderId = order.id;
+    this.pendingEmailOrderNumber = order.purchaseOrderNumber;
+
+    if (order.status === 'BORRADOR') {
+      this.currentEditingOrderId = order.id;
+      this.showStatus('success', `Borrador ${order.purchaseOrderNumber} cargado para edición.`);
+    }
+
     this.persistSummaryState();
-    this.showStatus('success', `Borrador ${order.purchaseOrderNumber} cargado para edición.`);
   }
 
   private clearDraftQueryParams(): void {
@@ -780,24 +818,46 @@ export class PortalHomePage {
     });
   }
 
-  private sendPurchaseOrderEmail(orderId: number, orderNumber: string, customMessage: string): void {
-    this.isSubmittingOrder = true;
+  private sendPurchaseOrderEmail(orderId: number, orderNumber: string, customMessage: string, isRetry = false): void {
+    if (isRetry) {
+      this.isRetryingEmail = true;
+    } else {
+      this.isSubmittingOrder = true;
+    }
 
     this.purchaseOrderService.sendPurchaseOrderEmail(orderId, { message: customMessage }).subscribe(({ data, error }) => {
       this.isSubmittingOrder = false;
+      this.isRetryingEmail = false;
 
       if (error || !data) {
         this.pendingEmailOrderId = orderId;
         this.pendingEmailOrderNumber = orderNumber;
+        this.pendingEmailMessage = customMessage;
         this.emailSubject = this.buildEmailSubject(orderNumber);
         this.attachmentName = `${orderNumber}.pdf`;
+        this.showSendOrderModal = false;
+        this.emailSendError = true;
+
+        if (isRetry) {
+          this.emailRetryCount++;
+        }
+
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { orderId },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+
         this.showStatus(
           'error',
-          error || `La orden ${orderNumber} fue registrada, pero no se pudo enviar el correo. Puedes reintentar.`
+          error || `La orden ${orderNumber} fue registrada, pero no se pudo enviar el correo.`
         );
         return;
       }
 
+      this.emailSendError = false;
+      this.emailRetryCount = 0;
       this.handleSuccessfulEmailDelivery(orderNumber, data);
     });
   }
@@ -807,18 +867,33 @@ export class PortalHomePage {
     emailResponse: PurchaseOrderEmailResponse
   ): void {
     const wasEditing = this.currentEditingOrderId !== null;
+    const wasRetry = this.emailRetryCount > 0 || this.emailSendError;
     const itemCount = this.summaryRows.length;
     const pdfName = emailResponse.pdfFileName ?? `${orderNumber}.pdf`;
 
     this.resetOrder();
     this.lastSubmittedOrderNumber = orderNumber;
     this.clearDraftQueryParams();
-    this.showStatus(
-      'success',
-      wasEditing
+    this.clearOrderQueryParams();
+
+    const successMessage = wasRetry
+      ? 'Correo enviado correctamente'
+      : wasEditing
         ? `Borrador ${orderNumber} actualizado y enviado correctamente con ${itemCount} item(s). PDF: ${pdfName}.`
-        : `Orden de compra ${orderNumber} creada y enviada correctamente con ${itemCount} item(s). PDF: ${pdfName}.`
-    );
+        : `Orden de compra ${orderNumber} creada y enviada correctamente con ${itemCount} item(s). PDF: ${pdfName}.`;
+
+    this.showStatus('success', successMessage);
+  }
+
+  private clearOrderQueryParams(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        orderId: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   private getOrderValidationError(saveDraft: boolean): string {

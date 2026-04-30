@@ -9,6 +9,7 @@ import com.kong.oc.dto.*;
 import com.kong.oc.interfaces.ISupplierService;
 import com.kong.oc.model.*;
 import com.kong.oc.repository.*;
+import com.kong.oc.common.exception.BadRequestException;
 import com.kong.oc.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -187,7 +188,7 @@ public class SupplierServiceImpl implements ISupplierService {
     public Supplier createFromForm(SupplierFormRequest req) {
         // Validaciones adicionales
         if (supplierRepository.findByRuc(req.getRuc()).isPresent()) {
-            throw new IllegalArgumentException("RUC ya existe");
+            throw new BadRequestException("RUC ya existe");
         }
 
         Supplier supplier = new Supplier();
@@ -196,7 +197,7 @@ public class SupplierServiceImpl implements ISupplierService {
         try {
             supplier.setCreditDays(CreditDays.fromDays(req.getCreditDays()));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Días de crédito inválidos: " + req.getCreditDays());
+            throw new BadRequestException("Días de crédito inválidos: " + req.getCreditDays());
         }
         supplier.setTiene_cuenta_detraccion(req.getIs_detraccion());
         supplier.setCuenta_detraccion(req.getAccountNumber_Detraccion());
@@ -205,7 +206,7 @@ public class SupplierServiceImpl implements ISupplierService {
         // Servicios
         List<Services> servicios = req.getServices().stream()
                 .map(id -> servicesRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Servicio no encontrado id: " + id)))
+                        .orElseThrow(() -> new BadRequestException("Servicio no encontrado id: " + id)))
                 .collect(Collectors.toList());
         supplier.setServicios(servicios);
 
@@ -217,7 +218,15 @@ public class SupplierServiceImpl implements ISupplierService {
         contact.setName(req.getNombre_contacto());
         contact.setApellido_materno(req.getApellido_m_contacto());
         contact.setApellido_paterno(req.getApellido_p_contacto());
-        contact.setPhone(req.getTelefono_contacto());
+        // Validación de teléfono: obligatorio y único
+        String telefono = req.getTelefono_contacto();
+        if (telefono == null || telefono.isBlank()) {
+            throw new BadRequestException("Telefono de contacto es obligatorio");
+        }
+        if (contactsRepository.existsByPhone(telefono)) {
+            throw new BadRequestException("numero de telefono en uso, use otro");
+        }
+        contact.setPhone(telefono);
         contact.setEmail(req.getCorreo_pedidos());
         contactsRepository.save(contact);
 
@@ -226,7 +235,7 @@ public class SupplierServiceImpl implements ISupplierService {
         String base = UsernameUtils.generateBase(contact.getName(), contact.getApellido_paterno());
         String username = UsernameUtils.generateUniqueUsername(userRepository, base);
         if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("No se pudo generar un username válido para el contacto");
+            throw new BadRequestException("No se pudo generar un username válido para el contacto");
         }
 
         User user = new User();
@@ -241,6 +250,9 @@ public class SupplierServiceImpl implements ISupplierService {
 
         user = userRepository.save(user);
 
+        supplier.setUser(user);
+        supplierRepository.save(supplier);
+
         // crear token y disparar email de activación (seguimos usando el email del contacto)
         activationService.createActivationForUser(user, contact.getEmail());
 
@@ -248,7 +260,7 @@ public class SupplierServiceImpl implements ISupplierService {
         Banks bankEntity = null;
         if (req.getBank() != null) {
             bankEntity = banksRepository.findById(req.getBank())
-                    .orElseThrow(() -> new IllegalArgumentException("Banco no encontrado id: " + req.getBank()));
+                    .orElseThrow(() -> new BadRequestException("Banco no encontrado id: " + req.getBank()));
         }
 
         // Cuentas Soles

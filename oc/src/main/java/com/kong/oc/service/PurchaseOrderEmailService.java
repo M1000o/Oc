@@ -46,7 +46,7 @@ public class PurchaseOrderEmailService {
                 order.getId(),
                 order.getPurchaseOrderNumber(),
                 recipientEmail,
-                PurchaseOrderEmailStatus.SENT,
+                PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR,
                 LocalDateTime.now(),
                 storedPdf.fileName(),
                 storedPdf.filePath()

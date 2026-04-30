@@ -1,6 +1,7 @@
 package com.kong.oc.repository;
 
 import com.kong.oc.dto.Status;
+import com.kong.oc.dto.PurchaseOrderEmailStatus;
 import com.kong.oc.model.PurchaseOrder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +39,35 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             WHERE po.id = :id
             """)
     Optional<PurchaseOrder> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("""
+            SELECT po FROM PurchaseOrder po
+            JOIN FETCH po.supplier s
+            JOIN FETCH po.usuario u
+            WHERE s.user.id = :userId
+              AND po.emailStatus = :emailStatus
+            """)
+    Page<PurchaseOrder> findBySupplierUserAndEmailStatus(
+            @Param("userId") Long userId,
+            @Param("emailStatus") PurchaseOrderEmailStatus emailStatus,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT DISTINCT po FROM PurchaseOrder po
+            JOIN FETCH po.supplier s
+            JOIN FETCH po.usuario u
+            LEFT JOIN FETCH po.details d
+            LEFT JOIN FETCH d.product
+            WHERE po.id = :orderId
+              AND s.user.id = :userId
+              AND po.emailStatus = :emailStatus
+            """)
+    Optional<PurchaseOrder> findByIdForSupplierUserWithDetails(
+            @Param("orderId") Long orderId,
+            @Param("userId") Long userId,
+            @Param("emailStatus") PurchaseOrderEmailStatus emailStatus
+    );
 
 
     // Listado paginado con filtros opcionales

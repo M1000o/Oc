@@ -45,9 +45,8 @@ public class Supplier extends BaseEntity {
     )
     private List<Services> servicios;
 
-    // Asociación opcional al usuario de autenticación creado para el contacto/proveedor
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
 }

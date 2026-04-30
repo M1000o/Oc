@@ -1,5 +1,29 @@
 <div layoutBody class="workspace-canvas">
   <div class="summary-shell" [class.summary-shell-blurred]="showSendOrderModal">
+    @if (emailSendError) {
+      <div class="email-error-banner">
+        <div class="email-error-content">
+          <mat-icon aria-hidden="true">warning</mat-icon>
+          <div class="email-error-text">
+            <p>La orden fue guardada pero el correo no pudo enviarse. Puedes reintentarlo.</p>
+            @if (emailRetryCount > 0) {
+              <span class="retry-badge">Reintento fallido #{{ emailRetryCount }}</span>
+            }
+          </div>
+        </div>
+        <button
+          class="btn btn-retry"
+          type="button"
+          (click)="retryEmailSend()"
+          [disabled]="isRetryingEmail"
+        >
+          <mat-icon aria-hidden="true" *ngIf="!isRetryingEmail">refresh</mat-icon>
+          <mat-icon aria-hidden="true" *ngIf="isRetryingEmail" class="rotating">sync</mat-icon>
+          {{ isRetryingEmail ? 'Reintentando...' : 'Reintentar envío' }}
+        </button>
+      </div>
+    }
+
     <section class="summary-hero">
       <div>
         <h1>Resumen de Pedido</h1>

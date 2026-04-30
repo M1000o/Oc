@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface ContactsRepository extends JpaRepository<Contacts, Long> {
     Optional<Contacts> findFirstBySupplier_IdAndIsDeletedFalseOrderByIdAsc(Long supplierId);
+    boolean existsByPhone(String phone);
 }

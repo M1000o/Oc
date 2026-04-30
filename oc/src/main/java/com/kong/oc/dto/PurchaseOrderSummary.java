@@ -12,6 +12,7 @@ public record PurchaseOrderSummary(
         String sede,
         String area,
         String status,
+        String emailStatus,
         BigDecimal total
 ) {
 }

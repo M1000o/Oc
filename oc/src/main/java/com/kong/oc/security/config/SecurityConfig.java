@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/activate", "/set-password", "/activation/resend").permitAll()
                         .requestMatchers("/dev/**").permitAll()
                         .requestMatchers("/internal/debug/**").permitAll()
+                        .requestMatchers("/api/v1/purchase-orders/supplier-view/**").hasAuthority("READ_OWN_PURCHASE_ORDERS")
                         .requestMatchers("/api/v1/roles/**", "/api/v1/permissions/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

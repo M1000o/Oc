@@ -11,10 +11,11 @@ public record PurchaseOrderRequest(
         @NotNull(message = "El proveedor es obligatorio")
         Long supplierId,
 
-        @NotNull(message = "La fecha de entrega es obligatoria")
-        @FutureOrPresent(message = "La fecha de entrega no puede ser anterior a hoy")
+        @NotNull(message = "La fecha de la orden es obligatoria")
         LocalDate orderDate,
 
+        @NotNull(message = "La fecha de entrega es obligatoria")
+        @FutureOrPresent(message = "La fecha de entrega no puede ser anterior a hoy")
         LocalDate deliveryDate,
 
         @NotBlank(message = "El local es obligatorio")

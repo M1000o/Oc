@@ -1,8 +1,9 @@
 import { inject } from '@angular/core';
 import { CanDeactivateFn } from '@angular/router';
+import { Observable } from 'rxjs';
 
 export interface OrderSummaryDraftAware {
-  confirmDiscardDraft(): boolean;
+  confirmDiscardDraft(): Observable<boolean> | Promise<boolean> | boolean;
 }
 
 export const orderSummaryDraftGuard: CanDeactivateFn<OrderSummaryDraftAware> = (component) => {

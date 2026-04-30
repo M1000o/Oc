@@ -30,15 +30,19 @@ export class PurchaseOrderService {
           data: response.data ?? null,
           error: ''
         })),
-        catchError((error) =>
-          of({
+        catchError((error) => {
+          const detail = error?.error?.errors;
+          const firstError = detail ? Object.values(detail)[0] as string : null;
+          
+          return of({
             data: null,
             error:
+              firstError ||
               error?.error?.message ||
               error?.error?.error ||
               'No se pudo finalizar la orden de compra.'
-          })
-        )
+          });
+        })
       );
   }
 
@@ -51,15 +55,19 @@ export class PurchaseOrderService {
         data: response.data ?? null,
         error: ''
       })),
-      catchError((error) =>
-        of({
+      catchError((error) => {
+        const detail = error?.error?.errors;
+        const firstError = detail ? Object.values(detail)[0] as string : null;
+        
+        return of({
           data: null,
           error:
+            firstError ||
             error?.error?.message ||
             error?.error?.error ||
             'No se pudo actualizar la orden de compra.'
-        })
-      )
+        });
+      })
     );
   }
 

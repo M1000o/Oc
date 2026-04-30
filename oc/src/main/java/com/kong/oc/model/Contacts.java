@@ -29,7 +29,7 @@ public class Contacts extends BaseEntity {
 
     private String apellido_materno;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String phone;
 
     @Column(name = "correo")

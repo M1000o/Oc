@@ -1,7 +1,7 @@
 package com.kong.oc.dto;
 
 public enum PurchaseOrderEmailStatus {
-    QUEUED,
-    SENT,
-    FAILED
+    PENDIENTE_ENVIO,
+    ENVIADO_PROVEEDOR,
+    ERROR_ENVIO
 }

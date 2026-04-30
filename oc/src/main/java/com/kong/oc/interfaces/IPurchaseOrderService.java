@@ -24,4 +24,10 @@ public interface IPurchaseOrderService {
 
     /** Envía por correo la orden de compra registrada. */
     PurchaseOrderEmailResponse sendEmail(Long orderId, PurchaseOrderEmailRequest request, Long userId);
+
+    /** Listado de órdenes enviadas al proveedor autenticado. */
+    Page<PurchaseOrderSummary> findSentOrdersForSupplierUser(Long userId, Pageable pageable);
+
+    /** Detalle de orden enviada al proveedor autenticado. */
+    PurchaseOrderResponse findSentOrderDetailForSupplierUser(Long orderId, Long userId);
 }

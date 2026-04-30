@@ -3,6 +3,7 @@ package com.kong.oc.mapper;
 import com.kong.oc.dto.PurchaseOrderDetailResponse;
 import com.kong.oc.dto.PurchaseOrderResponse;
 import com.kong.oc.dto.PurchaseOrderSummary;
+import com.kong.oc.dto.PurchaseOrderEmailStatus;
 import com.kong.oc.model.PurchaseOrder;
 import com.kong.oc.model.PurchaseOrderDetail;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class PurchaseOrderMapper {
                 order.getSede(),
                 order.getArea(),
                 order.getStatus().name(),
+                resolveEmailStatus(order),
                 order.getNotas(),
                 order.getUsuario().getUsername(),
                 order.getSubtotal(),
@@ -43,6 +45,7 @@ public class PurchaseOrderMapper {
                 order.getSede(),
                 order.getArea(),
                 order.getStatus().name(),
+                resolveEmailStatus(order),
                 order.getTotal()
         );
     }
@@ -64,5 +67,11 @@ public class PurchaseOrderMapper {
         return details.stream()
                 .map(this::toDetailResponse)
                 .toList();
+    }
+
+    private String resolveEmailStatus(PurchaseOrder order) {
+        return order.getEmailStatus() != null
+                ? order.getEmailStatus().name()
+                : PurchaseOrderEmailStatus.PENDIENTE_ENVIO.name();
     }
 }

@@ -59,6 +59,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/provider-home/provider-home.page').then((m) => m.ProviderHomePage)
       },
       {
+        path: 'mis-ordenes',
+        canActivate: [providerOnlyGuard],
+        loadComponent: () => import('./features/supplier-orders/supplier-orders.page').then((m) => m.SupplierOrdersPage)
+      },
+      {
         path: 'guardados',
         canActivate: [nonProviderGuard],
         loadComponent: () => import('./features/saved-orders/saved-orders.page').then((m) => m.SavedOrdersPage)

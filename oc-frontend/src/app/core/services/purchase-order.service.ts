@@ -217,6 +217,55 @@ export class PurchaseOrderService {
     );
   }
 
+  getSupplierOrders(
+    page = 0,
+    size = 10
+  ): Observable<{ data: PageResponse<PurchaseOrderSummary> | null; error: string }> {
+    return this.http
+      .get<ApiResponse<PageResponse<PurchaseOrderSummary>>>(`${this.endpoint}/supplier-view`, {
+        params: new HttpParams().set('page', page).set('size', size).set('sort', 'orderDate,DESC')
+      })
+      .pipe(
+        map((response) => ({
+          data: response.data ?? null,
+          error: ''
+        })),
+        catchError((error) =>
+          of({
+            data: null,
+            error:
+              error?.error?.message ||
+              error?.error?.error ||
+              'No se pudieron cargar sus órdenes de compra.'
+          })
+        )
+      );
+  }
+
+  getSupplierOrderDetail(id: number): Observable<{ data: PurchaseOrderResponse | null; error: string }> {
+    return this.http.get<ApiResponse<PurchaseOrderResponse>>(`${this.endpoint}/supplier-view/order/${id}`).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo cargar el detalle de la orden de compra.'
+        })
+      )
+    );
+  }
+
+  downloadPurchaseOrderPdf(id: number): Observable<Blob> {
+    return this.http.get(`${this.endpoint}/${id}/pdf`, {
+      responseType: 'blob'
+    });
+  }
+
   private fetchAllPages(filter: PurchaseOrderFilter): Observable<PurchaseOrderSummary[]> {
     return this.http
       .get<ApiResponse<PageResponse<PurchaseOrderSummary>>>(this.endpoint, {

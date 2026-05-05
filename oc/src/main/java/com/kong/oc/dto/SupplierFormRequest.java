@@ -37,7 +37,7 @@ public class SupplierFormRequest {
     @Email(message = "Correo para pedidos inválido")
     private String correo_pedidos;
 
-    private Long bank; // id de Banks
+    private Long bank;
 
     @NotNull(message = "Tipo de cuenta es obligatorio")
     private AccountType accountType;

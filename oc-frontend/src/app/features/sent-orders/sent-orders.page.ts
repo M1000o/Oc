@@ -104,7 +104,8 @@ export class SentOrdersPage implements OnInit {
       data: { orderId: id },
       width: '1100px',
       maxWidth: '95vw',
-      maxHeight: '90vh'
+      maxHeight: '90vh',
+      panelClass: 'purchase-order-detail-dialog'
     });
   }
 

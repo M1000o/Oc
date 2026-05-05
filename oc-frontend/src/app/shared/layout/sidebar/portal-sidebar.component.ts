@@ -38,6 +38,12 @@ export class PortalSidebarComponent {
           icon: 'storefront',
           route: '/portal/proveedor',
           exact: true
+        },
+        {
+          label: 'Mis Órdenes',
+          icon: 'receipt_long',
+          route: '/portal/mis-ordenes',
+          exact: true
         }
       ];
     }

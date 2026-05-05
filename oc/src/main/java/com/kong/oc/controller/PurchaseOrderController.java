@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -42,6 +44,25 @@ public class PurchaseOrderController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>("Orden de compra obtenida", purchaseOrderService.findById(id)));
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadPdf(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
+
+        Long userId = Long.parseLong(jwt.getSubject());
+        var roles = jwt.getClaimAsStringList("roles");
+        boolean isAdmin = roles != null && roles.contains("ADMIN");
+
+        PurchaseOrderPdfDownload pdf = purchaseOrderService.downloadPdf(id, userId, isAdmin);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + pdf.fileName() + "\"")
+                .body(pdf.content());
     }
 
     @GetMapping
@@ -83,6 +104,7 @@ public class PurchaseOrderController {
         );
     }
 
+    //PROV - Ordenes enviadas sin detalle
     @GetMapping("/supplier-view")
     public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> getSupplierSentOrders(
             @AuthenticationPrincipal Jwt jwt,
@@ -99,7 +121,22 @@ public class PurchaseOrderController {
         );
     }
 
+    //ADMIN - Ordenes enviadas a un proveedor especifico sin detalle
     @GetMapping("/supplier-view/{id}")
+    public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> getSupplierSentOrdersBySupplier(
+            @PathVariable Long id,
+            @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Órdenes enviadas al proveedor",
+                        purchaseOrderService.findSentOrdersForSupplier(id, pageable)
+                )
+        );
+    }
+
+    //PROV - Detalle de orden enviada al proveedor autenticado
+    @GetMapping("/supplier-view/order/{id}")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getSupplierSentOrderDetail(
             @PathVariable Long id,
             @AuthenticationPrincipal Jwt jwt

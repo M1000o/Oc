@@ -44,11 +44,11 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
-            WHERE s.user.id = :userId
+            WHERE s.id = :supplierId
               AND po.emailStatus = :emailStatus
             """)
-    Page<PurchaseOrder> findBySupplierUserAndEmailStatus(
-            @Param("userId") Long userId,
+    Page<PurchaseOrder> findBySupplierIdAndEmailStatus(
+            @Param("supplierId") Long supplierId,
             @Param("emailStatus") PurchaseOrderEmailStatus emailStatus,
             Pageable pageable
     );
@@ -60,12 +60,12 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             LEFT JOIN FETCH po.details d
             LEFT JOIN FETCH d.product
             WHERE po.id = :orderId
-              AND s.user.id = :userId
+              AND s.id = :supplierId
               AND po.emailStatus = :emailStatus
             """)
-    Optional<PurchaseOrder> findByIdForSupplierUserWithDetails(
+    Optional<PurchaseOrder> findByIdForSupplierWithDetails(
             @Param("orderId") Long orderId,
-            @Param("userId") Long userId,
+            @Param("supplierId") Long supplierId,
             @Param("emailStatus") PurchaseOrderEmailStatus emailStatus
     );
 

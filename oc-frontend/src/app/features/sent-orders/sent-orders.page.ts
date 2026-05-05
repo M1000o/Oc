@@ -6,6 +6,8 @@ import {
   PurchaseOrderSummary
 } from '../../core/interfaces/purchase-order.interface';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { PurchaseOrderDetailModalComponent } from '../supplier-orders/purchase-order-detail-modal.component';
 
 type ShipmentStatus = 'PENDIENTE' | 'APROBADO';
 
@@ -21,13 +23,14 @@ interface SentOrderView {
 
 @Component({
   selector: 'app-sent-orders-page',
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, MatDialogModule],
   providers: [DatePipe, CurrencyPipe],
   templateUrl: './sent-orders.page.html',
   styleUrl: './sent-orders.page.css'
 })
 export class SentOrdersPage implements OnInit {
   private readonly purchaseOrderService = inject(PurchaseOrderService);
+  private readonly dialog = inject(MatDialog);
   private readonly datePipe = inject(DatePipe);
   private readonly currencyPipe = inject(CurrencyPipe);
 
@@ -94,6 +97,15 @@ export class SentOrdersPage implements OnInit {
 
   protected resolveStatusLabel(status: ShipmentStatus): string {
     return status === 'APROBADO' ? 'Aprobado' : 'Pendiente';
+  }
+
+  protected viewDetail(id: number): void {
+    this.dialog.open(PurchaseOrderDetailModalComponent, {
+      data: { orderId: id },
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh'
+    });
   }
 
   private loadOrders(): void {

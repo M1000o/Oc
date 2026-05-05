@@ -30,7 +30,7 @@
         </div>
       } @else {
         @for (order of pagedOrders(); track order.id) {
-          <article class="sent-row">
+          <article class="sent-row" (click)="viewDetail(order.id)">
             <div class="row-col order-col">{{ order.orderNumber }}</div>
             <div class="row-col date-col">{{ order.shipmentDate }}</div>
             <div class="row-col destination-col">

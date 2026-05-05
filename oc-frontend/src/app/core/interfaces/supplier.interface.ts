@@ -17,7 +17,7 @@ export interface SupplierFormPayload {
     cci_dolares: string;
     is_detraccion: boolean;
     accountNumber_Detraccion: string;
-    correo_constancia: string;
+    correo_constancia: string | null;
     creditDays: number;
 }
 

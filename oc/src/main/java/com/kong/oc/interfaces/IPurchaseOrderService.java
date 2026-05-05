@@ -31,8 +31,8 @@ public interface IPurchaseOrderService {
     /** Listado de órdenes enviadas para un proveedor específico (vista administrador). */
     Page<PurchaseOrderSummary> findSentOrdersForSupplier(Long supplierId, Pageable pageable);
 
-    /** Detalle de orden enviada al proveedor autenticado. */
-    PurchaseOrderResponse findSentOrderDetailForSupplierUser(Long orderId, Long userId);
+    /** Detalle de orden enviada según alcance del usuario autenticado. */
+    PurchaseOrderResponse findSentOrderDetail(Long orderId, Long userId, boolean isAdmin);
 
     /** Descarga PDF de una orden de compra según permisos del usuario autenticado. */
     PurchaseOrderPdfDownload downloadPdf(Long orderId, Long userId, boolean isAdmin);

@@ -1,0 +1,253 @@
+<!-- <div class="modal-container">
+  <header class="modal-header">
+    <h2>Detalle de Orden de Compra</h2>
+    <button (click)="close()" class="btn-close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="modal-body">
+    @if (isLoading()) {
+      <div class="loading-overlay">
+        <mat-icon class="animate-spin">autorenew</mat-icon>
+        <p>Cargando detalles...</p>
+      </div>
+    } @else if (errorMessage()) {
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        <p>{{ errorMessage() }}</p>
+      </div>
+    } @else if (viewModel(); as vm) {
+      <article class="pdf-page">
+        <header class="document-header">
+          <div class="company-block">
+            <div>
+              <h2>{{ vm.companyName }}</h2>
+              <p>RUC: {{ vm.companyRuc }}</p>
+              <p>{{ vm.companyAddress }}</p>
+            </div>
+          </div>
+
+          <div class="document-meta">
+            <div>
+              <h3>ORDEN DE COMPRA</h3>
+              <p class="document-number">{{ vm.documentNumber }}</p>
+            </div>
+            <p>Fecha de Emision: <strong>{{ vm.issueDate }}</strong></p>
+          </div>
+        </header>
+
+        <section class="document-grid">
+          <div class="document-card">
+            <div class="section-title">
+              <mat-icon aria-hidden="true">factory</mat-icon>
+              <h4>Proveedor</h4>
+            </div>
+
+            <div class="data-stack">
+              <p class="supplier-name">{{ vm.supplierName }}</p>
+              <p><strong>RUC:</strong> {{ vm.supplierRuc }}</p>
+              <p><strong>Contacto:</strong> {{ vm.supplierContact }}</p>
+              <p><strong>Email:</strong> {{ vm.supplierEmail }}</p>
+            </div>
+          </div>
+
+          <div class="document-card">
+            <div class="section-title">
+              <mat-icon aria-hidden="true">local_shipping</mat-icon>
+              <h4>Entrega</h4>
+            </div>
+
+            <div class="data-stack">
+              <p><strong>Sede:</strong> {{ vm.deliverySite }}</p>
+              <p><strong>Area:</strong> {{ vm.deliveryArea }}</p>
+              <p><strong>Fecha Requerida:</strong> {{ vm.requiredDate }}</p>
+              <p><strong>Condicion de Pago:</strong> {{ vm.paymentTerms }}</p>
+              <p><strong>Moneda:</strong> {{ vm.currencyLabel }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="table-panel">
+          <table class="document-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>SKU/Code</th>
+                <th>Descripcion</th>
+                <th>Unidad</th>
+                <th class="align-center">Cant.</th>
+                <th class="align-right">Precio Unit.</th>
+                <th class="align-right">Total</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of vm.lineItems; track item.item) {
+                <tr>
+                  <td>{{ item.item }}</td>
+                  <td class="mono">{{ item.sku }}</td>
+                  <td class="description">{{ item.description }}</td>
+                  <td>{{ item.unit }}</td>
+                  <td class="align-center">{{ item.quantity }}</td>
+                  <td class="align-right">{{ formatCurrency(item.unitPrice) }}</td>
+                  <td class="align-right strong">{{ formatCurrency(item.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+
+        <section class="summary-block">
+          <div>
+            <span>Subtotal</span>
+            <strong>{{ formatCurrency(vm.subtotal) }}</strong>
+          </div>
+          <div>
+            <span>IGV (18%)</span>
+            <strong>{{ formatCurrency(vm.igv) }}</strong>
+          </div>
+          <div class="summary-total">
+            <span>Total General</span>
+            <strong>{{ formatCurrency(vm.total) }}</strong>
+          </div>
+        </section>
+
+        <footer class="document-footer">
+          <div class="notes-card">
+            <p>Observaciones: {{ vm.notes }}</p>
+          </div>
+
+          <p class="generated-copy">{{ vm.generatedBy }}</p>
+        </footer>
+      </article>
+    }
+  </div>
+</div> -->
+
+<div class="modal-container">
+  <header class="modal-header">
+    <h2>Detalle de Orden de Compra</h2>
+    <button (click)="close()" class="btn-close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="modal-body">
+    @if (isLoading()) {
+      <div class="loading-overlay">
+        <mat-icon class="animate-spin">autorenew</mat-icon>
+        <p>Cargando detalles...</p>
+      </div>
+    } @else if (errorMessage()) {
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        <p>{{ errorMessage() }}</p>
+      </div>
+    } @else if (viewModel(); as vm) {
+      <article class="pdf-page">
+        <header class="document-header">
+          <div class="company-block">
+            <div>
+              <h2>{{ vm.companyName }}</h2>
+              <p>RUC: {{ vm.companyRuc }}</p>
+              <p>{{ vm.companyAddress }}</p>
+            </div>
+          </div>
+
+          <div class="document-meta">
+            <div>
+              <h3>ORDEN DE COMPRA</h3>
+              <p class="document-number">{{ vm.documentNumber }}</p>
+            </div>
+            <p>Fecha de Emision: <strong>{{ vm.issueDate }}</strong></p>
+          </div>
+        </header>
+
+        <section class="document-grid">
+          <div class="document-card">
+            <div class="section-title">
+              <mat-icon aria-hidden="true">factory</mat-icon>
+              <h4>Proveedor</h4>
+            </div>
+
+            <div class="data-stack">
+              <p class="supplier-name">{{ vm.supplierName }}</p>
+              <p><strong>RUC:</strong> {{ vm.supplierRuc }}</p>
+              <p><strong>Contacto:</strong> {{ vm.supplierContact }}</p>
+              <p><strong>Email:</strong> {{ vm.supplierEmail }}</p>
+            </div>
+          </div>
+
+          <div class="document-card">
+            <div class="section-title">
+              <mat-icon aria-hidden="true">local_shipping</mat-icon>
+              <h4>Entrega</h4>
+            </div>
+
+            <div class="data-stack">
+              <p><strong>Sede:</strong> {{ vm.deliverySite }}</p>
+              <p><strong>Area:</strong> {{ vm.deliveryArea }}</p>
+              <p><strong>Fecha Requerida:</strong> {{ vm.requiredDate }}</p>
+              <p><strong>Condicion de Pago:</strong> {{ vm.paymentTerms }}</p>
+              <p><strong>Moneda:</strong> {{ vm.currencyLabel }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="table-panel">
+          <table class="document-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>SKU/Code</th>
+                <th>Descripcion</th>
+                <th>Unidad</th>
+                <th class="align-center">Cant.</th>
+                <th class="align-right">Precio Unit.</th>
+                <th class="align-right">Total</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of vm.lineItems; track item.item) {
+                <tr>
+                  <td>{{ item.item }}</td>
+                  <td class="mono">{{ item.sku }}</td>
+                  <td class="description">{{ item.description }}</td>
+                  <td>{{ item.unit }}</td>
+                  <td class="align-center">{{ item.quantity }}</td>
+                  <td class="align-right">{{ formatCurrency(item.unitPrice) }}</td>
+                  <td class="align-right strong">{{ formatCurrency(item.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+
+        <section class="summary-block">
+          <div>
+            <span>Subtotal</span>
+            <strong>{{ formatCurrency(vm.subtotal) }}</strong>
+          </div>
+          <div>
+            <span>IGV (18%)</span>
+            <strong>{{ formatCurrency(vm.igv) }}</strong>
+          </div>
+          <div class="summary-total">
+            <span>Total General</span>
+            <strong>{{ formatCurrency(vm.total) }}</strong>
+          </div>
+        </section>
+
+        <footer class="document-footer">
+          <div class="notes-card">
+            <p>Observaciones: {{ vm.notes }}</p>
+          </div>
+
+          <p class="generated-copy">{{ vm.generatedBy }}</p>
+        </footer>
+      </article>
+    }
+  </div>
+</div>

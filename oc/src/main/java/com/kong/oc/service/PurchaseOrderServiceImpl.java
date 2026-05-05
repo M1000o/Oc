@@ -212,15 +212,21 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public PurchaseOrderResponse findSentOrderDetailForSupplierUser(Long orderId, Long userId) {
+    public PurchaseOrderResponse findSentOrderDetail(Long orderId, Long userId, boolean isAdmin) {
         findUserOrThrow(userId);
-        Supplier supplier = findSupplierByUserOrThrow(userId);
-        PurchaseOrder order = purchaseOrderRepository.findByIdForSupplierWithDetails(
-                        orderId,
-                        supplier.getId(),
-                        PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR
-                )
-                .orElseThrow(() -> new ResourceNotFoundException("Orden de compra no encontrada para el proveedor autenticado."));
+
+        PurchaseOrder order;
+        if (isAdmin) {
+            order = findOrderWithDetailsOrThrow(orderId);
+        } else {
+            Supplier supplier = findSupplierByUserOrThrow(userId);
+            order = purchaseOrderRepository.findByIdForSupplierWithDetails(
+                            orderId,
+                            supplier.getId(),
+                            PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR
+                    )
+                    .orElseThrow(() -> new ResourceNotFoundException("Orden de compra no encontrada para el proveedor autenticado."));
+        }
         return mapper.toResponse(order);
     }
 

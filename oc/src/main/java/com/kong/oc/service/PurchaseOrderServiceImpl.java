@@ -37,6 +37,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     private final PurchaseOrderMapper mapper;
     private final UserRepository userRepository;
     private final PurchaseOrderEmailService purchaseOrderEmailService;
+    private final PurchaseOrderDocumentService purchaseOrderDocumentService;
 
 
     @Override
@@ -194,8 +195,18 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     @Transactional(readOnly = true)
     public Page<PurchaseOrderSummary> findSentOrdersForSupplierUser(Long userId, Pageable pageable) {
         findUserOrThrow(userId);
+        Supplier supplier = findSupplierByUserOrThrow(userId);
         return purchaseOrderRepository
-                .findBySupplierUserAndEmailStatus(userId, PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR, pageable)
+                .findBySupplierIdAndEmailStatus(supplier.getId(), PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR, pageable)
+                .map(mapper::toSummary);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PurchaseOrderSummary> findSentOrdersForSupplier(Long supplierId, Pageable pageable) {
+        findSupplierOrThrow(supplierId);
+        return purchaseOrderRepository
+                .findBySupplierIdAndEmailStatus(supplierId, PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR, pageable)
                 .map(mapper::toSummary);
     }
 
@@ -203,13 +214,36 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     @Transactional(readOnly = true)
     public PurchaseOrderResponse findSentOrderDetailForSupplierUser(Long orderId, Long userId) {
         findUserOrThrow(userId);
-        PurchaseOrder order = purchaseOrderRepository.findByIdForSupplierUserWithDetails(
+        Supplier supplier = findSupplierByUserOrThrow(userId);
+        PurchaseOrder order = purchaseOrderRepository.findByIdForSupplierWithDetails(
                         orderId,
-                        userId,
+                        supplier.getId(),
                         PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR
                 )
                 .orElseThrow(() -> new ResourceNotFoundException("Orden de compra no encontrada para el proveedor autenticado."));
         return mapper.toResponse(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PurchaseOrderPdfDownload downloadPdf(Long orderId, Long userId, boolean isAdmin) {
+        findUserOrThrow(userId);
+
+        PurchaseOrder order;
+        if (isAdmin) {
+            order = findOrderWithDetailsOrThrow(orderId);
+        } else {
+            Supplier supplier = findSupplierByUserOrThrow(userId);
+            order = purchaseOrderRepository.findByIdForSupplierWithDetails(
+                            orderId,
+                            supplier.getId(),
+                            PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR
+                    )
+                    .orElseThrow(() -> new ResourceNotFoundException("Orden de compra no encontrada para el proveedor autenticado."));
+        }
+
+        PurchaseOrderDocumentService.PreparedPurchaseOrderPdf preparedPdf = purchaseOrderDocumentService.preparePdf(order);
+        return new PurchaseOrderPdfDownload(preparedPdf.fileName(), preparedPdf.content());
     }
 
     private Map<Long, Product> loadAndValidateProducts(List<Long> productIds, Long supplierId, boolean isDraft) {
@@ -353,6 +387,12 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         return supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Proveedor no encontrado con ID: " + id));
+    }
+
+    private Supplier findSupplierByUserOrThrow(Long userId) {
+        return supplierRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontró un proveedor asociado al usuario autenticado."));
     }
 
     private User findUserOrThrow(Long id) {

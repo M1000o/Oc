@@ -1,0 +1,127 @@
+<div class="workspace-canvas">
+  <div class="page-header">
+    <h1>Mis Órdenes de Compra</h1>
+    <p>Gestiona y revisa el estado de tus órdenes activas y pasadas.</p>
+  </div>
+
+  <!-- Controls Section (Search & Filters) -->
+  <div class="controls-card">
+    <div class="control-group">
+      <label>Búsqueda Rápida</label>
+      <div class="input-container">
+        <span class="material-symbols-outlined">search</span>
+        <input class="input-field" placeholder="Buscar por N° de Orden, Local..." type="text"/>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Filtrar por Estado</label>
+      <div class="select-container">
+        <select class="select-field">
+          <option>Todos los Estados</option>
+          <option>Pendiente</option>
+          <option>En Proceso</option>
+          <option>Entregado</option>
+          <option>Cancelado</option>
+        </select>
+        <span class="material-symbols-outlined expand-icon">expand_more</span>
+      </div>
+    </div>
+    <button class="btn-filter">
+      <span class="material-symbols-outlined">filter_list</span>
+      Aplicar
+    </button>
+  </div>
+
+  <!-- Data Table Section -->
+  <div class="table-card">
+    <div class="table-wrapper">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>N° de Orden</th>
+            <th>Fecha de Emisión</th>
+            <th>Local de Entrega</th>
+            <th class="text-right">Monto Total</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loadingDelayed()) {
+            <tr>
+              <td colspan="6">
+                <div class="loading-state">
+                  <span class="material-symbols-outlined animate-spin icon-large">autorenew</span>
+                  <p>Cargando órdenes de compra...</p>
+                </div>
+              </td>
+            </tr>
+          } @else if (errorMessage()) {
+            <tr>
+              <td colspan="6">
+                <div class="error-state">
+                  <span class="material-symbols-outlined icon-large text-error">error</span>
+                  <p class="text-error">{{ errorMessage() }}</p>
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (order of orders(); track order.id) {
+              <tr>
+                <td class="text-primary">{{ order.purchaseOrderNumber }}</td>
+                <td class="text-variant">{{ formatDate(order.orderDate) }}</td>
+                <td>{{ order.sede }} - {{ order.area }}</td>
+                <td class="text-right font-medium">{{ formatCurrency(order.total) }}</td>
+                <td class="text-center">
+                  <span class="status-chip" [ngClass]="getStatusClass(order.status)">
+                    {{ getStatusLabel(order.status) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <button (click)="viewDetail(order.id)" class="btn-action" title="Ver Detalle">
+                      <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                    <button (click)="downloadPdf(order.id)" class="btn-action" title="Descargar PDF">
+                      <span class="material-symbols-outlined">download</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              @if (!isLoading()) {
+               <tr>
+                <td colspan="6">
+                   <div class="empty-state">
+                    <span class="material-symbols-outlined icon-large">inventory_2</span>
+                    <p>No se encontraron órdenes de compra.</p>
+                  </div>
+                </td>
+              </tr>
+              }
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="table-footer">
+      <span class="showing-text">
+        Mostrando {{ showingFrom() }} a {{ showingTo() }} de {{ totalElements() }} órdenes
+      </span>
+      <div class="pagination-controls">
+        <button (click)="previousPage()" 
+                [disabled]="currentPage() === 0 || isLoading()"
+                class="btn-pager">
+          Anterior
+        </button>
+        <button (click)="nextPage()" 
+                [disabled]="currentPage() >= totalPages() - 1 || isLoading()"
+                class="btn-pager active">
+          Siguiente
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -37,26 +38,27 @@ public class AuthService {
 
 
     public TokenResponse login(LoginRequest request) {
+        String normalizedUsername = normalizeUsername(request.getUsername());
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getUsername(),
+                            normalizedUsername,
                             request.getPassword()
                     )
             );
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            log.info("Login exitoso para usuario: {}", request.getUsername());
+            log.info("Login exitoso para usuario: {}", normalizedUsername);
 
             try {
                 return generateTokenResponse(userDetails.getUser());
             } catch (Exception e) {
-                log.error("Error generando tokens para usuario {}: {}", request.getUsername(), e.getMessage(), e);
+                log.error("Error generando tokens para usuario {}: {}", normalizedUsername, e.getMessage(), e);
                 throw new IllegalStateException("Error generando tokens para el usuario", e);
             }
 
         } catch (BadCredentialsException e) {
-            log.warn("Intento de login fallido para usuario: {}", request.getUsername());
+            log.warn("Intento de login fallido para usuario: {}", normalizedUsername);
             throw e;
         }
     }
@@ -93,15 +95,17 @@ public class AuthService {
 
     @Transactional
     public TokenResponse register(RegisterRequest request) {
+        String normalizedUsername = normalizeUsername(request.getUsername());
+
         // Validar que el usuario no exista
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            log.warn("Intento de registro con username ya existente: {}", request.getUsername());
+        if (userRepository.findByUsernameIgnoreCase(normalizedUsername).isPresent()) {
+            log.warn("Intento de registro con username ya existente: {}", normalizedUsername);
             throw new IllegalArgumentException("El username ya está en uso");
         }
 
         // Crear nuevo usuario
         User user = new User();
-        user.setUsername(request.getUsername());
+        user.setUsername(normalizedUsername);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         // Asignar rol (por defecto rol con ID 1 si no se especifica)
@@ -160,6 +164,10 @@ public class AuthService {
         String refreshToken = refreshTokenService.createRefreshToken(user);
 
         return new TokenResponse(accessToken, refreshToken);
+    }
+
+    private String normalizeUsername(String username) {
+        return username == null ? null : username.trim().toLowerCase(Locale.ROOT);
     }
 
 }

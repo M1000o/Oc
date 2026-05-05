@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -30,6 +31,7 @@ public class DataInitializer implements ApplicationRunner {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final Environment environment;
 
     @Override
     @Transactional
@@ -82,17 +84,16 @@ public class DataInitializer implements ApplicationRunner {
 
         // Crear admin
         if (spec.admin != null) {
-            String username = spec.admin.username != null ? spec.admin.username : "admin";
-            username = username.trim().toLowerCase();
-            String rawPassword = spec.admin.password != null ? spec.admin.password : "Admin123!";
-            String roleName = spec.admin.role != null ? spec.admin.role : "ADMIN";
+            String username = resolveSeedValue(spec.admin.username, "admin").trim().toLowerCase(Locale.ROOT);
+            String rawPassword = resolveSeedValue(spec.admin.password, "Admin123!");
+            String roleName = resolveSeedValue(spec.admin.role, "ADMIN").trim().toUpperCase(Locale.ROOT);
+            Role adminRole = createdRoles.getOrDefault(roleName, roleRepository.findByName(roleName).orElse(null));
 
             Optional<User> existing = userRepository.findByUsername(username);
             if (existing.isEmpty()) {
                 User user = new User();
                 user.setUsername(username);
                 user.setPassword(passwordEncoder.encode(rawPassword));
-                Role adminRole = createdRoles.get(roleName);
                 if (adminRole != null) {
                     user.getRoles().add(adminRole);
                 }
@@ -100,9 +101,39 @@ public class DataInitializer implements ApplicationRunner {
                 userRepository.save(user);
                 log.info("Created admin user: {} with role: {}", username, roleName);
             } else {
-                log.info("Admin user {} already exists, skipping", username);
+                User user = existing.get();
+                boolean changed = false;
+
+                if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+                    user.setPassword(passwordEncoder.encode(rawPassword));
+                    changed = true;
+                }
+                if (adminRole != null && user.getRoles().stream().noneMatch(r -> roleName.equals(r.getName()))) {
+                    user.getRoles().add(adminRole);
+                    changed = true;
+                }
+                if (!user.isEnabled()) {
+                    user.setEnabled(true);
+                    changed = true;
+                }
+
+                if (changed) {
+                    userRepository.save(user);
+                    log.info("Admin user {} updated to match configured credentials and role {}", username, roleName);
+                } else {
+                    log.info("Admin user {} already aligned with configured credentials and role", username);
+                }
             }
         }
+    }
+
+    private String resolveSeedValue(String configuredValue, String defaultValue) {
+        String rawValue = configuredValue == null ? defaultValue : configuredValue;
+        String resolvedValue = environment.resolvePlaceholders(rawValue);
+        if (resolvedValue == null || resolvedValue.isBlank()) {
+            return defaultValue;
+        }
+        return resolvedValue;
     }
 
     @Data

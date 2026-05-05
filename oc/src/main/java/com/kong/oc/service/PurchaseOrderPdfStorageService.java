@@ -14,7 +14,7 @@ import java.nio.file.Paths;
 @RequiredArgsConstructor
 public class PurchaseOrderPdfStorageService {
 
-    @Value("${app.purchase-order.pdf.storage-path:purchase-order-pdfs}")
+    @Value("${app.purchase-order.pdf.storage-path}")
     private String storagePath;
 
     public StoredPdf store(String fileName, byte[] pdfBytes) {

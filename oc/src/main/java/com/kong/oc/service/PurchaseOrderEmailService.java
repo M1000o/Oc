@@ -21,25 +21,20 @@ public class PurchaseOrderEmailService {
 
     private final ContactsRepository contactsRepository;
     private final EmailService emailService;
-    private final PurchaseOrderPdfService purchaseOrderPdfService;
-    private final PurchaseOrderPdfStorageService purchaseOrderPdfStorageService;
+    private final PurchaseOrderDocumentService purchaseOrderDocumentService;
 
     public PurchaseOrderEmailResponse sendPurchaseOrderEmail(PurchaseOrder order, PurchaseOrderEmailRequest request) {
         String recipientEmail = resolveRecipientEmail(order.getSupplier());
         String subject = buildSubject(order);
         String htmlBody = buildEmailBody(order, request.message());
-        PurchaseOrderPdfService.GeneratedPdf generatedPdf = purchaseOrderPdfService.generate(order);
-        PurchaseOrderPdfStorageService.StoredPdf storedPdf = purchaseOrderPdfStorageService.store(
-                generatedPdf.fileName(),
-                generatedPdf.content()
-        );
+        PurchaseOrderDocumentService.PreparedPurchaseOrderPdf preparedPdf = purchaseOrderDocumentService.preparePdf(order);
 
         emailService.sendPurchaseOrderEmail(
                 recipientEmail,
                 subject,
                 htmlBody,
-                generatedPdf.content(),
-                generatedPdf.fileName()
+                preparedPdf.content(),
+                preparedPdf.fileName()
         );
 
         return new PurchaseOrderEmailResponse(
@@ -48,8 +43,8 @@ public class PurchaseOrderEmailService {
                 recipientEmail,
                 PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR,
                 LocalDateTime.now(),
-                storedPdf.fileName(),
-                storedPdf.filePath()
+                preparedPdf.fileName(),
+                preparedPdf.filePath()
         );
     }
 

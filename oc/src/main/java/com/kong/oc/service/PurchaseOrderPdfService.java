@@ -37,16 +37,16 @@ public class PurchaseOrderPdfService {
 
     private final ContactsRepository contactsRepository;
 
-    @Value("${app.purchase-order.pdf.company-name:PROCUREFLOW S.A.C.}")
+    @Value("${app.purchase-order.pdf.company-name}")
     private String companyName;
 
-    @Value("${app.purchase-order.pdf.company-ruc:20601234567}")
+    @Value("${app.purchase-order.pdf.company-ruc}")
     private String companyRuc;
 
-    @Value("${app.purchase-order.pdf.company-address:Av. Empresarial 456, Lima, Peru}")
+    @Value("${app.purchase-order.pdf.company-address}")
     private String companyAddress;
 
-    @Value("${app.purchase-order.pdf.generated-by:Generado por ProcureFlow Enterprise ERP v4.2}")
+    @Value("${app.purchase-order.pdf.generated-by}")
     private String generatedBy;
 
     public GeneratedPdf generate(PurchaseOrder order) {
@@ -87,7 +87,7 @@ public class PurchaseOrderPdfService {
         values.put("igv", escapeHtml(formatCurrency(order.getIgv())));
         values.put("total", escapeHtml(formatCurrency(order.getTotal())));
         values.put("notes", escapeHtml(resolveNotes(order)));
-        values.put("generatedBy", escapeHtml(resolveGeneratedBy(order)));
+        values.put("generatedBy", escapeHtml(generatedBy));
         values.put("lineItemsRows", buildLineItemsRows(order));
 
         String html = template;
@@ -187,10 +187,6 @@ public class PurchaseOrderPdfService {
     }
 
     private String resolveGeneratedBy(PurchaseOrder order) {
-        if (order.getUsuario() != null && order.getUsuario().getUsername() != null && !order.getUsuario().getUsername().isBlank()) {
-            return generatedBy + " · Usuario: " + order.getUsuario().getUsername().trim();
-        }
-
         return generatedBy;
     }
 

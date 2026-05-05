@@ -21,10 +21,10 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.email.from:erickva2512@gmail.com}")
+    @Value("${app.email.from}")
     private String fromEmail;
 
-    @Value("${app.activation.expiration-hours:24}")
+    @Value("${app.activation.expiration-hours}")
     private int expirationHours;
 
     private final ObjectMapper objectMapper = new ObjectMapper();

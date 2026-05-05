@@ -19,7 +19,7 @@ public class ActivationController {
 
     private final ActivationService activationService;
 
-    @Value("${app.frontend-base-url:http://localhost:4200}")
+    @Value("${app.frontend-base-url}")
     private String frontendBaseUrl;
 
     @GetMapping("/activate")

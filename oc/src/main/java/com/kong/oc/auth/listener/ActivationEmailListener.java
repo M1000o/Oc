@@ -25,7 +25,7 @@ public class ActivationEmailListener {
     @Value("${app.backend-base-url:http://localhost:8080}")
     private String backendBaseUrl;
 
-    @Value("${app.activation.expiration-hours:24}")
+    @Value("${app.activation.expiration-hours}")
     private int expirationHours;
 
     @Async

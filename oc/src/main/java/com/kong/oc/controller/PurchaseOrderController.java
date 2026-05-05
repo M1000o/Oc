@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,17 +48,12 @@ public class PurchaseOrderController {
     }
 
     @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAuthority('READ_OWN_PURCHASE_ORDERS')")
     public ResponseEntity<byte[]> downloadPdf(
             @PathVariable Long id,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
-
-        Long userId = Long.parseLong(jwt.getSubject());
-        var roles = jwt.getClaimAsStringList("roles");
-        boolean isAdmin = roles != null && roles.contains("ADMIN");
-
-        PurchaseOrderPdfDownload pdf = purchaseOrderService.downloadPdf(id, userId, isAdmin);
+        PurchaseOrderPdfDownload pdf = purchaseOrderService.downloadPdf(id, extractUserId(jwt), isAdmin(jwt));
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
@@ -106,23 +102,22 @@ public class PurchaseOrderController {
 
     //PROV - Ordenes enviadas sin detalle
     @GetMapping("/supplier-view")
+    @PreAuthorize("hasAuthority('READ_OWN_PURCHASE_ORDERS') and !hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> getSupplierSentOrders(
             @AuthenticationPrincipal Jwt jwt,
             @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
-        Long userId = Long.parseLong(jwt.getSubject());
-
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "Órdenes enviadas al proveedor autenticado",
-                        purchaseOrderService.findSentOrdersForSupplierUser(userId, pageable)
+                        purchaseOrderService.findSentOrdersForSupplierUser(extractUserId(jwt), pageable)
                 )
         );
     }
 
     //ADMIN - Ordenes enviadas a un proveedor especifico sin detalle
     @GetMapping("/supplier-view/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> getSupplierSentOrdersBySupplier(
             @PathVariable Long id,
             @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
@@ -135,20 +130,28 @@ public class PurchaseOrderController {
         );
     }
 
-    //PROV - Detalle de orden enviada al proveedor autenticado
+    //ADMIN/PROV - Detalle de orden enviada
     @GetMapping("/supplier-view/order/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('READ_OWN_PURCHASE_ORDERS')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getSupplierSentOrderDetail(
             @PathVariable Long id,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
-        Long userId = Long.parseLong(jwt.getSubject());
-
         return ResponseEntity.ok(
                 new ApiResponse<>(
-                        "Detalle de orden enviada al proveedor autenticado",
-                        purchaseOrderService.findSentOrderDetailForSupplierUser(id, userId)
+                        "Detalle de orden enviada",
+                        purchaseOrderService.findSentOrderDetail(id, extractUserId(jwt), isAdmin(jwt))
                 )
         );
+    }
+
+    private Long extractUserId(Jwt jwt) {
+        if (jwt == null) throw new BadRequestException("Usuario no autenticado");
+        return Long.parseLong(jwt.getSubject());
+    }
+
+    private boolean isAdmin(Jwt jwt) {
+        var roles = jwt.getClaimAsStringList("roles");
+        return roles != null && roles.contains("ADMIN");
     }
 }

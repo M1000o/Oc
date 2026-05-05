@@ -210,6 +210,27 @@ public class SupplierServiceImpl implements ISupplierService {
                 .collect(Collectors.toList());
         supplier.setServicios(servicios);
 
+        // Crear usuario inactivo asociado al contacto (username = inicial del nombre + apellido paterno)
+        // Generar base y username único
+        String base = UsernameUtils.generateBase(req.getNombre_contacto(), req.getApellido_p_contacto());
+        String username = UsernameUtils.generateUniqueUsername(userRepository, base);
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("No se pudo generar un username válido para el contacto");
+        }
+
+        User user = new User();
+        user.setUsername(username);
+        // password temporal: generar random y guardar hasheado (no se enviará)
+        String tempPass = UUID.randomUUID().toString();
+        user.setPassword(passwordEncoder.encode(tempPass));
+        user.setEnabled(false);
+        user.setRequiresPasswordChange(true);
+        // asignar rol PROVEEDOR si existe
+        roleRepository.findByName("PROVEEDOR").ifPresent(user.getRoles()::add);
+
+        user = userRepository.save(user);
+
+        supplier.setUser(user);
         supplier = supplierRepository.save(supplier);
 
         // Contacto
@@ -229,29 +250,6 @@ public class SupplierServiceImpl implements ISupplierService {
         contact.setPhone(telefono);
         contact.setEmail(req.getCorreo_pedidos());
         contactsRepository.save(contact);
-
-        // Crear usuario inactivo asociado al contacto (username = inicial del nombre + apellido paterno)
-        // Generar base y username único
-        String base = UsernameUtils.generateBase(contact.getName(), contact.getApellido_paterno());
-        String username = UsernameUtils.generateUniqueUsername(userRepository, base);
-        if (username == null || username.isBlank()) {
-            throw new BadRequestException("No se pudo generar un username válido para el contacto");
-        }
-
-        User user = new User();
-        user.setUsername(username);
-        // password temporal: generar random y guardar hasheado (no se enviará)
-        String tempPass = UUID.randomUUID().toString();
-        user.setPassword(passwordEncoder.encode(tempPass));
-        user.setEnabled(false);
-        user.setRequiresPasswordChange(true);
-        // asignar rol PROVEEDOR si existe
-        roleRepository.findByName("PROVEEDOR").ifPresent(user.getRoles()::add);
-
-        user = userRepository.save(user);
-
-        supplier.setUser(user);
-        supplierRepository.save(supplier);
 
         // crear token y disparar email de activación (seguimos usando el email del contacto)
         activationService.createActivationForUser(user, contact.getEmail());

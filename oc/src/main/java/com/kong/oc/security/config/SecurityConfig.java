@@ -3,6 +3,7 @@ package com.kong.oc.security.config;
 import com.kong.oc.security.keys.RsaKeyProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,6 +43,8 @@ public class SecurityConfig {
                         .requestMatchers("/activate", "/set-password", "/activation/resend").permitAll()
                         .requestMatchers("/dev/**").permitAll()
                         .requestMatchers("/internal/debug/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/purchase-orders/*/pdf").hasAuthority("READ_OWN_PURCHASE_ORDERS")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/purchase-orders/supplier-view/*").hasRole("ADMIN")
                         .requestMatchers("/api/v1/purchase-orders/supplier-view/**").hasAuthority("READ_OWN_PURCHASE_ORDERS")
                         .requestMatchers("/api/v1/roles/**", "/api/v1/permissions/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

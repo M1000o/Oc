@@ -95,7 +95,7 @@ export class SupplierRegistrationPage implements OnInit {
     cci_dolares: this.fb.nonNullable.control({ value: '', disabled: true }),
     is_detraccion: this.fb.nonNullable.control(false),
     accountNumber_Detraccion: this.fb.nonNullable.control(''),
-    correo_constancia: this.fb.nonNullable.control('', [Validators.email]),
+    correo_constancia: this.fb.control<string | null>(null, [Validators.email]),
     creditDays: this.fb.nonNullable.control(7, [Validators.required])
   });
 
@@ -207,7 +207,7 @@ export class SupplierRegistrationPage implements OnInit {
       cci_dolares: '',
       is_detraccion: false,
       accountNumber_Detraccion: '',
-      correo_constancia: '',
+      correo_constancia: null,
       creditDays: 7
     });
     this.serviceQuery.set('');
@@ -243,7 +243,7 @@ export class SupplierRegistrationPage implements OnInit {
       cci_dolares: raw.cci_dolares.trim(),
       is_detraccion: raw.is_detraccion,
       accountNumber_Detraccion: raw.accountNumber_Detraccion.trim(),
-      correo_constancia: raw.correo_constancia.trim(),
+      correo_constancia: raw.correo_constancia?.trim() || null,
       creditDays: raw.creditDays
     };
 

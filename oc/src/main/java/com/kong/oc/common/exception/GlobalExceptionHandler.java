@@ -112,6 +112,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(AuthProcessingException.class)
+    public ResponseEntity<ErrorResponse> handleAuthProcessing(AuthProcessingException ex) {
+        log.error("Auth processing error: {}", ex.getMessage(), ex);
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "AUTH_PROCESSING_ERROR",
+                "No se pudo completar el flujo de autenticación.",
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
     @ExceptionHandler(PurchaseOrderRecipientException.class)
     public ResponseEntity<ErrorResponse> handlePurchaseOrderRecipient(PurchaseOrderRecipientException ex) {
         log.warn("Purchase order recipient error: {}", ex.getMessage());

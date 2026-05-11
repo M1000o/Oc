@@ -1,0 +1,8 @@
+app:
+  frontend-base-url: ${APP_FRONTEND_BASE_URL:http://192.168.1.24}
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    com.kong.oc: INFO
+    org.springframework: WARN

@@ -24,7 +24,7 @@ public class Supplier extends BaseEntity {
     @Column(unique = true, length = 11, nullable = false)
     private String ruc;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String razonSocial;
 
     @Convert(converter = CreditDaysConverter.class)

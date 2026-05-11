@@ -12,13 +12,64 @@ const createJwt = (payload: Record<string, unknown>) => {
 };
 
 test('redirecciona al login cuando una ruta protegida no tiene token', async ({ page }) => {
-  await page.goto('/#/portal');
+  await page.goto('/portal');
 
-  await expect(page).toHaveURL(/#\/login\?redirectTo=%2Fportal/);
-  await expect(page.getByRole('heading', { name: 'Welcome Back' })).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?redirectTo=%2Fportal$/);
+  await expect(page.getByRole('heading', { name: 'Inicio de sesión' })).toBeVisible();
 });
 
-test('login exitoso guarda tokens y consume endpoints protegidos con Authorization', async ({
+test('redirecciona al login cuando una ruta invalida no tiene token', async ({ page }) => {
+  await page.goto('/ruta-invalida');
+
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Inicio de sesión' })).toBeVisible();
+});
+
+test('redirecciona al portal cuando una ruta invalida tiene sesion activa', async ({ page }) => {
+  await page.addInitScript(({ accessTokenKey, refreshTokenKey, accessToken, refreshToken }) => {
+    window.localStorage.setItem(accessTokenKey, accessToken);
+    window.localStorage.setItem(refreshTokenKey, refreshToken);
+  }, {
+    accessTokenKey: 'oc.accessToken',
+    refreshTokenKey: 'oc.refreshToken',
+    accessToken: createJwt({
+      sub: 'comprador-1',
+      email: 'comprador@empresa.com',
+      roles: ['COMPRADOR']
+    }),
+    refreshToken: 'test-refresh-token'
+  });
+
+  await page.goto('/ruta-invalida');
+
+  await expect(page).toHaveURL(/\/portal$/);
+  await expect(page.getByRole('heading', { name: 'Empieza tu pedido' })).toBeVisible();
+});
+
+test('redirecciona al portal cuando un usuario autenticado intenta abrir login', async ({
+  page
+}) => {
+  await page.addInitScript(({ accessTokenKey, refreshTokenKey, accessToken, refreshToken }) => {
+    window.localStorage.setItem(accessTokenKey, accessToken);
+    window.localStorage.setItem(refreshTokenKey, refreshToken);
+  }, {
+    accessTokenKey: 'oc.accessToken',
+    refreshTokenKey: 'oc.refreshToken',
+    accessToken: createJwt({
+      sub: 'comprador-1',
+      email: 'comprador@empresa.com',
+      roles: ['COMPRADOR']
+    }),
+    refreshToken: 'test-refresh-token'
+  });
+
+  await page.goto('/login');
+
+  await expect(page).toHaveURL(/\/portal$/);
+  await expect(page.getByRole('heading', { name: 'Empieza tu pedido' })).toBeVisible();
+});
+
+test('login exitoso guarda tokens y redirecciona al portal', async ({
   page
 }) => {
   await page.route('**/api/v1/auth/login', async (route) => {
@@ -39,44 +90,24 @@ test('login exitoso guarda tokens y consume endpoints protegidos con Authorizati
     });
   });
 
-  await page.route('**/api/v1/services', async (route) => {
-    expect(route.request().headers()['authorization']).toBe('Bearer test-access-token');
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        message: 'ok',
-        data: [
-          { id: 1, nombre: 'Homologacion' },
-          { id: 2, nombre: 'Auditoria' }
-        ]
-      })
-    });
-  });
-
-  await page.route('**/api/v1/banks', async (route) => {
-    expect(route.request().headers()['authorization']).toBe('Bearer test-access-token');
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        message: 'ok',
-        data: [
-          { id: 1, banco: 'Banco 1' },
-          { id: 2, banco: 'Banco 2' }
-        ]
-      })
-    });
-  });
-
-  await page.goto('/#/login');
-  await page.getByLabel('Email Address').fill('proveedor@empresa.com');
+  await page.goto('/login');
+  await page.getByLabel('Nombre de Usuario').fill('proveedor@empresa.com');
   await page.getByLabel('Password').fill('Secreta123!');
-  await page.getByRole('button', { name: 'Login to Portal' }).click();
+  await page.getByRole('button', { name: 'Ingresar al portal' }).click();
 
-  await expect(page).toHaveURL(/#\/portal$/);
-  await expect(page.getByText('2 servicios cargados')).toBeVisible();
-  await expect(page.getByText('2 bancos cargados')).toBeVisible();
+  await expect(page).toHaveURL(/\/portal$/);
+  await expect(page.getByRole('heading', { name: 'Empieza tu pedido' })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        accessToken: window.localStorage.getItem('oc.accessToken'),
+        refreshToken: window.localStorage.getItem('oc.refreshToken')
+      }))
+    )
+    .toEqual({
+      accessToken: 'test-access-token',
+      refreshToken: 'test-refresh-token'
+    });
 });
 
 test('login exitoso redirecciona al panel de proveedor cuando el token tiene rol PROVEEDOR', async ({
@@ -98,12 +129,12 @@ test('login exitoso redirecciona al panel de proveedor cuando el token tiene rol
     });
   });
 
-  await page.goto('/#/login');
-  await page.getByLabel('Email Address').fill('proveedor@empresa.com');
+  await page.goto('/login');
+  await page.getByLabel('Nombre de Usuario').fill('proveedor@empresa.com');
   await page.getByLabel('Password').fill('Secreta123!');
-  await page.getByRole('button', { name: 'Login to Portal' }).click();
+  await page.getByRole('button', { name: 'Ingresar al portal' }).click();
 
-  await expect(page).toHaveURL(/#\/portal\/proveedor$/);
+  await expect(page).toHaveURL(/\/portal\/proveedor$/);
   await expect(page.getByText('provider-home works!')).toBeVisible();
 });
 
@@ -135,7 +166,7 @@ test('cambio de contraseña y reenvio de activacion consumen los endpoints del f
     });
   });
 
-  await page.goto('/#/set-password?token=token-prueba');
+  await page.goto('/set-password?token=token-prueba');
   await page.getByLabel('Correo del proveedor').fill('contacto@empresa.com');
   await page.getByRole('button', { name: 'Reenviar activacion' }).click();
   await expect(page.getByText('Email de activación reenviado')).toBeVisible();
@@ -145,5 +176,5 @@ test('cambio de contraseña y reenvio de activacion consumen los endpoints del f
   await page.getByRole('button', { name: 'Activar cuenta' }).click();
 
   await expect(page.getByText('Contraseña establecida y usuario activado')).toBeVisible();
-  await expect(page).toHaveURL(/#\/login$/);
+  await expect(page).toHaveURL(/\/login$/);
 });

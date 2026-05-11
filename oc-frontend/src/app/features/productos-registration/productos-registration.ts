@@ -315,9 +315,9 @@ export class ProductosRegistration implements OnInit {
   }
 
   protected formatPrice(price: number): string {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('es-PE', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PEN',
       minimumFractionDigits: 2,
     }).format(price);
   }

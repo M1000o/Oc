@@ -110,7 +110,7 @@ test('login exitoso guarda tokens y redirecciona al portal', async ({
     });
 });
 
-test('login exitoso redirecciona al panel de proveedor cuando el token tiene rol PROVEEDOR', async ({
+test('login exitoso redirecciona a mis ordenes cuando el token tiene rol PROVEEDOR', async ({
   page
 }) => {
   await page.route('**/api/v1/auth/login', async (route) => {
@@ -129,13 +129,31 @@ test('login exitoso redirecciona al panel de proveedor cuando el token tiene rol
     });
   });
 
+  await page.route('**/api/v1/purchase-orders/supplier-view**', async (route) => {
+    expect(route.request().headers()['authorization']).toMatch(/^Bearer /);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: 'ok',
+        data: {
+          content: [],
+          totalElements: 0,
+          totalPages: 0,
+          number: 0,
+          size: 10
+        }
+      })
+    });
+  });
+
   await page.goto('/login');
   await page.getByLabel('Nombre de Usuario').fill('proveedor@empresa.com');
   await page.getByLabel('Password').fill('Secreta123!');
   await page.getByRole('button', { name: 'Ingresar al portal' }).click();
 
-  await expect(page).toHaveURL(/\/portal\/proveedor$/);
-  await expect(page.getByText('provider-home works!')).toBeVisible();
+  await expect(page).toHaveURL(/\/portal\/mis-ordenes$/);
+  await expect(page.getByRole('heading', { name: 'Mis Órdenes de Compra' })).toBeVisible();
 });
 
 test('cambio de contraseña y reenvio de activacion consumen los endpoints del flujo', async ({

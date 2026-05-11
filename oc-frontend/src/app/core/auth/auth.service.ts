@@ -103,7 +103,7 @@ export class AuthService {
   }
 
   getDefaultPortalRoute(): string {
-    return this.isProviderUser() ? '/portal/proveedor' : '/portal';
+    return this.isProviderUser() ? '/portal/mis-ordenes' : '/portal';
   }
 
   getUserInitials(): string {

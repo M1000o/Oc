@@ -14,6 +14,6 @@ export const nonProviderGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   return authService.isProviderUser()
-    ? router.createUrlTree(['/portal/proveedor'])
+    ? router.createUrlTree([authService.getDefaultPortalRoute()])
     : true;
 };

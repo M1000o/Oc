@@ -1,45 +1,37 @@
 package com.kong.oc.auth.controller;
 
 import com.kong.oc.auth.service.ActivationService;
+import com.kong.oc.auth.util.ActivationFrontendUrlBuilder;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class ActivationController {
 
     private final ActivationService activationService;
-
-    @Value("${app.frontend-base-url}")
-    private String frontendBaseUrl;
+    private final ActivationFrontendUrlBuilder frontendUrlBuilder;
 
     @GetMapping("/activate")
     public ResponseEntity<?> validate(@RequestParam String token) {
-        String base = frontendBaseUrl.replaceAll("/+$", "");
-        String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
-
         try {
             // Si el token es válido, llevar al formulario de contraseña sin hash en URL.
             activationService.validateToken(token);
-            String redirectUrl = base + "/set-password?token=" + encodedToken;
+            String redirectUrl = frontendUrlBuilder.buildSetPasswordUrl(token);
             return buildRedirectResponse(redirectUrl);
         } catch (IllegalArgumentException e) {
             // Para enlaces usados/caducados/invalidos, mostrar una vista amigable en frontend.
             String reason = mapReason(e.getMessage());
-            String encodedMessage = URLEncoder.encode(
-                    e.getMessage() == null ? "Token inválido o expirado" : e.getMessage(),
-                    StandardCharsets.UTF_8
-            );
-            String redirectUrl = base + "/activation-link-status?reason=" + reason + "&message=" + encodedMessage;
+            String redirectUrl = frontendUrlBuilder.buildActivationStatusUrl(reason, e.getMessage());
             return buildRedirectResponse(redirectUrl);
         }
     }
@@ -66,7 +58,7 @@ public class ActivationController {
         return "invalid";
     }
 
-    @PostMapping("/set-password")
+    @PostMapping({"/set-password", "/api/v1/auth/set-password"})
     public ResponseEntity<?> setPassword(@RequestBody Map<String, String> body) {
         String token = body.get("token");
         String newPassword = body.get("newPassword");
@@ -80,8 +72,9 @@ public class ActivationController {
             // registrar intento fallido para rate limiting
             try {
                 activationService.registerFailedAttempt(token);
-            } catch (Exception ex) {
-                // ignore
+            } catch (DataAccessException ex) {
+                // Se registra y se continúa devolviendo el error original de token al cliente.
+                log.warn("No se pudo registrar intento fallido para token", ex);
             }
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

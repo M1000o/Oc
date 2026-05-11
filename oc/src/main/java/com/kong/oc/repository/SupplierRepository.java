@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
     Optional<Supplier> findByRuc(String ruc);
+    Optional<Supplier> findByRazonSocial(String razonSocial);
     Optional<Supplier> findByUser_Id(Long userId);
     List<Supplier> findByServicios_IdAndIsDeletedFalse(Long servicioId);
     Optional<Supplier> findByIdAndIsDeletedFalse(Long id);

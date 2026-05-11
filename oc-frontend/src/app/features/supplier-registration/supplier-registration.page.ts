@@ -84,7 +84,7 @@ export class SupplierRegistrationPage implements OnInit {
     apellido_m_contacto: this.fb.nonNullable.control(''),
     telefono_contacto: this.fb.nonNullable.control('', [
       Validators.required,
-      Validators.pattern(/^\d{9}$/)
+      Validators.pattern(/^9\d{8}$/)
     ]),
     correo_pedidos: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
     bank: this.fb.control<number | null>(null),

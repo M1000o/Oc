@@ -30,7 +30,7 @@ public class SupplierFormRequest {
     private String apellido_m_contacto;
 
     @NotBlank(message = "Teléfono de contacto es obligatorio")
-    @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Número de celular inválido")
+    @Pattern(regexp = "^9[0-9]{8}$", message = "Teléfono de contacto debe tener 9 dígitos y comenzar con 9")
     private String telefono_contacto;
 
     @NotBlank(message = "Correo para pedidos es obligatorio")

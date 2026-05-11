@@ -19,7 +19,7 @@ public class SupplierFormRequest {
 
     @NotNull(message = "Services es obligatorio")
     @Size(min = 1, message = "Debe seleccionar al menos un servicio")
-    private List<Long> services; // ids de Services
+    private List<Long> services;
 
     @NotBlank(message = "Nombre contacto es obligatorio")
     private String nombre_contacto;
@@ -37,14 +37,16 @@ public class SupplierFormRequest {
     @Email(message = "Correo para pedidos inválido")
     private String correo_pedidos;
 
+    @NotNull(message = "El banco es necesario")
     private Long bank;
 
     @NotNull(message = "Tipo de cuenta es obligatorio")
     private AccountType accountType;
 
-    @NotNull(message = "El número de cuenta en soles es obligatorio")
+    @NotBlank(message = "El número de cuenta en soles es obligatorio")
     private String accountNumber_Soles;
 
+    @NotBlank(message = "El cci en soles es obligatorio")
     private String cci_soles;
 
     private String accountNumber_Dolares;
@@ -62,4 +64,13 @@ public class SupplierFormRequest {
     @NotNull(message = "creditDays es obligatorio")
     @Min(value = 0, message = "creditDays inválido")
     private Integer creditDays;
+
+    @AssertTrue(message = "Si ingresa cuenta en dólares, debe ingresar también el CCI en dólares")
+    public boolean isValidDollarAccount(){
+        boolean hasAccount = accountNumber_Dolares != null && !accountNumber_Dolares.isBlank();
+
+        boolean hasCci = cci_dolares != null && !cci_dolares.isBlank();
+
+        return hasAccount == hasCci;
+    }
 }

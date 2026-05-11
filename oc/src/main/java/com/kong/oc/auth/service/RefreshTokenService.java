@@ -3,6 +3,7 @@ package com.kong.oc.auth.service;
 import com.kong.oc.auth.model.RefreshToken;
 import com.kong.oc.auth.model.User;
 import com.kong.oc.auth.repository.RefreshTokenRepository;
+import com.kong.oc.common.exception.AuthProcessingException;
 import com.kong.oc.common.exception.TokenErrorType;
 import com.kong.oc.common.exception.TokenException;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -115,9 +117,9 @@ public class RefreshTokenService {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(token.getBytes());
             return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
+        } catch (NoSuchAlgorithmException e) {
             log.error("Error hasheando refresh token", e);
-            throw new IllegalStateException("Error hasheando refresh token", e);
+            throw new AuthProcessingException("Error hasheando refresh token", e);
         }
     }
 

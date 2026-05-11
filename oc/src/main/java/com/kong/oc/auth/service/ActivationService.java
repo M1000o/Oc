@@ -1,6 +1,5 @@
 package com.kong.oc.auth.service;
 
-import com.kong.oc.auth.dev.DevTokenStore;
 import com.kong.oc.auth.model.ActivationToken;
 import com.kong.oc.auth.model.User;
 import com.kong.oc.auth.repository.ActivationTokenRepository;
@@ -25,7 +24,6 @@ public class ActivationService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordEncoder passwordEncoder;
-    private final DevTokenStore devTokenStore; // in dev profile bean exists
 
     private final long EXPIRATION_HOURS = 24;
     private final int MAX_ATTEMPTS = 5;
@@ -43,12 +41,9 @@ public class ActivationService {
                 .attempts(0)
                 .build();
         at = tokenRepository.save(at);
-        // store plain token in dev store for convenience
-        try { devTokenStore.storeForUser(user.getId(), tokenPlain); devTokenStore.storeForHash(tokenHash, tokenPlain); } catch(Exception ignored) {}
         // publicar evento para envío asíncrono con token en claro (solo via email)
         eventPublisher.publishEvent(new com.kong.oc.auth.event.ActivationEmailEvent(this, user.getId(), email, tokenPlain, user.getUsername()));
         log.info("Created activation token for userId={}", user.getId());
-        log.debug("Activation token (dev): {} for userId={} - link: https://miapp.com/activate?token={}", tokenPlain, user.getId(), tokenPlain);
         return at;
     }
 

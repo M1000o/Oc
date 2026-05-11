@@ -33,12 +33,12 @@ export class PortalSidebarComponent {
   protected get navItems(): NavItem[] {
     if (this.authService.isProviderUser()) {
       return [
-        {
-          label: 'Panel del Proveedor',
-          icon: 'storefront',
-          route: '/portal/proveedor',
-          exact: true
-        },
+        // {
+        //   label: 'Panel del Proveedor',
+        //   icon: 'storefront',
+        //   route: '/portal/proveedor',
+        //   exact: true
+        // },
         {
           label: 'Mis Órdenes',
           icon: 'receipt_long',
@@ -93,6 +93,12 @@ export class PortalSidebarComponent {
             exact: false
           }
         ]
+      },
+      {
+        label: 'Configuración',
+        icon: 'bookmark',
+        route: '/portal/configuracion',
+        exact: true
       }
     ];
   }

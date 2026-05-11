@@ -1,7 +1,4 @@
-#En local corre en docker -_-
 spring:
-  profiles:
-    active: dev
   application:
     name: oc
 
@@ -32,14 +29,8 @@ spring:
           starttls:
             enable: true
 
-  logging:
-    level:
-      org.hibernate.SQL: DEBUG
-      com.kong.oc: DEBUG
-      org.springframework: DEBUG
-
 app:
-  frontend-base-url: http://localhost:4200
+  frontend-base-url: ${APP_FRONTEND_BASE_URL:http://localhost:4200}
   email:
     from: pepecuentacuentos36@gmail.com
   activation:
@@ -52,5 +43,11 @@ app:
       company-address: ${PURCHASE_ORDER_COMPANY_ADDRESS:Av. Empresarial 456, Lima, Peru}
       generated-by: ${PURCHASE_ORDER_GENERATED_BY:Generado por Grupo Kong Sistemas}
 
+logging:
+  level:
+    org.hibernate.SQL: INFO
+    com.kong.oc: INFO
+    org.springframework: INFO
+
 server:
-    port: 8080
+  port: 8080

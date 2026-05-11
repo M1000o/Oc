@@ -14,3 +14,21 @@ export const authGuard: CanActivateFn = (_route, state) => {
     queryParams: { redirectTo: state.url }
   });
 };
+
+export const guestOnlyGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  return authService.isAuthenticated()
+    ? router.createUrlTree([authService.getDefaultPortalRoute()])
+    : true;
+};
+
+export const fallbackRedirectGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  return router.createUrlTree([
+    authService.isAuthenticated() ? authService.getDefaultPortalRoute() : '/login'
+  ]);
+};

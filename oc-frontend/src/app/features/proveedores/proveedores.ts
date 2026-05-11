@@ -1,26 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, Subscription } from 'rxjs';
-import { ProductResponse } from '../../core/interfaces/product-response.interface';
+import { Router } from '@angular/router';
 import {
-  SupplierDirectoryDetail,
   SupplierDirectoryItem,
   SupplierDirectoryStatus,
 } from '../../core/interfaces/supplier-directory.interface';
-import { ProductCatalogService } from '../../core/services/product-catalog.service';
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
-
-type SupplierProductRow = {
-  id: number;
-  codigo: string;
-  nombre: string;
-  categoria: string;
-  unidad: string;
-  precio: number;
-};
 
 @Component({
   selector: 'app-proveedores',
@@ -28,57 +15,20 @@ type SupplierProductRow = {
   templateUrl: './proveedores.html',
   styleUrl: './proveedores.css',
 })
-export class Proveedores implements OnInit, OnDestroy {
+export class Proveedores implements OnInit {
   private readonly supplierDirectoryService = inject(SupplierDirectoryService);
-  private readonly productCatalogService = inject(ProductCatalogService);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-
-  private routeSubscription?: Subscription;
 
   protected readonly pageSize = 5;
   protected suppliers: SupplierDirectoryItem[] = [];
-  protected selectedSupplier: SupplierDirectoryDetail | null = null;
   protected searchTerm = '';
   protected activeCategory = 'Todos';
   protected currentPage = 1;
   protected loadingDirectory = true;
-  protected loadingDetail = false;
   protected directoryError = '';
-  protected detailError = '';
-  protected supplierProducts: SupplierProductRow[] = [];
-  protected detailProductsError = '';
 
   ngOnInit(): void {
     this.loadDirectory();
-    this.routeSubscription = this.route.paramMap.subscribe((params) => {
-      const rawId = params.get('id');
-
-      if (!rawId) {
-        this.selectedSupplier = null;
-        this.detailError = '';
-        this.detailProductsError = '';
-        this.supplierProducts = [];
-        return;
-      }
-
-      const supplierId = Number(rawId);
-      if (!Number.isFinite(supplierId)) {
-        this.detailError = 'El proveedor solicitado no es válido.';
-        this.selectedSupplier = null;
-        return;
-      }
-
-      this.loadSupplierDetail(supplierId);
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.routeSubscription?.unsubscribe();
-  }
-
-  protected get isDetailView(): boolean {
-    return this.selectedSupplier !== null || this.loadingDetail || !!this.detailError;
   }
 
   protected get filteredSuppliers(): SupplierDirectoryItem[] {
@@ -167,10 +117,6 @@ export class Proveedores implements OnInit, OnDestroy {
     return ['Todos', ...this.availableCategories.slice(0, 4)];
   }
 
-  protected get complianceItems(): SupplierDirectoryItem[] {
-    return this.suppliers.slice(0, 2);
-  }
-
   protected get pageItems(): Array<number | string> {
     const total = this.totalPages;
 
@@ -218,23 +164,8 @@ export class Proveedores implements OnInit, OnDestroy {
     void this.router.navigate(['/portal/proveedores', supplier.id]);
   }
 
-  protected goBackToDirectory(): void {
-    this.selectedSupplier = null;
-    this.detailError = '';
-    void this.router.navigate(['/portal/proveedores']);
-  }
-
   protected retryDirectory(): void {
     this.loadDirectory();
-  }
-
-  protected retryDetail(): void {
-    const routeId = this.route.snapshot.paramMap.get('id');
-    const id = this.selectedSupplier?.id ?? (routeId ? Number(routeId) : NaN);
-
-    if (Number.isFinite(id)) {
-      this.loadSupplierDetail(id);
-    }
   }
 
   protected exportCsv(): void {
@@ -304,33 +235,8 @@ export class Proveedores implements OnInit, OnDestroy {
     }
   }
 
-  protected formatDate(value: string | null): string {
-    if (!value) {
-      return 'Sin registro';
-    }
-
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-      return 'Sin registro';
-    }
-
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(parsed);
-  }
-
   protected trackBySupplierId(_: number, supplier: SupplierDirectoryItem): number {
     return supplier.id;
-  }
-
-  protected formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN',
-      minimumFractionDigits: 2,
-    }).format(value);
   }
 
   private loadDirectory(): void {
@@ -349,33 +255,6 @@ export class Proveedores implements OnInit, OnDestroy {
           'No se pudo cargar el directorio de proveedores.',
         );
         this.loadingDirectory = false;
-      },
-    });
-  }
-
-  private loadSupplierDetail(id: number): void {
-    this.loadingDetail = true;
-    this.detailError = '';
-    this.detailProductsError = '';
-    this.supplierProducts = [];
-
-    forkJoin({
-      detail: this.supplierDirectoryService.getSupplierDetail(id),
-      products: this.productCatalogService.listProductsBySupplier(id),
-    }).subscribe({
-      next: ({ detail, products }) => {
-        this.selectedSupplier = detail.data;
-        this.supplierProducts = (products.data ?? []).map((product) => this.mapSupplierProduct(product));
-        this.loadingDetail = false;
-      },
-      error: (error) => {
-        this.selectedSupplier = null;
-        this.supplierProducts = [];
-        this.detailError = this.extractErrorMessage(
-          error,
-          'No se pudo cargar el detalle del proveedor.',
-        );
-        this.loadingDetail = false;
       },
     });
   }
@@ -399,31 +278,4 @@ export class Proveedores implements OnInit, OnDestroy {
     return candidate?.error?.message || candidate?.error?.error || candidate?.message || fallback;
   }
 
-  private mapSupplierProduct(product: ProductResponse): SupplierProductRow {
-    return {
-      id: product.id,
-      codigo: product.codigo_producto?.trim() || `PRD-${product.id}`,
-      nombre: product.nombre?.trim() || 'Producto sin nombre',
-      categoria: product.servicioNombre?.trim() || 'Sin categoría',
-      unidad: this.resolveUnitLabel(product.und_medida),
-      precio: this.toNumber(product.precio),
-    };
-  }
-
-  private resolveUnitLabel(value: string | null | undefined): string {
-    const labels: Record<string, string> = {
-      KG: 'Kilogramos',
-      UND: 'Unidad',
-      PAQ: 'Paquete',
-      DOC: 'Docena',
-      GR: 'Gramos',
-    };
-
-    return (value && labels[value]) || value || 'Unidad';
-  }
-
-  private toNumber(value: number | string): number {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
 }

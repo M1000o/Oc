@@ -75,8 +75,16 @@ export class SetPasswordPage {
           );
         },
         error: (error) => {
-          const message =
-            error?.error?.message || 'No se pudo establecer la contraseña. Intente nuevamente.';
+          const errorBody = error?.error;
+          let message = '';
+          
+          if (errorBody?.errors && typeof errorBody.errors === 'object') {
+            message = Object.values(errorBody.errors).join('\n');
+          }
+          
+          if (!message) {
+            message = errorBody?.message || 'No se pudo establecer la contraseña. Intente nuevamente.';
+          }
           this.showError(message);
         }
       });
@@ -100,8 +108,16 @@ export class SetPasswordPage {
         next: (response) =>
           this.showSuccess(response.message ?? 'Se envio un nuevo token de activacion.'),
         error: (error) => {
-          const message =
-            error?.error?.message || 'No se pudo reenviar el token de activacion.';
+          const errorBody = error?.error;
+          let message = '';
+          
+          if (errorBody?.errors && typeof errorBody.errors === 'object') {
+            message = Object.values(errorBody.errors).join('\n');
+          }
+          
+          if (!message) {
+            message = errorBody?.message || 'No se pudo reenviar el token de activacion.';
+          }
           this.showError(message);
         }
       });

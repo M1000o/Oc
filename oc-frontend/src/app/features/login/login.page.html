@@ -8,7 +8,6 @@
     <div class="auth-card">
       <!-- <div class="auth-icon">▦</div> -->
       <h1 class="auth-title">Inicio de sesión</h1>
-      <p class="auth-copy">Ingresa tus credenciales para acceder al portal</p>
 
       @if (errorMessage()) {
         <div class="feedback-banner">{{ errorMessage() }}</div>
@@ -45,12 +44,6 @@
             <small class="error-text">La contraseña es obligatoria.</small>
           }
         </div>
-
-        <!-- <label class="auth-checkbox">
-          <input type="checkbox" checked />
-          <span>Recordarme por 30 dias en este dispositivo</span>
-        </label> -->
-
         <button class="btn btn-primary" type="submit" [disabled]="isSubmitting()">
           {{ isSubmitting() ? 'Ingresando...' : 'Ingresar al portal' }}
         </button>

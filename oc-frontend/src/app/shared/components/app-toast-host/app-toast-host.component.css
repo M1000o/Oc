@@ -63,6 +63,7 @@
   color: #162033;
   font-size: 0.8rem;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 .toast-close {

@@ -14,8 +14,8 @@ export const environment = {
       purchaseOrders: '/api/v1/purchase-orders',
       supplierForm: '/api/v1/suppliers/form',
       activate: '/activate',
-      setPassword: '/set-password',
-      resendActivation: '/activation/resend'
+      setPassword: '/api/v1/auth/set-password',
+      resendActivation: '/api/v1/auth/activation/resend'
     }
   },
   auth: {

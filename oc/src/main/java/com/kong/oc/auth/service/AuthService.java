@@ -9,6 +9,8 @@ import com.kong.oc.auth.model.Role;
 import com.kong.oc.auth.model.User;
 import com.kong.oc.auth.repository.RoleRepository;
 import com.kong.oc.auth.repository.UserRepository;
+import com.kong.oc.common.exception.AuthProcessingException;
+import com.kong.oc.interfaces.IAuthService;
 import com.kong.oc.security.UserDetailsImpl;
 import com.kong.oc.security.jwt.JwtTokenService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +29,7 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthService {
+public class AuthService implements IAuthService{
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenService jwtTokenService;
@@ -49,17 +51,14 @@ public class AuthService {
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             log.info("Login exitoso para usuario: {}", normalizedUsername);
-
-            try {
-                return generateTokenResponse(userDetails.getUser());
-            } catch (Exception e) {
-                log.error("Error generando tokens para usuario {}: {}", normalizedUsername, e.getMessage(), e);
-                throw new IllegalStateException("Error generando tokens para el usuario", e);
-            }
+            return generateTokenResponse(userDetails.getUser());
 
         } catch (BadCredentialsException e) {
             log.warn("Intento de login fallido para usuario: {}", normalizedUsername);
             throw e;
+        } catch (RuntimeException e) {
+            log.error("Error generando tokens para usuario {}: {}", normalizedUsername, e.getMessage(), e);
+            throw new AuthProcessingException("Error generando tokens para el usuario", e);
         }
     }
 
@@ -124,24 +123,18 @@ public class AuthService {
         user = userRepository.save(user);
         log.info("Usuario registrado exitosamente: {} con rol: {}", user.getUsername(), role.getName());
 
-        // Generar tokens
         try {
             return generateTokenResponse(user);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error generando tokens para usuario registrado {}: {}", user.getUsername(), e.getMessage(), e);
-            throw new IllegalStateException("Error generando tokens al registrar usuario", e);
+            throw new AuthProcessingException("Error generando tokens al registrar usuario", e);
         }
     }
 
     @Transactional
     public void logout(String refreshToken) {
-        try {
-            refreshTokenService.revokeRefreshToken(refreshToken);
-            log.info("Logout exitoso - refresh token revocado");
-        } catch (Exception e) {
-            log.warn("Error al revocar refresh token durante logout: {}", e.getMessage());
-            // No lanzamos excepción para que el logout siempre sea exitoso del lado del cliente
-        }
+        refreshTokenService.revokeRefreshToken(refreshToken);
+        log.info("Logout exitoso - refresh token revocado");
     }
 
     private TokenResponse generateTokenResponse(User user) {

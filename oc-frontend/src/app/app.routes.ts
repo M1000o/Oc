@@ -87,7 +87,7 @@ export const routes: Routes = [
       {
         path: 'proveedores/:id',
         canActivate: [nonProviderGuard],
-        loadComponent: () => import('./features/proveedores/proveedores').then((m) => m.Proveedores)
+        loadComponent: () => import('./features/proveedores/proveedor-detail').then((m) => m.ProveedorDetail)
       },
       {
         path: 'configuracion',

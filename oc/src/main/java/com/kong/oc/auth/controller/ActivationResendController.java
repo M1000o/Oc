@@ -8,13 +8,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/activation")
 @RequiredArgsConstructor
 public class ActivationResendController {
 
     private final ActivationResendService resendService;
 
-    @PostMapping("/resend")
+    @PostMapping({"/activation/resend", "/api/v1/auth/activation/resend"})
     public ResponseEntity<?> resend(@RequestBody Map<String, String> body) {
         String email = body.get("email");
         if (email == null || email.isBlank()) {

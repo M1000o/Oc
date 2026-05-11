@@ -499,9 +499,13 @@ export class ProductosRegistration implements OnInit {
 
   private extractErrorMessage(error: unknown, fallback: string): string {
     const candidate = error as {
-      error?: { message?: string; error?: string };
+      error?: { message?: string; error?: string; errors?: Record<string, string> };
       message?: string;
     };
+
+    if (candidate?.error?.errors && typeof candidate.error.errors === 'object') {
+      return Object.values(candidate.error.errors).join('\n');
+    }
 
     return candidate?.error?.message || candidate?.error?.error || candidate?.message || fallback;
   }

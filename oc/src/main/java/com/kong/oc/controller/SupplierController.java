@@ -50,7 +50,6 @@ public class SupplierController {
     @PostMapping("/form")
     public ResponseEntity<?> create(@Valid @RequestBody SupplierFormRequest req) {
         Supplier s = supplierService.createFromForm(req);
-        // retornar mensaje de estado en lugar de DTO
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 Map.of("message", "Registro recibido. Email de activación enviado (o en cola). Revise su correo o la carpeta de spam." , "userId", s.getId())
         );

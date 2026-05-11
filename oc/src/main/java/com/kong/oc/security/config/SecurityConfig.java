@@ -37,16 +37,14 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/banks", "/api/v1/services/**").permitAll()
-                        .requestMatchers("/api/v1/suppliers/form").permitAll()
-                        .requestMatchers("/activate", "/set-password", "/activation/resend").permitAll()
-                        .requestMatchers("/dev/**").permitAll()
-                        .requestMatchers("/internal/debug/**").permitAll()
-                        .requestMatchers("/api/v1/roles/**", "/api/v1/permissions/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/api/v1/auth/**").permitAll();
+                    auth.requestMatchers("/api/v1/banks", "/api/v1/services/**").permitAll();
+                    auth.requestMatchers("/api/v1/suppliers/form").permitAll();
+                    auth.requestMatchers("/activate", "/set-password", "/activation/resend").permitAll();
+                    auth.requestMatchers("/api/v1/roles/**", "/api/v1/permissions/**").hasRole("ADMIN");
+                    auth.anyRequest().authenticated();
+                })
                 // Habilitar validación de JWT en Authorization: Bearer <token>
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))

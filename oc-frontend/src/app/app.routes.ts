@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guard';
+import { authGuard, fallbackRedirectGuard, guestOnlyGuard } from './core/auth/auth.guard';
 import { orderSummaryDraftGuard } from './core/guards/order-summary-draft.guard';
 import { nonProviderGuard, providerOnlyGuard } from './core/auth/portal-role.guard';
 
@@ -7,6 +7,7 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
     path: 'login',
+    canActivate: [guestOnlyGuard],
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage)
   },
   {
@@ -87,10 +88,22 @@ export const routes: Routes = [
         path: 'proveedores/:id',
         canActivate: [nonProviderGuard],
         loadComponent: () => import('./features/proveedores/proveedores').then((m) => m.Proveedores)
+      },
+      {
+        path: 'configuracion',
+        canActivate: [nonProviderGuard],
+        loadComponent: () =>
+          import('./features/configuration/configuration.page').then(
+            (m) => m.ConfigurationPage
+          )
       }
        // ...otras rutas hijas protegidas
     ]
   },
   // Rutas duplicadas eliminadas. Las rutas de guardados y enviados solo existen como hijas de portal con layout.
-  { path: '**', redirectTo: 'login' }
+  {
+    path: '**',
+    canActivate: [fallbackRedirectGuard],
+    loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage)
+  }
 ];

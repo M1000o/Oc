@@ -32,6 +32,6 @@ public class Contacts extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String phone;
 
-    @Column(name = "correo")
+    @Column(name = "correo", unique = true)
     private String email;
 }

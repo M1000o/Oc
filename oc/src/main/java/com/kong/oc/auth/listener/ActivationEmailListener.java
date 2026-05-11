@@ -2,6 +2,8 @@ package com.kong.oc.auth.listener;
 
 import com.kong.oc.auth.event.ActivationEmailEvent;
 import com.kong.oc.auth.service.EmailService;
+import com.kong.oc.auth.util.ActivationFrontendUrlBuilder;
+import com.kong.oc.common.exception.PurchaseOrderEmailDispatchException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,8 +12,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.stereotype.Component;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,9 +21,7 @@ import java.util.Map;
 public class ActivationEmailListener {
 
     private final EmailService emailService;
-
-    @Value("${app.backend-base-url:http://localhost:8080}")
-    private String backendBaseUrl;
+    private final ActivationFrontendUrlBuilder frontendUrlBuilder;
 
     @Value("${app.activation.expiration-hours}")
     private int expirationHours;
@@ -32,11 +30,8 @@ public class ActivationEmailListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onActivationEmailEvent(ActivationEmailEvent event) {
         try {
-            String activationLink = String.format(
-                "%s/activate?token=%s",
-                backendBaseUrl.replaceAll("/+$", ""),
-                URLEncoder.encode(event.getActivationToken(), StandardCharsets.UTF_8)
-            );
+            String activationLink = frontendUrlBuilder.buildSetPasswordUrl(event.getActivationToken());
+            log.info("Activation link base URL in use: {}", frontendUrlBuilder.getConfiguredBaseUrl());
 
             // Construir datos dinámicos para plantilla simple
             Map<String, Object> data = new HashMap<>();
@@ -49,7 +44,7 @@ public class ActivationEmailListener {
             // enviar via Gmail (JavaMailSender)
             emailService.sendActivationEmailTemplate(event.getEmail(), html, data);
             log.info("Activation email enqueued for userId={}", event.getUserId());
-        } catch (Exception e) {
+        } catch (PurchaseOrderEmailDispatchException e) {
             log.error("Failed to send activation email for userId={}", event.getUserId(), e);
         }
     }

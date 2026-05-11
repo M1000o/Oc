@@ -17,9 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -87,7 +85,7 @@ public class SupplierServiceImpl implements ISupplierService {
         );
     }
 
-    private ProveedorResponse toDto(Supplier s){
+    private ProveedorResponse toDto(Supplier s) {
         return new ProveedorResponse(
                 s.getId(),
                 s.getRazonSocial(),
@@ -179,113 +177,193 @@ public class SupplierServiceImpl implements ISupplierService {
                 .toList();
     }
 
-    @Override
-    public Optional<Supplier> findByUserId(Long userId) {
-        return supplierRepository.findByUser_Id(userId);
-    }
-
     @Transactional
     public Supplier createFromForm(SupplierFormRequest req) {
-        // Validaciones adicionales
-        if (supplierRepository.findByRuc(req.getRuc()).isPresent()) {
-            throw new BadRequestException("RUC ya existe");
-        }
 
-        Supplier supplier = new Supplier();
-        supplier.setRuc(req.getRuc());
-        supplier.setRazonSocial(req.getRazon_social());
-        try {
-            supplier.setCreditDays(CreditDays.fromDays(req.getCreditDays()));
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Días de crédito inválidos: " + req.getCreditDays());
-        }
-        supplier.setTiene_cuenta_detraccion(req.getIs_detraccion());
-        supplier.setCuenta_detraccion(req.getAccountNumber_Detraccion());
-        supplier.setCorreoConstancias(req.getCorreo_constancia());
+        validateBussinessRules(req);
+        Supplier supplier = buildSupplier(req);
 
-        // Servicios
-        List<Services> servicios = req.getServices().stream()
-                .map(id -> servicesRepository.findById(id)
-                        .orElseThrow(() -> new BadRequestException("Servicio no encontrado id: " + id)))
-                .collect(Collectors.toList());
-        supplier.setServicios(servicios);
-
-        // Crear usuario inactivo asociado al contacto (username = inicial del nombre + apellido paterno)
-        // Generar base y username único
-        String base = UsernameUtils.generateBase(req.getNombre_contacto(), req.getApellido_p_contacto());
-        String username = UsernameUtils.generateUniqueUsername(userRepository, base);
-        if (username == null || username.isBlank()) {
-            throw new BadRequestException("No se pudo generar un username válido para el contacto");
-        }
-
-        User user = new User();
-        user.setUsername(username);
-        // password temporal: generar random y guardar hasheado (no se enviará)
-        String tempPass = UUID.randomUUID().toString();
-        user.setPassword(passwordEncoder.encode(tempPass));
-        user.setEnabled(false);
-        user.setRequiresPasswordChange(true);
-        // asignar rol PROVEEDOR si existe
-        roleRepository.findByName("PROVEEDOR").ifPresent(user.getRoles()::add);
-
-        user = userRepository.save(user);
-
+        User user = createSupplierUser(req);
         supplier.setUser(user);
+
         supplier = supplierRepository.save(supplier);
 
-        // Contacto
-        Contacts contact = new Contacts();
-        contact.setSupplier(supplier);
-        contact.setName(req.getNombre_contacto());
-        contact.setApellido_materno(req.getApellido_m_contacto());
-        contact.setApellido_paterno(req.getApellido_p_contacto());
-        // Validación de teléfono: obligatorio y único
-        String telefono = req.getTelefono_contacto();
-        if (telefono == null || telefono.isBlank()) {
-            throw new BadRequestException("Telefono de contacto es obligatorio");
-        }
-        if (contactsRepository.existsByPhone(telefono)) {
-            throw new BadRequestException("numero de telefono en uso, use otro");
-        }
-        contact.setPhone(telefono);
-        contact.setEmail(req.getCorreo_pedidos());
-        contactsRepository.save(contact);
+        createContact(req, supplier);
 
-        // crear token y disparar email de activación (seguimos usando el email del contacto)
-        activationService.createActivationForUser(user, contact.getEmail());
-
-        // Bank
-        Banks bankEntity = null;
-        if (req.getBank() != null) {
-            bankEntity = banksRepository.findById(req.getBank())
-                    .orElseThrow(() -> new BadRequestException("Banco no encontrado id: " + req.getBank()));
-        }
-
-        // Cuentas Soles
-        if (req.getAccountNumber_Soles() != null && !req.getAccountNumber_Soles().isBlank()) {
-            CuentasBancarias cuenta = new CuentasBancarias();
-            cuenta.setBanco(bankEntity);
-            cuenta.setTipoCuenta(req.getAccountType());
-            cuenta.setMoneda(Currency.PEN);
-            cuenta.setNumeroCuenta(req.getAccountNumber_Soles());
-            cuenta.setCci(req.getCci_soles());
-            cuenta.setProveedor(supplier);
-            cuentasRepository.save(cuenta);
-        }
-
-        // Cuentas Dolares
-        if (req.getAccountNumber_Dolares() != null && !req.getAccountNumber_Dolares().isBlank()) {
-            CuentasBancarias cuenta = new CuentasBancarias();
-            cuenta.setBanco(bankEntity);
-            cuenta.setTipoCuenta(req.getAccountType());
-            cuenta.setMoneda(Currency.USD);
-            cuenta.setNumeroCuenta(req.getAccountNumber_Dolares());
-            cuenta.setCci(req.getCci_dolares());
-            cuenta.setProveedor(supplier);
-            cuentasRepository.save(cuenta);
-        }
+        createBankAccounts(req, supplier);
 
         return supplier;
     }
+
+    private void validateBussinessRules(SupplierFormRequest req) {
+        if (supplierRepository.findByRuc(req.getRuc()).isPresent()) {
+            throw new BadRequestException("Ruc ya existe");
+        }
+
+        if (supplierRepository.findByRazonSocial(req.getRazon_social()).isPresent()) {
+            throw new BadRequestException("Razón social ya existe");
+        }
+
+        if (contactsRepository.existsByEmail(req.getCorreo_pedidos())) {
+            throw new BadRequestException("Correo de contacto ya en uso");
+        }
+
+        if (contactsRepository.existsByPhone(req.getTelefono_contacto())) {
+            throw new BadRequestException("Número de teléfono en uso, use otro");
+        }
+
+        if(cuentasRepository.existsByNumeroCuenta(req.getAccountNumber_Soles())){
+            throw new BadRequestException("El número de cuenta en soles ya existe");
+        }
+
+        if (cuentasRepository.existsByCci(req.getCci_soles())) {
+            throw new BadRequestException("El CCI en soles ya está registrado");
+        }
+
+        if (req.getAccountNumber_Dolares() != null && !req.getAccountNumber_Dolares().isBlank()) {
+            if (cuentasRepository.existsByNumeroCuenta(req.getAccountNumber_Dolares())) {
+                throw new BadRequestException("El número de cuenta en dólares ya está registrado");
+            }
+
+            if (cuentasRepository.existsByCci(req.getCci_dolares())) {
+                throw new BadRequestException("El CCI en dólares ya está registrado");
+            }
+        }
+    }
+
+    private Supplier buildSupplier(SupplierFormRequest req) {
+        CreditDays creditDays;
+
+        try {
+            creditDays = CreditDays.fromDays(req.getCreditDays());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException(
+                    "Días de crédito inválidos: " + req.getCreditDays()
+            );
+        }
+
+        List<Services> servicios = req.getServices()
+                .stream()
+                .map(this::findServiceById)
+                .toList();
+
+        return Supplier.builder()
+                .ruc(req.getRuc())
+                .razonSocial(req.getRazon_social())
+                .creditDays(creditDays)
+                .tiene_cuenta_detraccion(req.getIs_detraccion())
+                .cuenta_detraccion(req.getAccountNumber_Detraccion())
+                .correoConstancias(req.getCorreo_constancia())
+                .servicios(servicios)
+                .build();
+    }
+
+    private Services findServiceById(Long id) {
+        return servicesRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Servicio no encontrado id: " + id));
+    }
+
+    private User createSupplierUser(SupplierFormRequest req){
+
+        String base = UsernameUtils.generateBase(
+                req.getNombre_contacto(),
+                req.getApellido_p_contacto()
+        );
+
+        String username = UsernameUtils.generateUniqueUsername(userRepository, base);
+
+        if(username == null || username.isBlank()){
+            throw new BadRequestException(
+                    "No se pudo generar ub username válido"
+            );
+        }
+
+        User user = new User();
+
+        user.setUsername(username);
+
+        String tempPass = UUID.randomUUID().toString();
+
+        user.setPassword(passwordEncoder.encode(tempPass));
+
+        user.setEnabled(false);
+
+        user.setRequiresPasswordChange(true);
+
+        roleRepository.findByName("PROVEEDOR").ifPresent(user.getRoles()::add);
+
+        return userRepository.save(user);
+    }
+
+    private void createContact(
+            SupplierFormRequest req,
+            Supplier s
+    ){
+
+        Contacts contact = new Contacts();
+
+        contact.setSupplier(s);
+        contact.setName(req.getNombre_contacto());
+        contact.setApellido_paterno(req.getApellido_p_contacto());
+        contact.setApellido_materno(req.getApellido_m_contacto());
+        contact.setPhone(req.getTelefono_contacto());
+        contact.setEmail(req.getCorreo_pedidos());
+
+        contactsRepository.save(contact);
+
+        activationService.createActivationForUser(
+                s.getUser(),
+                contact.getEmail()
+        );
+    }
+
+    private void createBankAccounts(
+            SupplierFormRequest req,
+            Supplier s
+    ){
+        Banks bank = banksRepository.findById(req.getBank())
+                .orElseThrow(() -> new BadRequestException("Banco no encontrado id: " + req.getBank()));
+
+        saveAccount(
+                s,
+                bank,
+                req.getAccountType(),
+                Currency.PEN,
+                req.getAccountNumber_Soles(),
+                req.getCci_soles()
+        );
+
+        if(req.getAccountNumber_Dolares() != null && !req.getAccountNumber_Dolares().isBlank()){
+            saveAccount(
+                    s,
+                    bank,
+                    req.getAccountType(),
+                    Currency.USD,
+                    req.getAccountNumber_Dolares(),
+                    req.getCci_dolares()
+            );
+        }
+    }
+
+    private void saveAccount(
+            Supplier s,
+            Banks bank,
+            AccountType accountType,
+            Currency currency,
+            String accountNumber,
+            String cci
+    ){
+        CuentasBancarias cuenta = new CuentasBancarias();
+
+        cuenta.setProveedor(s);
+        cuenta.setBanco(bank);
+        cuenta.setTipoCuenta(accountType);
+        cuenta.setMoneda(currency);
+        cuenta.setNumeroCuenta(accountNumber);
+        cuenta.setCci(cci);
+
+        cuentasRepository.save(cuenta);
+    }
+
 
 }

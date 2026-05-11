@@ -1,0 +1,38 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.workspace-canvas {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px 22px;
+  background:
+    radial-gradient(circle at 85% 8%, rgba(16, 185, 129, 0.08), transparent 30%),
+    radial-gradient(circle at 16% 14%, rgba(35, 57, 98, 0.1), transparent 36%),
+    #f4f6fb;
+}
+
+.configuration-card {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  border: 1px solid #dde3ef;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111a30;
+  box-shadow: 0 10px 24px rgba(22, 32, 48, 0.05);
+  backdrop-filter: blur(4px);
+}
+
+.configuration-card p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 860px) {
+  .workspace-canvas {
+    padding: 12px;
+  }
+}

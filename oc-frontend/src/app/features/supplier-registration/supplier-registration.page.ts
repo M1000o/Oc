@@ -264,11 +264,24 @@ export class SupplierRegistrationPage implements OnInit {
         error: (error) => {
           const fallback =
             'No se pudo enviar el registro. Si el backend mantiene este endpoint protegido, primero inicia sesion.';
-          const message =
-            error?.error?.message ||
-            error?.error?.error ||
-            (typeof error?.error === 'string' ? error.error : '') ||
-            fallback;
+          
+          let message = '';
+          const errorBody = error?.error;
+
+          if (errorBody && typeof errorBody === 'object' && errorBody.errors) {
+            const detailedErrors = errorBody.errors;
+            if (typeof detailedErrors === 'object') {
+              message = Object.values(detailedErrors).join('\n');
+            }
+          }
+
+          if (!message) {
+            message =
+              errorBody?.message ||
+              errorBody?.error ||
+              (typeof errorBody === 'string' ? errorBody : '') ||
+              fallback;
+          }
 
           this.showError(message);
         }

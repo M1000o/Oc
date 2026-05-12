@@ -9,8 +9,8 @@ export interface PurchaseOrderRequest {
   supplierId: number;
   orderDate: string;
   deliveryDate: string;
-  sede: string;
-  area: string;
+  sedeId: number;
+  areaId: number;
   saveDraft?: boolean;
   details: PurchaseOrderDetailRequest[];
   notas?: string;
@@ -24,7 +24,9 @@ export interface PurchaseOrderResponse {
   supplierName: string;
   orderDate: string;
   deliveryDate: string;
+  sedeId: number;
   sede: string;
+  areaId: number;
   area: string;
   status: PurchaseOrderStatus;
   notas: string | null;
@@ -57,7 +59,9 @@ export interface PurchaseOrderSummary {
   supplierName: string;
   orderDate: string;
   deliveryDate: string;
+  sedeId: number;
   sede: string;
+  areaId: number;
   area: string;
   status: PurchaseOrderStatus;
   total: number;

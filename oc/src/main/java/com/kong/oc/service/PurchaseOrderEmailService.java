@@ -74,31 +74,13 @@ public class PurchaseOrderEmailService {
     }
 
     private String buildEmailBody(PurchaseOrder order, String customMessage) {
-        String notes = order.getNotas() == null || order.getNotas().isBlank()
-                ? "Sin notas registradas"
-                : order.getNotas();
-
         return """
                 <html>
                   <body>
                     <p>%s</p>
-                    <hr/>
-                    <p><strong>Orden:</strong> %s</p>
-                    <p><strong>Proveedor:</strong> %s</p>
-                    <p><strong>Fecha de orden:</strong> %s</p>
-                    <p><strong>Total:</strong> %s</p>
-                    <p><strong>Notas:</strong> %s</p>
-                    <p>Adjuntamos el PDF de la orden de compra generada por el sistema.</p>
                   </body>
                 </html>
-                """.formatted(
-                escapeHtml(customMessage),
-                escapeHtml(order.getPurchaseOrderNumber()),
-                escapeHtml(order.getSupplier().getRazonSocial()),
-                order.getOrderDate(),
-                order.getTotal(),
-                escapeHtml(notes)
-        );
+                """.formatted(escapeHtml(customMessage).replace("\n", "<br/>"));
     }
 
     private String escapeHtml(String value) {

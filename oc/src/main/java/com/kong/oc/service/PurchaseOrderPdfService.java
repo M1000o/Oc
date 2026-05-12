@@ -1,12 +1,14 @@
 package com.kong.oc.service;
 
 import com.kong.oc.common.exception.PurchaseOrderPdfException;
+import com.kong.oc.dto.PurchaseOrderCompanyConfigurationResponse;
 import com.kong.oc.model.Contacts;
 import com.kong.oc.model.PurchaseOrder;
 import com.kong.oc.model.PurchaseOrderDetail;
 import com.kong.oc.model.Supplier;
 import com.kong.oc.repository.ContactsRepository;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import com.openhtmltopdf.svgsupport.BatikSVGDrawer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -36,15 +38,7 @@ public class PurchaseOrderPdfService {
     private static final String TEMPLATE_PATH = "templates/purchase-order-pdf-template.html";
 
     private final ContactsRepository contactsRepository;
-
-    @Value("${app.purchase-order.pdf.company-name}")
-    private String companyName;
-
-    @Value("${app.purchase-order.pdf.company-ruc}")
-    private String companyRuc;
-
-    @Value("${app.purchase-order.pdf.company-address}")
-    private String companyAddress;
+    private final PurchaseOrderCompanyConfigurationService companyConfigurationService;
 
     @Value("${app.purchase-order.pdf.generated-by}")
     private String generatedBy;
@@ -67,11 +61,13 @@ public class PurchaseOrderPdfService {
         Contacts primaryContact = contactsRepository
                 .findFirstBySupplier_IdAndIsDeletedFalseOrderByIdAsc(supplier.getId())
                 .orElse(null);
+        PurchaseOrderCompanyConfigurationResponse companyConfiguration =
+                companyConfigurationService.resolveForPdf();
 
         Map<String, String> values = new LinkedHashMap<>();
-        values.put("companyName", escapeHtml(companyName));
-        values.put("companyRuc", escapeHtml(companyRuc));
-        values.put("companyAddress", escapeHtml(companyAddress));
+        values.put("companyName", escapeHtml(companyConfiguration.companyName()));
+        values.put("companyRuc", escapeHtml(companyConfiguration.companyRuc()));
+        values.put("companyAddress", escapeHtml(companyConfiguration.companyAddress()));
         values.put("documentNumber", escapeHtml(order.getPurchaseOrderNumber()));
         values.put("issueDate", formatDate(order.getOrderDate()));
         values.put("supplierName", escapeHtml(supplier.getRazonSocial()));
@@ -102,6 +98,7 @@ public class PurchaseOrderPdfService {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+            builder.useSVGDrawer(new BatikSVGDrawer());
             builder.withHtmlContent(html, null);
             builder.toStream(outputStream);
             builder.run();

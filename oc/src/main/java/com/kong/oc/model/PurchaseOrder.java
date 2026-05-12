@@ -37,9 +37,13 @@ public class PurchaseOrder extends BaseEntity {
 
     private LocalDate deliveryDate;
 
-    private String sede;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sede_id", nullable = false)
+    private Sede sede;
 
-    private String area;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "area_id", nullable = false)
+    private Area area;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

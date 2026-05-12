@@ -13,6 +13,8 @@ import com.kong.oc.model.*;
 import com.kong.oc.repository.ProductRepository;
 import com.kong.oc.repository.PurchaseOrderRepository;
 import com.kong.oc.repository.SupplierRepository;
+import com.kong.oc.repository.SedeRepository;
+import com.kong.oc.repository.AreaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +38,8 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     private final ProductRepository productRepository;
     private final PurchaseOrderMapper mapper;
     private final UserRepository userRepository;
+    private final SedeRepository sedeRepository;
+    private final AreaRepository areaRepository;
     private final PurchaseOrderEmailService purchaseOrderEmailService;
     private final PurchaseOrderDocumentService purchaseOrderDocumentService;
     private final PurchaseOrderCompanyConfigurationService companyConfigurationService;
@@ -50,6 +54,8 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
         Supplier supplier = findSupplierOrThrow(request.supplierId());
         User user = findUserOrThrow(userId);
+        Sede sede = findSedeOrThrow(request.sedeId());
+        Area area = findAreaForSedeOrThrow(request.areaId(), sede.getId());
 
         validateDates(request);
 
@@ -64,8 +70,8 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                 .supplier(supplier)
                 .orderDate(LocalDate.now())
                 .deliveryDate(request.deliveryDate())
-                .sede(request.sede().trim())
-                .area(request.area().trim())
+                .sede(sede)
+                .area(area)
                 .notas(request.notas())
                 .status(isDraft ? Status.BORRADOR : Status.PENDIENTE)
                 .emailStatus(PurchaseOrderEmailStatus.PENDIENTE_ENVIO)
@@ -96,6 +102,8 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         }
 
         boolean isDraft = Boolean.TRUE.equals(request.saveDraft());
+        Sede sede = findSedeOrThrow(request.sedeId());
+        Area area = findAreaForSedeOrThrow(request.areaId(), sede.getId());
 
         if(!order.getSupplier().getId().equals(request.supplierId())){
             Supplier newSupplier = findSupplierOrThrow(request.supplierId());
@@ -115,8 +123,8 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
         order.setOrderDate(request.orderDate());
         order.setDeliveryDate(request.deliveryDate());
-        order.setSede(request.sede().trim());
-        order.setArea(request.area().trim());
+        order.setSede(sede);
+        order.setArea(area);
         order.setNotas(request.notas());
         order.setStatus(isDraft ? Status.BORRADOR : Status.PENDIENTE);
         if (isDraft) {
@@ -402,6 +410,26 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         return supplierRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró un proveedor asociado al usuario autenticado."));
+    }
+
+    private Sede findSedeOrThrow(Long id) {
+        return sedeRepository.findById(id)
+                .filter(sede -> !Boolean.TRUE.equals(sede.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Sede no encontrada con ID: " + id));
+    }
+
+    private Area findAreaForSedeOrThrow(Long areaId, Long sedeId) {
+        Area area = areaRepository.findById(areaId)
+                .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Área no encontrada con ID: " + areaId));
+
+        if (!area.getSede().getId().equals(sedeId)) {
+            throw new BadRequestException("El área seleccionada no pertenece a la sede indicada.");
+        }
+
+        return area;
     }
 
     private User findUserOrThrow(Long id) {

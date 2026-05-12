@@ -83,26 +83,28 @@
               <label>
                 <span>Sede Local</span>
                 <select
-                  [(ngModel)]="deliverySite"
+                  [(ngModel)]="deliverySiteId"
                   [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="persistSummaryDraft()"
+                  (ngModelChange)="onSedeChange()"
+                  [disabled]="!sedes.length"
                 >
-                  <option value="Planta Central - Lima">Planta Central - Lima</option>
-                  <option value="Almacen Norte - Trujillo">Almacen Norte - Trujillo</option>
-                  <option value="Centro Sur - Arequipa">Centro Sur - Arequipa</option>
+                  @for (sede of sedes; track sede.id) {
+                    <option [ngValue]="sede.id">{{ sede.name }}</option>
+                  }
                 </select>
               </label>
 
               <label>
                 <span>Area de Recepcion</span>
                 <select
-                  [(ngModel)]="deliveryArea"
+                  [(ngModel)]="deliveryAreaId"
                   [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="persistSummaryDraft()"
+                  (ngModelChange)="onAreaChange()"
+                  [disabled]="!areas.length"
                 >
-                  <option value="Area de Recepcion Principal">Area de Recepcion Principal</option>
-                  <option value="Zona de Carga Liviana">Zona de Carga Liviana</option>
-                  <option value="Control de Calidad">Control de Calidad</option>
+                  @for (area of areas; track area.id) {
+                    <option [ngValue]="area.id">{{ area.nombre }}</option>
+                  }
                 </select>
               </label>
             </div>

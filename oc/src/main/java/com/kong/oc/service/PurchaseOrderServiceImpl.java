@@ -38,11 +38,13 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     private final UserRepository userRepository;
     private final PurchaseOrderEmailService purchaseOrderEmailService;
     private final PurchaseOrderDocumentService purchaseOrderDocumentService;
+    private final PurchaseOrderCompanyConfigurationService companyConfigurationService;
 
 
     @Override
     @Transactional
     public PurchaseOrderResponse create(PurchaseOrderRequest request, Long userId){
+        companyConfigurationService.assertConfigurationExists();
 
         boolean isDraft = Boolean.TRUE.equals(request.saveDraft());
 
@@ -83,6 +85,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     @Override
     @Transactional
     public PurchaseOrderResponse update(Long id, PurchaseOrderRequest request) {
+        companyConfigurationService.assertConfigurationExists();
 
         PurchaseOrder order = findOrderWithDetailsOrThrow(id);
 

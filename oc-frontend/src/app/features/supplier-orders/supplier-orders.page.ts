@@ -142,13 +142,16 @@ export class SupplierOrdersPage implements OnInit {
 
     this.purchaseOrderService.downloadPurchaseOrderPdf(id)
       .subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${orderNumber}.pdf`;
-          link.click();
-          window.URL.revokeObjectURL(url);
+        next: (response) => {
+          const content = response.body;
+          if (!content || content.size === 0) {
+            this.notificationService.error('El PDF generado está vacío.');
+            return;
+          }
+
+          const pdfBlob = new Blob([content], { type: 'application/pdf' });
+          const fileName = this.resolvePdfFileName(response.headers.get('content-disposition'), orderNumber);
+          this.downloadBlob(pdfBlob, fileName);
           this.notificationService.success(`Orden ${orderNumber} descargada correctamente.`);
         },
         error: (err) => {
@@ -156,5 +159,37 @@ export class SupplierOrdersPage implements OnInit {
           this.notificationService.error('No se pudo descargar el PDF de la orden de compra.');
         }
       });
+  }
+
+  private downloadBlob(blob: Blob, fileName: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+  }
+
+  private resolvePdfFileName(contentDisposition: string | null, orderNumber: string): string {
+    const fallback = `${orderNumber}.pdf`;
+    if (!contentDisposition) {
+      return fallback;
+    }
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1].trim());
+      } catch {
+        return fallback;
+      }
+    }
+
+    const asciiMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    return asciiMatch?.[1]?.trim() || fallback;
   }
 }

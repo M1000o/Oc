@@ -18,11 +18,11 @@ public record PurchaseOrderRequest(
         @FutureOrPresent(message = "La fecha de entrega no puede ser anterior a hoy")
         LocalDate deliveryDate,
 
-        @NotBlank(message = "El local es obligatorio")
-        String sede,
+        @NotNull(message = "El local es obligatorio")
+        Long sedeId,
 
-        @NotBlank(message = "El area es obligatoria")
-        String area,
+        @NotNull(message = "El area es obligatoria")
+        Long areaId,
 
         Boolean saveDraft,
 

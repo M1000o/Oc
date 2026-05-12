@@ -18,7 +18,9 @@ export interface OrderSummaryDraftState {
   rows: OrderSummaryDraftRow[];
   summaryProviderSelection: ProviderSelection | null;
   dispatchDate: string;
+  deliverySiteId: number;
   deliverySite: string;
+  deliveryAreaId: number;
   deliveryArea: string;
   notes: string;
   nextRowId: number;

@@ -144,10 +144,6 @@ export class ProductosRegistration implements OnInit {
     return new Set(this.products.map((product) => product.category)).size;
   }
 
-  protected get productsWithoutPriceCount(): number {
-    return this.products.filter((product) => !product.price || product.price <= 0).length;
-  }
-
   protected onSearchChange(value: string): void {
     this.searchTerm = value;
     this.currentPage = 1;

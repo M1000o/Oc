@@ -19,6 +19,8 @@ import { AppNotificationService } from '../../core/services/app-notification.ser
 import { ProductCatalogService } from '../../core/services/product-catalog.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
+import { LocationService } from '../../core/services/location.service';
+import { AreaOption, SedeOption } from '../../core/interfaces/location.interface';
 import { ServiceProviderModalComponent } from './service-provider-modal.component';
 import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
 import {
@@ -77,6 +79,7 @@ export class PortalHomePage {
   private readonly productCatalogService = inject(ProductCatalogService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
   private readonly supplierDirectoryService = inject(SupplierDirectoryService);
+  private readonly locationService = inject(LocationService);
   private readonly validUnits: UnitOption[] = ['KG', 'UND', 'PAQ', 'DOC', 'GR', 'UN', 'CJ'];
   private readonly taxRate = 0.18;
   private readonly currencyFormatter = new Intl.NumberFormat('es-PE', {
@@ -94,8 +97,12 @@ export class PortalHomePage {
 
   protected orderDate = this.toDateInputValue(new Date());
   protected dispatchDate = this.toDateInputValue(this.addDays(new Date(), 2));
+  protected deliverySiteId = 0;
   protected deliverySite = 'Planta Central - Lima';
+  protected deliveryAreaId = 0;
   protected deliveryArea = 'Area de Recepcion Principal';
+  protected sedes: SedeOption[] = [];
+  protected areas: AreaOption[] = [];
   protected notes = '';
   protected purchaseOrderPreviewError = '';
   protected isLoadingPurchaseOrderNumber = false;
@@ -119,6 +126,7 @@ export class PortalHomePage {
 
   constructor() {
     this.restoreSummaryState();
+    this.loadDeliveryLocations();
     this.handleStartSelectionRequest();
     this.handleDraftEditRequest();
     this.handleOrderDetailRequest();
@@ -314,6 +322,19 @@ export class PortalHomePage {
     this.persistSummaryState();
   }
 
+  protected onSedeChange(): void {
+    this.deliverySite = this.resolveSedeName(this.deliverySiteId);
+    this.deliveryAreaId = 0;
+    this.deliveryArea = '';
+    this.loadAreasForSelectedSede();
+    this.persistSummaryState();
+  }
+
+  protected onAreaChange(): void {
+    this.deliveryArea = this.resolveAreaName(this.deliveryAreaId);
+    this.persistSummaryState();
+  }
+
   protected reopenSelection(): void {
     if (this.summaryProviderSelection) {
       this.currentProviderSelection = null;
@@ -328,8 +349,10 @@ export class PortalHomePage {
   protected resetOrder(): void {
     this.orderDate = this.toDateInputValue(new Date());
     this.dispatchDate = this.toDateInputValue(this.addDays(new Date(), 2));
-    this.deliverySite = 'Planta Central - Lima';
-    this.deliveryArea = 'Area de Recepcion Principal';
+    this.deliverySiteId = this.sedes[0]?.id ?? 0;
+    this.deliverySite = this.resolveSedeName(this.deliverySiteId) || 'Planta Central - Lima';
+    this.deliveryAreaId = this.areas.find((area) => area.sedeId === this.deliverySiteId)?.id ?? 0;
+    this.deliveryArea = this.resolveAreaName(this.deliveryAreaId) || 'Area de Recepcion Principal';
     this.notes = '';
     this.purchaseOrderPreviewError = '';
     this.lastSubmittedOrderNumber = '';
@@ -551,7 +574,9 @@ export class PortalHomePage {
       rows: this.rows,
       summaryProviderSelection: this.summaryProviderSelection,
       dispatchDate: this.dispatchDate,
+      deliverySiteId: this.deliverySiteId,
       deliverySite: this.deliverySite,
+      deliveryAreaId: this.deliveryAreaId,
       deliveryArea: this.deliveryArea,
       notes: this.notes,
       nextRowId: this.nextRowId
@@ -575,9 +600,13 @@ export class PortalHomePage {
       this.dispatchDate = parsed.dispatchDate;
     }
 
+    this.deliverySiteId = this.toPositiveInt(parsed.deliverySiteId);
+
     if (typeof parsed.deliverySite === 'string') {
       this.deliverySite = parsed.deliverySite;
     }
+
+    this.deliveryAreaId = this.toPositiveInt(parsed.deliveryAreaId);
 
     if (typeof parsed.deliveryArea === 'string') {
       this.deliveryArea = parsed.deliveryArea;
@@ -714,8 +743,11 @@ export class PortalHomePage {
 
     this.orderDate = this.normalizeDateValue(order.orderDate, this.orderDate);
     this.dispatchDate = this.normalizeDateValue(order.deliveryDate, this.dispatchDate);
+    this.deliverySiteId = order.sedeId;
     this.deliverySite = order.sede;
+    this.deliveryAreaId = order.areaId;
     this.deliveryArea = order.area;
+    this.loadAreasForSelectedSede(order.areaId);
     this.notes = order.notas ?? '';
     this.rows = nextRows;
     this.summaryProviderSelection = {
@@ -909,6 +941,14 @@ export class PortalHomePage {
         : 'Selecciona un proveedor antes de finalizar la orden de compra.';
     }
 
+    if (!this.deliverySiteId) {
+      return 'Selecciona una sede antes de continuar.';
+    }
+
+    if (!this.deliveryAreaId) {
+      return 'Selecciona un área de recepción antes de continuar.';
+    }
+
     return '';
   }
 
@@ -921,8 +961,8 @@ export class PortalHomePage {
       supplierId: this.summaryProviderSelection.providerId,
       orderDate: this.orderDate,
       deliveryDate: this.dispatchDate,
-      sede: this.deliverySite.trim(),
-      area: this.deliveryArea.trim(),
+      sedeId: this.deliverySiteId,
+      areaId: this.deliveryAreaId,
       saveDraft,
       details: this.summaryRows.map((row) => ({
         productId: row.productId,
@@ -950,6 +990,66 @@ export class PortalHomePage {
           ? `Borrador ${savedOrderNumber} actualizado y enviado correctamente con ${order.details.length} item(s).`
           : `Orden de compra ${savedOrderNumber} creada correctamente con ${order.details.length} item(s).`
     );
+  }
+
+  private loadDeliveryLocations(): void {
+    const preferredSedeId = this.deliverySiteId;
+    const preferredAreaId = this.deliveryAreaId;
+
+    this.locationService.getSedes().subscribe(({ data, error }) => {
+      if (error) {
+        this.showStatus('error', error);
+        return;
+      }
+
+      this.sedes = data;
+      if (!this.sedes.length) {
+        return;
+      }
+
+      const targetSedeId = this.deliverySiteId || preferredSedeId;
+      const targetAreaId = this.deliveryAreaId || preferredAreaId;
+      const preferredSede = this.sedes.find((sede) => sede.id === targetSedeId);
+      this.deliverySiteId = preferredSede?.id ?? this.sedes[0].id;
+      this.deliverySite = this.resolveSedeName(this.deliverySiteId);
+      this.loadAreasForSelectedSede(targetAreaId);
+    });
+  }
+
+  private loadAreasForSelectedSede(preferredAreaId = 0): void {
+    if (!this.deliverySiteId) {
+      this.areas = [];
+      return;
+    }
+
+    this.locationService.getAreasBySede(this.deliverySiteId).subscribe(({ data, error }) => {
+      if (error) {
+        this.areas = [];
+        this.showStatus('error', error);
+        return;
+      }
+
+      this.areas = data;
+      if (!this.areas.length) {
+        this.deliveryAreaId = 0;
+        this.deliveryArea = '';
+        this.persistSummaryState();
+        return;
+      }
+
+      const preferredArea = this.areas.find((area) => area.id === preferredAreaId);
+      this.deliveryAreaId = preferredArea?.id ?? this.areas[0].id;
+      this.deliveryArea = this.resolveAreaName(this.deliveryAreaId);
+      this.persistSummaryState();
+    });
+  }
+
+  private resolveSedeName(sedeId: number): string {
+    return this.sedes.find((sede) => sede.id === sedeId)?.name ?? this.deliverySite;
+  }
+
+  private resolveAreaName(areaId: number): string {
+    return this.areas.find((area) => area.id === areaId)?.nombre ?? this.deliveryArea;
   }
 
   private normalizeRows(value: unknown): OrderRow[] {

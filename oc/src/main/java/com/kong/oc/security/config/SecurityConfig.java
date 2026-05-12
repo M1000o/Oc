@@ -57,7 +57,12 @@ public class SecurityConfig {
                     config.setAllowedOriginPatterns(List.of("http://localhost:4200"));
                     config.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(List.of("*"));
-                    config.setExposedHeaders(List.of("Authorization","Content-Type"));
+                    config.setExposedHeaders(List.of(
+                            "Authorization",
+                            "Content-Type",
+                            "Content-Disposition",
+                            "Content-Length"
+                    ));
                     config.setAllowCredentials(true);
                     return config;
                 }))

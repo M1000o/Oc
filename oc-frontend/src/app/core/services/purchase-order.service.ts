@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { catchError, EMPTY, expand, forkJoin, map, Observable, of, reduce } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../interfaces/api-response.interface';
@@ -260,8 +260,9 @@ export class PurchaseOrderService {
     );
   }
 
-  downloadPurchaseOrderPdf(id: number): Observable<Blob> {
+  downloadPurchaseOrderPdf(id: number): Observable<HttpResponse<Blob>> {
     return this.http.get(`${this.endpoint}/${id}/pdf`, {
+      observe: 'response',
       responseType: 'blob'
     });
   }

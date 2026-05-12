@@ -1,5 +1,125 @@
-<div layoutBody class="workspace-canvas">
-  <section class="configuration-card">
-    <p>configuration works!</p>
-  </section>
+<div layoutBody class="configuration-workspace">
+  <header class="configuration-topbar">
+    <div>
+      <span class="eyebrow">Configuración global</span>
+      <h1>Datos para órdenes de compra</h1>
+      <p>
+        Estos datos se imprimen en el encabezado de los PDFs que se guardan y en los PDFs enviados
+        por correo a proveedores.
+      </p>
+    </div>
+    <button class="btn btn-ghost" type="button" (click)="loadConfiguration()" [disabled]="loading || saving">
+      <mat-icon aria-hidden="true">refresh</mat-icon>
+      Actualizar
+    </button>
+  </header>
+
+  @if (loading) {
+    <section class="state-card">
+      <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+      <p>Cargando configuración...</p>
+    </section>
+  } @else {
+    <main class="configuration-grid">
+      <section class="settings-card">
+        <div class="card-head">
+          <div class="card-icon">
+            <mat-icon aria-hidden="true">receipt_long</mat-icon>
+          </div>
+          <div>
+            <h2>Empresa emisora</h2>
+            <p>Información fiscal usada por el generador de PDF del backend.</p>
+          </div>
+        </div>
+
+        @if (errorMessage) {
+          <div class="feedback-banner error">
+            <mat-icon aria-hidden="true">error</mat-icon>
+            <span>{{ errorMessage }}</span>
+          </div>
+        }
+
+        <form class="settings-form" [formGroup]="form" (ngSubmit)="saveConfiguration()">
+          <label class="field">
+            <span>Razón social</span>
+            <input
+              type="text"
+              formControlName="companyName"
+              placeholder="Razón social de la empresa"
+              maxlength="180"
+            />
+            @if (hasFieldError('companyName')) {
+              <small>{{ getFieldError('companyName') }}</small>
+            }
+          </label>
+
+          <label class="field">
+            <span>RUC</span>
+            <input
+              type="text"
+              formControlName="companyRuc"
+              placeholder="RUC de 11 dígitos"
+              inputmode="numeric"
+              maxlength="11"
+            />
+            @if (hasFieldError('companyRuc')) {
+              <small>{{ getFieldError('companyRuc') }}</small>
+            }
+          </label>
+
+          <label class="field full">
+            <span>Dirección fiscal</span>
+            <textarea
+              formControlName="companyAddress"
+              placeholder="Dirección fiscal de la empresa"
+              rows="3"
+              maxlength="280"
+            ></textarea>
+            @if (hasFieldError('companyAddress')) {
+              <small>{{ getFieldError('companyAddress') }}</small>
+            }
+          </label>
+
+          <div class="form-actions">
+            <button class="btn btn-ghost" type="button" (click)="resetForm()" [disabled]="saving">
+              <mat-icon aria-hidden="true">undo</mat-icon>
+              Deshacer
+            </button>
+            <button class="btn btn-primary" type="submit" [disabled]="saving">
+              <mat-icon aria-hidden="true">{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+              {{ saving ? 'Guardando...' : 'Guardar configuración' }}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="preview-card">
+        <div class="preview-label">Vista en PDF</div>
+        <div class="pdf-preview">
+          <div class="preview-header">
+            <div class="preview-logo">OC</div>
+            <div>
+              <h3>{{ form.controls.companyName.value || 'Razón social' }}</h3>
+              <p>RUC {{ form.controls.companyRuc.value || '00000000000' }}</p>
+              <p>{{ form.controls.companyAddress.value || 'Dirección fiscal' }}</p>
+            </div>
+          </div>
+          <div class="preview-divider"></div>
+          <div class="preview-row">
+            <span>Orden de compra</span>
+            <strong>000001</strong>
+          </div>
+          <div class="preview-row">
+            <span>Proveedor</span>
+            <strong>Proveedor seleccionado</strong>
+          </div>
+          <div class="preview-table">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </aside>
+    </main>
+  }
 </div>

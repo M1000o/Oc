@@ -37,10 +37,7 @@ app:
     expiration-hours: 24
   purchase-order:
     pdf:
-      storage-path: ${PURCHASE_ORDER_PDF_STORAGE_PATH:purchase-order-pdfs}
-      company-name: ${PURCHASE_ORDER_COMPANY_NAME:GRUPO KONG S.A.C.}
-      company-ruc: ${PURCHASE_ORDER_COMPANY_RUC:20601234567}
-      company-address: ${PURCHASE_ORDER_COMPANY_ADDRESS:Av. Empresarial 456, Lima, Peru}
+      storage-path: ${PURCHASE_ORDER_PDF_STORAGE_PATH:${user.home}/Documents/oc/pdfs}
       generated-by: ${PURCHASE_ORDER_GENERATED_BY:Generado por Grupo Kong Sistemas}
 
 logging:

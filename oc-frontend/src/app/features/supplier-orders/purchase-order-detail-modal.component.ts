@@ -2,6 +2,9 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { forkJoin } from 'rxjs';
+import { PurchaseOrderCompanyConfiguration } from '../../core/interfaces/configuration.interface';
+import { ConfigurationService } from '../../core/services/configuration.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
 import { PurchaseOrderResponse } from '../../core/interfaces/purchase-order.interface';
@@ -48,6 +51,7 @@ interface PurchaseOrderPdfViewModel {
   styleUrl: './purchase-order-detail-modal.component.css'
 })
 export class PurchaseOrderDetailModalComponent implements OnInit {
+  private readonly configurationService = inject(ConfigurationService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
   private readonly supplierDirectoryService = inject(SupplierDirectoryService);
   private readonly currencyPipe = inject(CurrencyPipe);
@@ -76,20 +80,34 @@ export class PurchaseOrderDetailModalComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.purchaseOrderService.getSupplierOrderDetail(this.data.orderId).subscribe(({ data, error }) => {
-      if (error || !data) {
+    forkJoin({
+      order: this.purchaseOrderService.getSupplierOrderDetail(this.data.orderId),
+      configuration: this.configurationService.getPurchaseOrderCompanyConfiguration()
+    }).subscribe(({ order, configuration }) => {
+      if (order.error || !order.data) {
         this.isLoading.set(false);
-        this.errorMessage.set(error || 'No se pudo cargar la orden de compra.');
+        this.errorMessage.set(order.error || 'No se pudo cargar la orden de compra.');
         return;
       }
 
-      this.supplierDirectoryService.getSupplierDetail(data.supplierId).subscribe({
+      if (configuration.error || !configuration.data) {
+        this.isLoading.set(false);
+        this.errorMessage.set(
+          configuration.error || 'Configura los datos de la empresa antes de visualizar el PDF.'
+        );
+        return;
+      }
+
+      const purchaseOrder = order.data;
+      const company = configuration.data;
+
+      this.supplierDirectoryService.getSupplierDetail(purchaseOrder.supplierId).subscribe({
         next: (response) => {
-          this.viewModel.set(this.buildViewModel(data, response.data ?? null));
+          this.viewModel.set(this.buildViewModel(purchaseOrder, response.data ?? null, company));
           this.isLoading.set(false);
         },
         error: () => {
-          this.viewModel.set(this.buildViewModel(data, null));
+          this.viewModel.set(this.buildViewModel(purchaseOrder, null, company));
           this.isLoading.set(false);
         }
       });
@@ -98,12 +116,13 @@ export class PurchaseOrderDetailModalComponent implements OnInit {
 
   private buildViewModel(
     order: PurchaseOrderResponse,
-    supplier: any
+    supplier: any,
+    company: PurchaseOrderCompanyConfiguration
   ): PurchaseOrderPdfViewModel {
     return {
-      companyName: 'GRUPO KONG S.A.C.',
-      companyRuc: '20601234567',
-      companyAddress: 'Av. Empresarial 456, Lima, Peru',
+      companyName: company.companyName,
+      companyRuc: company.companyRuc,
+      companyAddress: company.companyAddress,
       documentNumber: order.purchaseOrderNumber,
       issueDate: this.formatDisplayDate(order.orderDate),
       supplierName: order.supplierName,
@@ -139,4 +158,5 @@ export class PurchaseOrderDetailModalComponent implements OnInit {
     if (!value) return '';
     return this.datePipe.transform(value, 'dd/MM/yyyy') ?? value;
   }
+
 }

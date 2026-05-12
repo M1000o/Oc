@@ -12,6 +12,8 @@ export const environment = {
       banks: '/api/v1/banks',
       products: '/api/v1/products',
       purchaseOrders: '/api/v1/purchase-orders',
+      sedes: '/api/v1/sedes',
+      areas: '/api/v1/areas',
       configuration: '/api/v1/configuration',
       supplierForm: '/api/v1/suppliers/form',
       activate: '/activate',

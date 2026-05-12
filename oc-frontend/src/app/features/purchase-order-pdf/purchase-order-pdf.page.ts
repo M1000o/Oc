@@ -2,7 +2,10 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { forkJoin } from 'rxjs';
+import { PurchaseOrderCompanyConfiguration } from '../../core/interfaces/configuration.interface';
 import { PurchaseOrderResponse } from '../../core/interfaces/purchase-order.interface';
+import { ConfigurationService } from '../../core/services/configuration.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
 
@@ -69,6 +72,7 @@ export class PurchaseOrderPdfPage {
   private readonly router = inject(Router);
   private readonly currencyPipe = inject(CurrencyPipe);
   private readonly datePipe = inject(DatePipe);
+  private readonly configurationService = inject(ConfigurationService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
   private readonly supplierDirectoryService = inject(SupplierDirectoryService);
 
@@ -106,20 +110,34 @@ export class PurchaseOrderPdfPage {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.purchaseOrderService.getPurchaseOrder(orderId).subscribe(({ data, error }) => {
-      if (error || !data) {
+    forkJoin({
+      order: this.purchaseOrderService.getPurchaseOrder(orderId),
+      configuration: this.configurationService.getPurchaseOrderCompanyConfiguration()
+    }).subscribe(({ order, configuration }) => {
+      if (order.error || !order.data) {
         this.isLoading.set(false);
-        this.errorMessage.set(error || 'No se pudo cargar la orden de compra.');
+        this.errorMessage.set(order.error || 'No se pudo cargar la orden de compra.');
         return;
       }
 
-      this.supplierDirectoryService.getSupplierDetail(data.supplierId).subscribe({
+      if (configuration.error || !configuration.data) {
+        this.isLoading.set(false);
+        this.errorMessage.set(
+          configuration.error || 'Configura los datos de la empresa antes de visualizar el PDF.'
+        );
+        return;
+      }
+
+      const purchaseOrder = order.data;
+      const company = configuration.data;
+
+      this.supplierDirectoryService.getSupplierDetail(purchaseOrder.supplierId).subscribe({
         next: (response) => {
-          this.viewModel.set(this.buildFromOrder(data, response.data ?? null));
+          this.viewModel.set(this.buildFromOrder(purchaseOrder, response.data ?? null, company));
           this.isLoading.set(false);
         },
         error: () => {
-          this.viewModel.set(this.buildFromOrder(data, null));
+          this.viewModel.set(this.buildFromOrder(purchaseOrder, null, company));
           this.isLoading.set(false);
         }
       });
@@ -136,8 +154,18 @@ export class PurchaseOrderPdfPage {
 
     try {
       const preview = JSON.parse(rawPreviewData) as PurchaseOrderPdfPreviewData;
-      this.viewModel.set(this.buildFromPreview(preview));
-      this.isLoading.set(false);
+      this.configurationService.getPurchaseOrderCompanyConfiguration().subscribe((configuration) => {
+        if (configuration.error || !configuration.data) {
+          this.errorMessage.set(
+            configuration.error || 'Configura los datos de la empresa antes de visualizar el PDF.'
+          );
+          this.isLoading.set(false);
+          return;
+        }
+
+        this.viewModel.set(this.buildFromPreview(preview, configuration.data));
+        this.isLoading.set(false);
+      });
     } catch {
       this.isLoading.set(false);
       this.errorMessage.set('No se pudo interpretar la vista previa del PDF.');
@@ -151,12 +179,13 @@ export class PurchaseOrderPdfPage {
       contactoNombre?: string | null;
       contactoEmail?: string | null;
       correoConstancias?: string | null;
-    } | null
+    } | null,
+    company: PurchaseOrderCompanyConfiguration
   ): PurchaseOrderPdfViewModel {
     return {
-      companyName: 'GRUPO KONG S.A.C.',
-      companyRuc: '20601234567',
-      companyAddress: 'Av. Empresarial 456, Lima, Peru',
+      companyName: company.companyName,
+      companyRuc: company.companyRuc,
+      companyAddress: company.companyAddress,
       documentNumber: order.purchaseOrderNumber,
       issueDate: this.formatDisplayDate(order.orderDate),
       supplierName: order.supplierName,
@@ -188,11 +217,14 @@ export class PurchaseOrderPdfPage {
     };
   }
 
-  private buildFromPreview(preview: PurchaseOrderPdfPreviewData): PurchaseOrderPdfViewModel {
+  private buildFromPreview(
+    preview: PurchaseOrderPdfPreviewData,
+    company: PurchaseOrderCompanyConfiguration
+  ): PurchaseOrderPdfViewModel {
     return {
-      companyName: 'GRUPO KONG S.A.C.',
-      companyRuc: '20601234567',
-      companyAddress: 'Av. Empresarial 456, Lima, Peru',
+      companyName: company.companyName,
+      companyRuc: company.companyRuc,
+      companyAddress: company.companyAddress,
       documentNumber: preview.orderNumber,
       issueDate: this.formatDisplayDate(new Date().toISOString()),
       supplierName: preview.supplierName,
@@ -225,4 +257,5 @@ export class PurchaseOrderPdfPage {
     const parsed = Number(value);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
   }
+
 }

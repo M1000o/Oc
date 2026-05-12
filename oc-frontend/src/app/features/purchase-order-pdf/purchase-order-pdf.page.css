@@ -125,18 +125,9 @@
 
 .document-chip {
   display: inline-grid;
-  gap: 4px;
-  padding: 12px 16px;
+  padding: 10px 16px 12px;
   border-radius: 14px;
   background: #f5f6f8;
-}
-
-.document-chip span {
-  color: #7a8597;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .document-chip strong {

@@ -25,6 +25,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier
             JOIN FETCH po.usuario
+            JOIN FETCH po.sede
+            JOIN FETCH po.area
             WHERE po.id = :id
             """)
     Optional<PurchaseOrder> findByIdWithSupplierAndUser(@Param("id") Long id);
@@ -34,16 +36,26 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT DISTINCT po FROM PurchaseOrder po
             JOIN FETCH po.supplier
             JOIN FETCH po.usuario
+            JOIN FETCH po.sede
+            JOIN FETCH po.area
             LEFT JOIN FETCH po.details d
             LEFT JOIN FETCH d.product
             WHERE po.id = :id
             """)
     Optional<PurchaseOrder> findByIdWithDetails(@Param("id") Long id);
 
-    @Query("""
+    @Query(value = """
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
+            JOIN FETCH po.sede
+            JOIN FETCH po.area
+            WHERE s.id = :supplierId
+              AND po.emailStatus = :emailStatus
+            """,
+            countQuery = """
+            SELECT COUNT(po) FROM PurchaseOrder po
+            JOIN po.supplier s
             WHERE s.id = :supplierId
               AND po.emailStatus = :emailStatus
             """)
@@ -57,6 +69,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT DISTINCT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
+            JOIN FETCH po.sede
+            JOIN FETCH po.area
             LEFT JOIN FETCH po.details d
             LEFT JOIN FETCH d.product
             WHERE po.id = :orderId
@@ -71,16 +85,30 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
 
 
     // Listado paginado con filtros opcionales
-    @Query("""
+    @Query(value = """
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
+            JOIN FETCH po.sede se
+            JOIN FETCH po.area ar
             WHERE (:proveedorId  IS NULL OR s.id            = :proveedorId)
               AND (:status       IS NULL OR po.status       = :status)
               AND (:fechaDesde   IS NULL OR po.orderDate   >= :fechaDesde)
               AND (:fechaHasta   IS NULL OR po.orderDate   <= :fechaHasta)
-              AND (:sede         IS NULL OR po.sede         = :sede)
-              AND (:area         IS NULL OR po.area         = :area)
+              AND (:sede         IS NULL OR se.name         = :sede)
+              AND (:area         IS NULL OR ar.nombre       = :area)
+            """,
+            countQuery = """
+            SELECT COUNT(po) FROM PurchaseOrder po
+            JOIN po.supplier s
+            JOIN po.sede se
+            JOIN po.area ar
+            WHERE (:proveedorId  IS NULL OR s.id            = :proveedorId)
+              AND (:status       IS NULL OR po.status       = :status)
+              AND (:fechaDesde   IS NULL OR po.orderDate   >= :fechaDesde)
+              AND (:fechaHasta   IS NULL OR po.orderDate   <= :fechaHasta)
+              AND (:sede         IS NULL OR se.name         = :sede)
+              AND (:area         IS NULL OR ar.nombre       = :area)
             """)
     Page<PurchaseOrder> findAllWithFilters(
             @Param("proveedorId") Long proveedorId,

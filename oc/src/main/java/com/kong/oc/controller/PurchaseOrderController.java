@@ -1,6 +1,7 @@
 package com.kong.oc.controller;
 
 import com.kong.oc.common.exception.BadRequestException;
+import com.kong.oc.common.http.PdfResponseFactory;
 import com.kong.oc.dto.*;
 import com.kong.oc.interfaces.IPurchaseOrderService;
 import jakarta.validation.Valid;
@@ -9,8 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -55,10 +54,7 @@ public class PurchaseOrderController {
     ) {
         PurchaseOrderPdfDownload pdf = purchaseOrderService.downloadPdf(id, extractUserId(jwt), isAdmin(jwt));
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + pdf.fileName() + "\"")
-                .body(pdf.content());
+        return PdfResponseFactory.attachment(pdf.fileName(), pdf.content());
     }
 
     @GetMapping

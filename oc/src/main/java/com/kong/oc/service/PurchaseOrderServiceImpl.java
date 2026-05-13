@@ -75,6 +75,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                 .notas(request.notas())
                 .status(isDraft ? Status.BORRADOR : Status.PENDIENTE)
                 .emailStatus(PurchaseOrderEmailStatus.PENDIENTE_ENVIO)
+                .deliveryStatus(DeliveryStatus.PENDIENTE)
                 .usuario(user)
                 .subtotal(BigDecimal.ZERO)
                 .igv(BigDecimal.ZERO)
@@ -193,6 +194,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
             PurchaseOrderEmailResponse response = purchaseOrderEmailService.sendPurchaseOrderEmail(order, request);
             order.setEmailStatus(PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR);
             order.setStatus(Status.APROBADO);
+            order.setDeliveryStatus(DeliveryStatus.PENDIENTE);
             purchaseOrderRepository.save(order);
             return response;
         } catch (PurchaseOrderRecipientException | PurchaseOrderEmailDispatchException ex) {
@@ -354,6 +356,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
             case PENDIENTE  -> next == Status.APROBADO || next == Status.CANCELADO;
             case APROBADO -> false;
             case CANCELADO -> false;
+            case CERRADA -> false;
         };
 
         if (!valid) {

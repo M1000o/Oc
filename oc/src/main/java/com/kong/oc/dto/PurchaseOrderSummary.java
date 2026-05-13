@@ -15,6 +15,7 @@ public record PurchaseOrderSummary(
         String area,
         String status,
         String emailStatus,
+        String deliveryStatus,
         BigDecimal total
 ) {
 }

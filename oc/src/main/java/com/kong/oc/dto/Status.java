@@ -5,4 +5,5 @@ public enum Status {
     APROBADO,
     CANCELADO,
     BORRADOR,
+    CERRADA
 }

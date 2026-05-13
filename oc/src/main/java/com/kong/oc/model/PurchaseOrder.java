@@ -2,6 +2,7 @@ package com.kong.oc.model;
 
 import com.kong.oc.auth.model.User;
 import com.kong.oc.common.model.BaseEntity;
+import com.kong.oc.dto.DeliveryStatus;
 import com.kong.oc.dto.PurchaseOrderEmailStatus;
 import com.kong.oc.dto.Status;
 import jakarta.persistence.*;
@@ -52,6 +53,10 @@ public class PurchaseOrder extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 40)
     private PurchaseOrderEmailStatus emailStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private DeliveryStatus deliveryStatus;
 
     private String notas;
 

@@ -28,6 +28,7 @@ public class PurchaseOrderMapper {
                 order.getArea().getNombre(),
                 order.getStatus().name(),
                 resolveEmailStatus(order),
+                order.getDeliveryStatus().name(),
                 order.getNotas(),
                 order.getUsuario().getUsername(),
                 order.getSubtotal(),
@@ -50,6 +51,7 @@ public class PurchaseOrderMapper {
                 order.getArea().getNombre(),
                 order.getStatus().name(),
                 resolveEmailStatus(order),
+                order.getDeliveryStatus().name(),
                 order.getTotal()
         );
     }

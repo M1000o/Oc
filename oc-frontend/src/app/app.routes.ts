@@ -87,7 +87,7 @@ export const routes: Routes = [
       {
         path: 'proveedores/:id',
         canActivate: [nonProviderGuard],
-        loadComponent: () => import('./features/proveedores/proveedor-detail').then((m) => m.ProveedorDetail)
+        loadComponent: () => import('./features/proveedores/proveedor-detail/proveedor-detail').then((m) => m.ProveedorDetail)
       },
       {
         path: 'configuracion',
@@ -97,10 +97,8 @@ export const routes: Routes = [
             (m) => m.ConfigurationPage
           )
       }
-       // ...otras rutas hijas protegidas
     ]
   },
-  // Rutas duplicadas eliminadas. Las rutas de guardados y enviados solo existen como hijas de portal con layout.
   {
     path: '**',
     canActivate: [fallbackRedirectGuard],

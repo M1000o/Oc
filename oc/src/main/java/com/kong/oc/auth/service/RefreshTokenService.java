@@ -37,7 +37,7 @@ public class RefreshTokenService {
         token.setTokenHash(hash);
         token.setUser(user);
         token.setExpiresAt(
-                Instant.now().plus(60, ChronoUnit.MINUTES)
+                Instant.now().plus(7, ChronoUnit.DAYS)
         );
         token.setRevoked(false);
         repository.save(token);

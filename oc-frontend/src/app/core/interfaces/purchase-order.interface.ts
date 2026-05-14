@@ -5,6 +5,8 @@ import {
 
 export type PurchaseOrderStatus = 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'CANCELADO';
 
+export type DeliveryStatus = 'PENDIENTE' | 'EN_PROCESO' | 'ENTREGADO' | 'ENTREGADO_PARCIAL' | 'RECHAZADO' | 'ATRASADO';
+
 export interface PurchaseOrderRequest {
   supplierId: number;
   orderDate: string;
@@ -29,6 +31,7 @@ export interface PurchaseOrderResponse {
   areaId: number;
   area: string;
   status: PurchaseOrderStatus;
+  deliveryStatus: DeliveryStatus;
   notas: string | null;
   createdBy: string;
   subtotal: number;
@@ -57,6 +60,7 @@ export interface PurchaseOrderSummary {
   id: number;
   purchaseOrderNumber: string;
   supplierName: string;
+  clientName: string;
   orderDate: string;
   deliveryDate: string;
   sedeId: number;
@@ -64,6 +68,7 @@ export interface PurchaseOrderSummary {
   areaId: number;
   area: string;
   status: PurchaseOrderStatus;
+  deliveryStatus: DeliveryStatus;
   total: number;
 }
 
@@ -79,4 +84,9 @@ export interface PurchaseOrderFilter {
 export interface PurchaseOrderStatusPayload {
   status: PurchaseOrderStatus;
   motivo?: string;
+}
+
+export interface DeliveryStatusPayload {
+  deliveryStatus: DeliveryStatus;
+  notas?: string;
 }

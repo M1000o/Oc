@@ -7,7 +7,9 @@ import { PurchaseOrderCompanyConfiguration } from '../../core/interfaces/configu
 import { ConfigurationService } from '../../core/services/configuration.service';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
-import { PurchaseOrderResponse } from '../../core/interfaces/purchase-order.interface';
+import { AppNotificationService } from '../../core/services/app-notification.service';
+import { PurchaseOrderResponse, DeliveryStatus } from '../../core/interfaces/purchase-order.interface';
+import { AuthService } from '../../core/auth/auth.service';
 
 interface PurchaseOrderPdfLineItem {
   item: string;
@@ -51,16 +53,21 @@ interface PurchaseOrderPdfViewModel {
   styleUrl: './purchase-order-detail-modal.component.css'
 })
 export class PurchaseOrderDetailModalComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly configurationService = inject(ConfigurationService);
   private readonly purchaseOrderService = inject(PurchaseOrderService);
   private readonly supplierDirectoryService = inject(SupplierDirectoryService);
+  private readonly notificationService = inject(AppNotificationService);
   private readonly currencyPipe = inject(CurrencyPipe);
   private readonly datePipe = inject(DatePipe);
   private readonly dialogRef = inject(MatDialogRef<PurchaseOrderDetailModalComponent>);
 
+  protected readonly isProvider = this.authService.isProviderUser();
   protected readonly isLoading = signal(true);
+  protected readonly isUpdating = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly viewModel = signal<PurchaseOrderPdfViewModel | null>(null);
+  protected readonly currentDeliveryStatus = signal<DeliveryStatus>('PENDIENTE');
 
   constructor(@Inject(MAT_DIALOG_DATA) public data: { orderId: number }) {}
 
@@ -74,6 +81,35 @@ export class PurchaseOrderDetailModalComponent implements OnInit {
 
   protected formatCurrency(value: number): string {
     return this.currencyPipe.transform(value, 'S/', 'symbol', '1.2-2') ?? `S/ ${value.toFixed(2)}`;
+  }
+
+  protected updateDeliveryStatus(status: DeliveryStatus): void {
+    if (this.isUpdating() || this.currentDeliveryStatus() === status) return;
+
+    if (this.currentDeliveryStatus() === 'ENTREGADO') {
+      this.notificationService.error('No se puede revertir un pedido ya marcado como ENTREGADO.');
+      return;
+    }
+
+    if (status === 'ENTREGADO') {
+      if (!confirm('¿Deseas marcar este pedido como ENTREGADO? Esta acción es irreversible.')) {
+        return;
+      }
+    }
+
+    this.isUpdating.set(true);
+    this.purchaseOrderService
+      .changeDeliveryStatus(this.data.orderId, { deliveryStatus: status })
+      .subscribe(({ data, error }) => {
+        this.isUpdating.set(false);
+        if (error) {
+          this.errorMessage.set(error);
+          return;
+        }
+        if (data) {
+          this.currentDeliveryStatus.set(data.deliveryStatus);
+        }
+      });
   }
 
   private loadOrderDetail(): void {
@@ -100,6 +136,7 @@ export class PurchaseOrderDetailModalComponent implements OnInit {
 
       const purchaseOrder = order.data;
       const company = configuration.data;
+      this.currentDeliveryStatus.set(purchaseOrder.deliveryStatus);
 
       this.supplierDirectoryService.getSupplierDetail(purchaseOrder.supplierId).subscribe({
         next: (response) => {

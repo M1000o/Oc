@@ -40,6 +40,107 @@
   letter-spacing: 0.025em;
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delivery-status-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delivery-status-control span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.status-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.status-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.status-btn.active {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.status-btn.warning.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.status-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.update-loader {
+  font-size: 1.2rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  color: #10b981;
+}
+
+.delivery-status-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delivery-status-display span:first-child {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-badge.ENTREGADO {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.status-badge.ENTREGADO_PARCIAL {
+  background: #fffbeb;
+  color: #d97706;
+}
+
 .btn-close {
   border: none;
   background: #f1f5f9;

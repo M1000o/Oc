@@ -22,7 +22,7 @@ public class JwtTokenService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("oc-auth-service")
                 .issuedAt(now)
-                .expiresAt(now.plus(15, ChronoUnit.HOURS))
+                .expiresAt(now.plus(15, ChronoUnit.MINUTES))
                 .subject(userId)
                 .claim("user", user)
                 .claim("roles", roles)

@@ -187,14 +187,13 @@
 }
 
 .field small,
-.section-error,
-.helper {
+.section-error {
   color: var(--danger);
   font-size: 0.74rem;
   line-height: 1.3;
 }
 
-.helper {
+.field small.helper {
   color: var(--text-secondary);
 }
 

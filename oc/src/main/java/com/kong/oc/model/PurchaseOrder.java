@@ -39,10 +39,6 @@ public class PurchaseOrder extends BaseEntity {
     private LocalDate deliveryDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sede_id", nullable = false)
-    private Sede sede;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id", nullable = false)
     private Area area;
 
@@ -99,4 +95,3 @@ public class PurchaseOrder extends BaseEntity {
         }
     }
 }
-

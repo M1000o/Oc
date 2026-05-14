@@ -8,7 +8,7 @@ import {
 } from '../../core/interfaces/purchase-order.interface';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { PurchaseOrderDetailModalComponent } from '../supplier-orders/purchase-order-detail-modal.component';
+import { PurchaseOrderDetailModalComponent } from '../supplier-orders/purchase-order-detail-modal/purchase-order-detail-modal.component';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 
 type ShipmentStatus = 'PENDIENTE' | 'APROBADO';

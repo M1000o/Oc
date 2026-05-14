@@ -134,9 +134,9 @@
 
 .sent-grid-header {
   display: grid;
-  grid-template-columns: 1.1fr 1.25fr 2.4fr 0.9fr 1.1fr 1.1fr 1.2fr;
+  grid-template-columns: 100px 140px 1fr 100px 120px 130px 100px;
   gap: 12px;
-  padding: 8px 10px;
+  padding: 12px 16px;
   border-bottom: 2px solid #e3e5ec;
   margin-bottom: 10px;
   color: #62708d;
@@ -147,10 +147,9 @@
 
 .align-center {
   text-align: center;
-  justify-content: center;
 }
 
-.sent-grid-header .align-right {
+.align-right {
   text-align: right;
 }
 
@@ -161,32 +160,45 @@
 
 .sent-row {
   display: grid;
-  grid-template-columns: 1.1fr 1.25fr 2.4fr 0.9fr 1.1fr 1.1fr 1.2fr;
+  grid-template-columns: 100px 140px 1fr 100px 120px 130px 100px;
   gap: 12px;
   align-items: center;
-  padding: 10px;
+  padding: 12px 16px;
   border: 1px solid #e0e2e8;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #ffffff;
-  transition:
-    background 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .sent-row:hover {
   background: #fbfcff;
-  box-shadow: 0 10px 30px rgba(30, 41, 59, 0.04);
+  box-shadow: 0 8px 24px rgba(30, 41, 59, 0.05);
   transform: translateY(-1px);
 }
 
-.sent-row .row-col {
-  cursor: pointer;
+.row-col {
+  color: #2a344d;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-col.align-center {
+  display: flex;
+  justify-content: center;
+}
+
+.row-col.align-right {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .delivery-actions {
   display: flex;
   gap: 6px;
+  justify-content: center;
 }
 
 .action-btn {

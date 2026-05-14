@@ -13,7 +13,6 @@ import com.kong.oc.model.*;
 import com.kong.oc.repository.ProductRepository;
 import com.kong.oc.repository.PurchaseOrderRepository;
 import com.kong.oc.repository.SupplierRepository;
-import com.kong.oc.repository.SedeRepository;
 import com.kong.oc.repository.AreaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,7 +37,6 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     private final ProductRepository productRepository;
     private final PurchaseOrderMapper mapper;
     private final UserRepository userRepository;
-    private final SedeRepository sedeRepository;
     private final AreaRepository areaRepository;
     private final PurchaseOrderEmailService purchaseOrderEmailService;
     private final PurchaseOrderDocumentService purchaseOrderDocumentService;
@@ -54,8 +52,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
         Supplier supplier = findSupplierOrThrow(request.supplierId());
         User user = findUserOrThrow(userId);
-        Sede sede = findSedeOrThrow(request.sedeId());
-        Area area = findAreaForSedeOrThrow(request.areaId(), sede.getId());
+        Area area = findAreaOrThrow(request.areaId());
 
         validateDates(request);
 
@@ -70,7 +67,6 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                 .supplier(supplier)
                 .orderDate(LocalDate.now())
                 .deliveryDate(request.deliveryDate())
-                .sede(sede)
                 .area(area)
                 .notas(request.notas())
                 .status(isDraft ? Status.BORRADOR : Status.PENDIENTE)
@@ -103,8 +99,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         }
 
         boolean isDraft = Boolean.TRUE.equals(request.saveDraft());
-        Sede sede = findSedeOrThrow(request.sedeId());
-        Area area = findAreaForSedeOrThrow(request.areaId(), sede.getId());
+        Area area = findAreaOrThrow(request.areaId());
 
         if(!order.getSupplier().getId().equals(request.supplierId())){
             Supplier newSupplier = findSupplierOrThrow(request.supplierId());
@@ -124,7 +119,6 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
         order.setOrderDate(request.orderDate());
         order.setDeliveryDate(request.deliveryDate());
-        order.setSede(sede);
         order.setArea(area);
         order.setNotas(request.notas());
         order.setStatus(isDraft ? Status.BORRADOR : Status.PENDIENTE);
@@ -159,6 +153,27 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     }
 
     @Override
+    @Transactional
+    public PurchaseOrderResponse changeDeliveryStatus(Long id, DeliveryStatusPayload deliveryStatusDTO) {
+        PurchaseOrder order = findOrderOrThrow(id);
+
+        if (order.getStatus() != Status.APROBADO) {
+            throw new BadRequestException("No se puede cambiar el estado de entrega si la orden no está APROBADA.");
+        }
+
+        order.setDeliveryStatus(deliveryStatusDTO.deliveryStatus());
+
+        if (deliveryStatusDTO.notas() != null && !deliveryStatusDTO.notas().isBlank()) {
+            String deliveryNotes = "[ENTREGA] " + deliveryStatusDTO.notas();
+            order.setNotas(order.getNotas() != null
+                    ? order.getNotas() + "\n" + deliveryNotes
+                    : deliveryNotes);
+        }
+
+        return mapper.toResponse(purchaseOrderRepository.save(order));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PurchaseOrderResponse findById(Long id) {
         return mapper.toResponse(findOrderWithDetailsOrThrow(id));
@@ -172,6 +187,8 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
             throw new BadRequestException("La fecha desde no puede ser posterior a la fecha hasta");
         }
 
+        String clientName = getClientName();
+
         return purchaseOrderRepository.findAllWithFilters(
                 filter.supplierId(),
                 filter.status(),
@@ -180,7 +197,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                 filter.sede(),
                 filter.area(),
                 pageable
-        ).map(mapper::toSummary);
+        ).map(order -> mapper.toSummary(order, clientName));
     }
 
     @Override
@@ -209,18 +226,20 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     public Page<PurchaseOrderSummary> findSentOrdersForSupplierUser(Long userId, Pageable pageable) {
         findUserOrThrow(userId);
         Supplier supplier = findSupplierByUserOrThrow(userId);
+        String clientName = getClientName();
         return purchaseOrderRepository
                 .findBySupplierIdAndEmailStatus(supplier.getId(), PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR, pageable)
-                .map(mapper::toSummary);
+                .map(order -> mapper.toSummary(order, clientName));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<PurchaseOrderSummary> findSentOrdersForSupplier(Long supplierId, Pageable pageable) {
         findSupplierOrThrow(supplierId);
+        String clientName = getClientName();
         return purchaseOrderRepository
                 .findBySupplierIdAndEmailStatus(supplierId, PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR, pageable)
-                .map(mapper::toSummary);
+                .map(order -> mapper.toSummary(order, clientName));
     }
 
     @Override
@@ -263,6 +282,11 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
         PurchaseOrderDocumentService.PreparedPurchaseOrderPdf preparedPdf = purchaseOrderDocumentService.preparePdf(order);
         return new PurchaseOrderPdfDownload(preparedPdf.fileName(), preparedPdf.content());
+    }
+
+    private String getClientName() {
+        var config = companyConfigurationService.getConfiguration();
+        return config != null ? config.companyName() : "Empresa Emisora";
     }
 
     private Map<Long, Product> loadAndValidateProducts(List<Long> productIds, Long supplierId, boolean isDraft) {
@@ -415,21 +439,14 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                         "No se encontró un proveedor asociado al usuario autenticado."));
     }
 
-    private Sede findSedeOrThrow(Long id) {
-        return sedeRepository.findById(id)
-                .filter(sede -> !Boolean.TRUE.equals(sede.getIsDeleted()))
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Sede no encontrada con ID: " + id));
-    }
-
-    private Area findAreaForSedeOrThrow(Long areaId, Long sedeId) {
+    private Area findAreaOrThrow(Long areaId) {
         Area area = areaRepository.findById(areaId)
                 .filter(value -> !Boolean.TRUE.equals(value.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Área no encontrada con ID: " + areaId));
 
-        if (!area.getSede().getId().equals(sedeId)) {
-            throw new BadRequestException("El área seleccionada no pertenece a la sede indicada.");
+        if (Boolean.TRUE.equals(area.getSede().getIsDeleted())) {
+            throw new BadRequestException("El área seleccionada pertenece a una sede inactiva.");
         }
 
         return area;

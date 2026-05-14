@@ -7,6 +7,7 @@ public record PurchaseOrderSummary(
         Long id,
         String purchaseOrderNumber,
         String supplierName,
+        String clientName,
         LocalDate orderDate,
         LocalDate deliveryDate,
         Long sedeId,

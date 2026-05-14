@@ -1,0 +1,287 @@
+<div layoutBody class="profile-workspace">
+  <header class="profile-topbar">
+    <button class="back-link" type="button" (click)="goBackToDirectory()">
+      <mat-icon aria-hidden="true">arrow_back</mat-icon>
+      Proveedores
+    </button>
+    <span class="bc-sep">/</span>
+    <span class="bc-current">Perfil del proveedor</span>
+    @if (supplier; as currentSupplier) {
+      <div class="ptb-actions">
+        @if (currentSupplier.contactoEmail) {
+          <a class="btn btn-ghost" [href]="'mailto:' + currentSupplier.contactoEmail">
+            <mat-icon aria-hidden="true">mail</mat-icon>
+            Contactar
+          </a>
+        }
+        <button class="btn btn-ghost" type="button" (click)="exportProfileCsv()">
+          <mat-icon aria-hidden="true">download</mat-icon>
+          Exportar base
+        </button>
+        <button class="btn btn-ghost" type="button" (click)="retryDetail()">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          Actualizar
+        </button>
+      </div>
+    }
+  </header>
+
+  <main class="profile-content">
+    @if (loadingDetail) {
+      <section class="state-card">
+        <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+        <p>Cargando perfil del proveedor...</p>
+      </section>
+    } @else if (detailError) {
+      <section class="state-card error">
+        <mat-icon aria-hidden="true">error</mat-icon>
+        <p>{{ detailError }}</p>
+        <button class="btn btn-primary" type="button" (click)="retryDetail()">Reintentar</button>
+      </section>
+    } @else if (supplier; as currentSupplier) {
+      <section class="profile-hero">
+        <div class="profile-icon-lg">{{ getSupplierInitials(currentSupplier.razonSocial) }}</div>
+        <div class="hero-info">
+          <div class="hero-name-row">
+            <h1 class="hero-name">{{ currentSupplier.razonSocial }}</h1>
+            <span [class]="getStatusClass(currentSupplier.estado)">
+              <span class="dot-sm"></span>
+              {{ getStatusLabel(currentSupplier.estado) }}
+            </span>
+          </div>
+          <p class="hero-ruc">
+            RUC {{ currentSupplier.ruc }} &nbsp;&nbsp;
+          </p>
+          <div class="tags">
+            @for (categoria of currentSupplier.categorias; track categoria) {
+              <span class="tag">{{ categoria }}</span>
+            } @empty {
+              <span class="tag tag-muted">Sin categorías asignadas</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="info-grid" aria-label="Indicadores del proveedor">
+        <article class="info-card">
+          <span class="stat-label">Productos vinculados</span>
+          <strong class="stat-value">{{ supplierProducts.length }}</strong>
+          <span class="stat-sub brand">Catálogo activo</span>
+        </article>
+        <article class="info-card">
+          <span class="stat-label">Servicios ofrecidos</span>
+          <strong class="stat-value">{{ supplierServices.length }}</strong>
+          <span class="stat-sub violet">Disponibles</span>
+        </article>
+        <article class="info-card">
+          <span class="stat-label">Días de crédito</span>
+          <strong class="stat-value">{{ currentSupplier.diasCredito ?? 0 }}</strong>
+          <span class="stat-sub muted">Días hábiles</span>
+        </article>
+        <article class="info-card">
+          <span class="stat-label">Detracción</span>
+          <strong class="stat-value compact">{{
+            currentSupplier.tieneCuentaDetraccion ? 'Sí' : 'No'
+          }}</strong>
+          <span class="stat-sub muted">{{
+            currentSupplier.tieneCuentaDetraccion ? 'Cuenta registrada' : 'Sin cuenta asociada'
+          }}</span>
+        </article>
+      </section>
+
+      <section class="two-panel">
+        <div class="side-stack">
+          <article class="section">
+            <header class="section-header">
+              <h2 class="section-title">
+                <mat-icon aria-hidden="true">person</mat-icon>
+                Contacto principal
+              </h2>
+            </header>
+            <div class="section-body">
+              <div class="info-group">
+                <span class="info-label">Nombre</span>
+                <p class="info-value">{{ currentSupplier.contactoNombre || 'No registrado' }}</p>
+              </div>
+              <div class="info-group">
+                <span class="info-label">Correo electrónico</span>
+                @if (currentSupplier.contactoEmail) {
+                  <a class="info-value link" [href]="'mailto:' + currentSupplier.contactoEmail">
+                    {{ currentSupplier.contactoEmail }}
+                  </a>
+                } @else {
+                  <p class="info-value muted">No registrado</p>
+                }
+              </div>
+              <div class="info-group">
+                <span class="info-label">Teléfono</span>
+                <p class="info-value">{{ currentSupplier.contactoTelefono || 'No registrado' }}</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="section">
+            <header class="section-header">
+              <h2 class="section-title">
+                <mat-icon aria-hidden="true">description</mat-icon>
+                Información administrativa
+              </h2>
+            </header>
+            <div class="section-body">
+              <div class="info-group">
+                <span class="info-label">Correo constancias</span>
+                <p class="info-value" [class.muted]="!currentSupplier.correoConstancias">
+                  {{ currentSupplier.correoConstancias || 'No registrado' }}
+                </p>
+              </div>
+              <div class="info-group">
+                <span class="info-label">Cuenta detracción</span>
+                <p class="info-value" [class.muted]="!currentSupplier.cuentaDetraccion">
+                  {{ currentSupplier.cuentaDetraccion || 'No registrada' }}
+                </p>
+              </div>
+              <hr class="info-divider" />
+              <div class="info-group">
+                <span class="info-label">Cobertura del proveedor</span>
+                <div class="tags info-tags">
+                  @for (categoria of currentSupplier.categorias; track categoria) {
+                    <span class="tag">{{ categoria }}</span>
+                  } @empty {
+                    <span class="tag tag-muted">Sin categorías asignadas</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <article class="tabs-wrap">
+          <div class="tabs-bar" role="tablist" aria-label="Catálogo del proveedor">
+            <button
+              class="tab-btn"
+              type="button"
+              [class.active]="activeTab === 'productos'"
+              (click)="setActiveTab('productos')"
+            >
+              <mat-icon aria-hidden="true">inventory_2</mat-icon>
+              Productos
+              <span class="tab-badge">{{ supplierProducts.length }}</span>
+            </button>
+            <button
+              class="tab-btn"
+              type="button"
+              [class.active]="activeTab === 'servicios'"
+              (click)="setActiveTab('servicios')"
+            >
+              <mat-icon aria-hidden="true">construction</mat-icon>
+              Servicios
+              <span class="tab-badge">{{ supplierServices.length }}</span>
+            </button>
+          </div>
+
+          @if (activeTab === 'productos') {
+            <section class="tab-panel">
+              <div class="tab-toolbar">
+                <label class="tab-search">
+                  <mat-icon aria-hidden="true">search</mat-icon>
+                  <input
+                    type="text"
+                    [(ngModel)]="productSearch"
+                    placeholder="Buscar producto..."
+                  />
+                </label>
+                <button class="btn btn-ghost compact-btn" type="button" (click)="exportProductsCsv()">
+                  <mat-icon aria-hidden="true">download</mat-icon>
+                  Exportar
+                </button>
+              </div>
+              <div class="table-scroll">
+                <table class="ftable">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Nombre del producto</th>
+                      <th>Categoría</th>
+                      <th>Unidad</th>
+                      <th>Precio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (product of filteredProducts; track trackByProductId($index, product)) {
+                      <tr>
+                        <td><span class="code-chip">{{ product.codigo }}</span></td>
+                        <td>{{ product.nombre }}</td>
+                        <td><span class="tag">{{ product.categoria }}</span></td>
+                        <td class="muted-cell">{{ product.unidad }}</td>
+                        <td><span class="price-value">{{ formatCurrency(product.precio) }}</span></td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="5">
+                          <div class="empty-state compact">
+                            <mat-icon aria-hidden="true">inventory_2</mat-icon>
+                            <p>Este proveedor aún no tiene productos registrados.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <footer class="tab-footer">
+                <span>Mostrando {{ filteredProducts.length }} producto(s)</span>
+              </footer>
+            </section>
+          } @else {
+            <section class="tab-panel">
+              <div class="tab-toolbar">
+                <label class="tab-search">
+                  <mat-icon aria-hidden="true">search</mat-icon>
+                  <input
+                    type="text"
+                    [(ngModel)]="serviceSearch"
+                    placeholder="Buscar servicio..."
+                  />
+                </label>
+              </div>
+              <div class="table-scroll">
+                <table class="ftable">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Servicio</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (service of filteredServices; track trackByServiceId($index, service)) {
+                      <tr>
+                        <td><span class="code-chip">SRV-{{ service.id }}</span></td>
+                        <td>{{ service.nombre }}</td>
+                        <td>
+                          <span class="status-inline"><span class="dot-sm"></span> Disponible</span>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="3">
+                          <div class="empty-state compact">
+                            <mat-icon aria-hidden="true">construction</mat-icon>
+                            <p>Este proveedor aún no tiene servicios registrados.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <footer class="tab-footer">
+                <span>Mostrando {{ filteredServices.length }} servicio(s)</span>
+              </footer>
+            </section>
+          }
+        </article>
+      </section>
+    }
+  </main>
+</div>

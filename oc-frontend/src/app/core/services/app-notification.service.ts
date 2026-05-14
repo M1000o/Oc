@@ -1,11 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-
-export type AppNotificationKind = 'success' | 'error';
-
-export interface AppNotificationState {
-  kind: AppNotificationKind;
-  message: string;
-}
+import { AppNotificationKind, AppNotificationState } from '../interfaces/notifications.interface';
 
 @Injectable({ providedIn: 'root' })
 export class AppNotificationService {

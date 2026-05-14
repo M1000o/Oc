@@ -74,7 +74,7 @@ public class PurchaseOrderPdfService {
         values.put("supplierRuc", escapeHtml(supplier.getRuc()));
         values.put("supplierContact", escapeHtml(resolveContactName(primaryContact)));
         values.put("supplierEmail", escapeHtml(resolveSupplierEmail(primaryContact, supplier)));
-        values.put("deliverySite", escapeHtml(defaultText(order.getSede().getName(), "No registrado")));
+        values.put("deliverySite", escapeHtml(defaultText(order.getArea().getSede().getName(), "No registrado")));
         values.put("deliveryArea", escapeHtml(defaultText(order.getArea().getNombre(), "No registrado")));
         values.put("requiredDate", formatNullableDate(order.getDeliveryDate()));
         values.put("paymentTerms", escapeHtml(resolvePaymentTerms(supplier)));

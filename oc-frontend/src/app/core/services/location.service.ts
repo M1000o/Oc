@@ -29,6 +29,60 @@ export class LocationService {
     );
   }
 
+  createSede(sede: Partial<SedeOption>): Observable<{ data: SedeOption | null; error: string }> {
+    return this.http.post<ApiResponse<SedeOption>>(this.sedesEndpoint, sede).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo crear la sede.'
+        })
+      )
+    );
+  }
+
+  updateSede(id: number, sede: Partial<SedeOption>): Observable<{ data: SedeOption | null; error: string }> {
+    return this.http.put<ApiResponse<SedeOption>>(`${this.sedesEndpoint}/${id}`, sede).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo actualizar la sede.'
+        })
+      )
+    );
+  }
+
+  deleteSede(id: number): Observable<{ success: boolean; error: string }> {
+    return this.http.delete<ApiResponse<void>>(`${this.sedesEndpoint}/${id}`).pipe(
+      map(() => ({
+        success: true,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          success: false,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo eliminar la sede.'
+        })
+      )
+    );
+  }
+
   getAreasBySede(sedeId: number): Observable<{ data: AreaOption[]; error: string }> {
     return this.http
       .get<ApiResponse<AreaOption[]>>(this.areasEndpoint, {
@@ -49,5 +103,59 @@ export class LocationService {
           })
         )
       );
+  }
+
+  createArea(area: Partial<AreaOption>): Observable<{ data: AreaOption | null; error: string }> {
+    return this.http.post<ApiResponse<AreaOption>>(this.areasEndpoint, area).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo crear el área.'
+        })
+      )
+    );
+  }
+
+  updateArea(id: number, area: Partial<AreaOption>): Observable<{ data: AreaOption | null; error: string }> {
+    return this.http.put<ApiResponse<AreaOption>>(`${this.areasEndpoint}/${id}`, area).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo actualizar el área.'
+        })
+      )
+    );
+  }
+
+  deleteArea(id: number): Observable<{ success: boolean; error: string }> {
+    return this.http.delete<ApiResponse<void>>(`${this.areasEndpoint}/${id}`).pipe(
+      map(() => ({
+        success: true,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          success: false,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo eliminar el área.'
+        })
+      )
+    );
   }
 }

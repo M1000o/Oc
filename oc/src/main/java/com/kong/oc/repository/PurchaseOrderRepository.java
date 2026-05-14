@@ -25,8 +25,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier
             JOIN FETCH po.usuario
-            JOIN FETCH po.sede
-            JOIN FETCH po.area
+            JOIN FETCH po.area ar
+            JOIN FETCH ar.sede
             WHERE po.id = :id
             """)
     Optional<PurchaseOrder> findByIdWithSupplierAndUser(@Param("id") Long id);
@@ -36,8 +36,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT DISTINCT po FROM PurchaseOrder po
             JOIN FETCH po.supplier
             JOIN FETCH po.usuario
-            JOIN FETCH po.sede
-            JOIN FETCH po.area
+            JOIN FETCH po.area ar
+            JOIN FETCH ar.sede
             LEFT JOIN FETCH po.details d
             LEFT JOIN FETCH d.product
             WHERE po.id = :id
@@ -48,8 +48,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
-            JOIN FETCH po.sede
-            JOIN FETCH po.area
+            JOIN FETCH po.area ar
+            JOIN FETCH ar.sede
             WHERE s.id = :supplierId
               AND po.emailStatus = :emailStatus
             """,
@@ -69,8 +69,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT DISTINCT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
-            JOIN FETCH po.sede
-            JOIN FETCH po.area
+            JOIN FETCH po.area ar
+            JOIN FETCH ar.sede
             LEFT JOIN FETCH po.details d
             LEFT JOIN FETCH d.product
             WHERE po.id = :orderId
@@ -89,8 +89,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             SELECT po FROM PurchaseOrder po
             JOIN FETCH po.supplier s
             JOIN FETCH po.usuario u
-            JOIN FETCH po.sede se
             JOIN FETCH po.area ar
+            JOIN FETCH ar.sede se
             WHERE (:proveedorId  IS NULL OR s.id            = :proveedorId)
               AND (:status       IS NULL OR po.status       = :status)
               AND (:fechaDesde   IS NULL OR po.orderDate   >= :fechaDesde)
@@ -101,8 +101,8 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             countQuery = """
             SELECT COUNT(po) FROM PurchaseOrder po
             JOIN po.supplier s
-            JOIN po.sede se
             JOIN po.area ar
+            JOIN ar.sede se
             WHERE (:proveedorId  IS NULL OR s.id            = :proveedorId)
               AND (:status       IS NULL OR po.status       = :status)
               AND (:fechaDesde   IS NULL OR po.orderDate   >= :fechaDesde)

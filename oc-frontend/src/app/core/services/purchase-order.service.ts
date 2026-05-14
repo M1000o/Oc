@@ -11,6 +11,7 @@ import {
   PurchaseOrderResponse,
   PurchaseOrderStatus,
   PurchaseOrderStatusPayload,
+  DeliveryStatusPayload,
   PurchaseOrderSummary
 } from '../interfaces/purchase-order.interface';
 import { PageResponse } from '../interfaces/page-response.interface';
@@ -105,6 +106,27 @@ export class PurchaseOrderService {
             error?.error?.message ||
             error?.error?.error ||
             'No se pudo actualizar el estado de la orden.'
+        })
+      )
+    );
+  }
+
+  changeDeliveryStatus(
+    id: number,
+    payload: DeliveryStatusPayload
+  ): Observable<{ data: PurchaseOrderResponse | null; error: string }> {
+    return this.http.patch<ApiResponse<PurchaseOrderResponse>>(`${this.endpoint}/${id}/delivery-status`, payload).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo actualizar el estado de entrega.'
         })
       )
     );
@@ -233,6 +255,39 @@ export class PurchaseOrderService {
         catchError((error) =>
           of({
             data: null,
+            error:
+              error?.error?.message ||
+              error?.error?.error ||
+              'No se pudieron cargar sus órdenes de compra.'
+          })
+        )
+      );
+  }
+
+  listAllSupplierOrders(): Observable<{ data: PurchaseOrderSummary[]; error: string }> {
+    return this.http
+      .get<ApiResponse<PageResponse<PurchaseOrderSummary>>>(`${this.endpoint}/supplier-view`, {
+        params: new HttpParams().set('page', 0).set('size', 50).set('sort', 'orderDate,DESC')
+      })
+      .pipe(
+        map((response) => response.data),
+        expand((page) =>
+          page && page.number + 1 < page.totalPages
+            ? this.http
+                .get<ApiResponse<PageResponse<PurchaseOrderSummary>>>(`${this.endpoint}/supplier-view`, {
+                  params: new HttpParams()
+                    .set('page', page.number + 1)
+                    .set('size', page.size || 50)
+                    .set('sort', 'orderDate,DESC')
+                })
+                .pipe(map((response) => response.data))
+            : EMPTY
+        ),
+        reduce((all, page) => [...all, ...(page?.content ?? [])], [] as PurchaseOrderSummary[]),
+        map((data) => ({ data, error: '' })),
+        catchError((error) =>
+          of({
+            data: [],
             error:
               error?.error?.message ||
               error?.error?.error ||

@@ -1,3 +1,4 @@
+import { UnitOption } from '../../features/portal-home/portal-selection-modal/product-selection-modal.component';
 import {
   PurchaseOrderDetailRequest,
   PurchaseOrderDetailResponse
@@ -89,4 +90,16 @@ export interface PurchaseOrderStatusPayload {
 export interface DeliveryStatusPayload {
   deliveryStatus: DeliveryStatus;
   notas?: string;
+}
+
+export interface OrderRow {
+  id: number;
+  productId: number;
+  code: string;
+  description: string;
+  unit: UnitOption;
+  unitPrice: number;
+  quantity: number;
+  serviceId: number;
+  serviceName: string;
 }

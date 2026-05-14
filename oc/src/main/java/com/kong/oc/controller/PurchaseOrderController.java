@@ -79,6 +79,19 @@ public class PurchaseOrderController {
         );
     }
 
+    @PatchMapping("/{id}/delivery-status")
+    public ResponseEntity<ApiResponse<PurchaseOrderResponse>> changeDeliveryStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody DeliveryStatusPayload deliveryStatusDTO
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Estado de entrega de orden de compra actualizado",
+                        purchaseOrderService.changeDeliveryStatus(id, deliveryStatusDTO)
+                )
+        );
+    }
+
     @PostMapping("/{id}/send-email")
     public ResponseEntity<ApiResponse<PurchaseOrderEmailResponse>> sendEmail(
             @PathVariable Long id,

@@ -18,9 +18,6 @@ public record PurchaseOrderRequest(
         @FutureOrPresent(message = "La fecha de entrega no puede ser anterior a hoy")
         LocalDate deliveryDate,
 
-        @NotNull(message = "El local es obligatorio")
-        Long sedeId,
-
         @NotNull(message = "El area es obligatoria")
         Long areaId,
 

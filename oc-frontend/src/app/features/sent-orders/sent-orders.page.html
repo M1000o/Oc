@@ -15,7 +15,9 @@
       <div>FECHA DE REGISTRO</div>
       <div>DESTINO</div>
       <div class="align-right">TOTAL</div>
-      <div class="align-right">ESTADO</div>
+      <div class="align-center">ESTADO OC</div>
+      <div class="align-center">ESTADO ENTREGA</div>
+      <div class="align-center">ACCIONES</div>
     </div>
     <div class="sent-list">
       @if (isLoading()) {
@@ -30,10 +32,10 @@
         </div>
       } @else {
         @for (order of pagedOrders(); track order.id) {
-          <article class="sent-row" (click)="viewDetail(order.id)">
-            <div class="row-col order-col">{{ order.orderNumber }}</div>
-            <div class="row-col date-col">{{ order.shipmentDate }}</div>
-            <div class="row-col destination-col">
+          <article class="sent-row">
+            <div class="row-col order-col" (click)="viewDetail(order.id)">{{ order.orderNumber }}</div>
+            <div class="row-col date-col" (click)="viewDetail(order.id)">{{ order.shipmentDate }}</div>
+            <div class="row-col destination-col" (click)="viewDetail(order.id)">
               <span class="location-icon">
                 <mat-icon aria-hidden="true">location_on</mat-icon>
               </span>
@@ -43,9 +45,9 @@
               </div>
             </div>
 
-            <div class="row-col total-col">{{ toCurrency(order.total) }}</div>
+            <div class="row-col total-col" (click)="viewDetail(order.id)">{{ toCurrency(order.total) }}</div>
 
-            <div class="row-col status-col">
+            <div class="row-col status-col align-center" (click)="viewDetail(order.id)">
               @if (order.status === 'PENDIENTE') {
                 <span class="status-chip transit">
                   <span class="dot"></span>
@@ -57,6 +59,33 @@
                   {{ resolveStatusLabel(order.status) }}
                 </span>
               }
+            </div>
+
+            <div class="row-col status-col align-center">
+              <span class="status-chip" [ngClass]="getDeliveryStatusClass(order.deliveryStatus)">
+                {{ resolveDeliveryStatusLabel(order.deliveryStatus) }}
+              </span>
+            </div>
+
+            <div class="row-col action-col align-center">
+              <div class="delivery-actions">
+                <button
+                  class="action-btn success"
+                  title="Marcar como Entregado"
+                  [disabled]="isUpdating() === order.id || order.deliveryStatus === 'ENTREGADO' || order.status !== 'APROBADO'"
+                  (click)="updateDeliveryStatus(order, 'ENTREGADO')"
+                >
+                  <mat-icon>done_all</mat-icon>
+                </button>
+                <button
+                  class="action-btn warning"
+                  title="Marcar como Parcial"
+                  [disabled]="isUpdating() === order.id || order.deliveryStatus === 'ENTREGADO_PARCIAL' || order.deliveryStatus === 'ENTREGADO' || order.status !== 'APROBADO'"
+                  (click)="updateDeliveryStatus(order, 'ENTREGADO_PARCIAL')"
+                >
+                  <mat-icon>inventory</mat-icon>
+                </button>
+              </div>
             </div>
           </article>
         } @empty {
@@ -91,5 +120,35 @@
         </button>
       </div>
     </footer>
+
+    @if (updateTarget()) {
+      <div class="product-modal-backdrop" (click)="closeConfirmModal()">
+        <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmDeliveryModalTitle" (click)="$event.stopPropagation()">
+          <header class="confirm-modal__header">
+            <div class="confirm-modal__icon warning" aria-hidden="true">!</div>
+            <div>
+              <h2 id="confirmDeliveryModalTitle">Confirmar Entrega</h2>
+              <p>Esta accion es irreversible.</p>
+            </div>
+          </header>
+
+          <div class="confirm-modal__content">
+            <p>
+              ¿Deseas marcar el pedido <strong>{{ updateTarget()?.orderNumber }}</strong> como <strong>ENTREGADO</strong>?
+              Una vez confirmada la entrega completa, no podrás revertir el estado a pendiente o parcial.
+            </p>
+          </div>
+
+          <footer class="confirm-modal__footer">
+            <button type="button" class="btn btn-secondary" [disabled]="isUpdating() !== null" (click)="closeConfirmModal()">
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-primary" [disabled]="isUpdating() !== null" (click)="confirmDeliveryUpdate()">
+              <span>{{ isUpdating() !== null ? 'Procesando...' : 'Confirmar Entrega' }}</span>
+            </button>
+          </footer>
+        </section>
+      </div>
+    }
   </section>
 </div>

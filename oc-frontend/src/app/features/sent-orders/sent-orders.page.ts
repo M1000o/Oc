@@ -2,12 +2,14 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import {
+  DeliveryStatus,
   PurchaseOrderStatus,
   PurchaseOrderSummary
 } from '../../core/interfaces/purchase-order.interface';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PurchaseOrderDetailModalComponent } from '../supplier-orders/purchase-order-detail-modal.component';
+import { AppNotificationService } from '../../core/services/app-notification.service';
 
 type ShipmentStatus = 'PENDIENTE' | 'APROBADO';
 
@@ -19,6 +21,7 @@ interface SentOrderView {
   supplierName: string;
   total: number;
   status: ShipmentStatus;
+  deliveryStatus: DeliveryStatus;
 }
 
 @Component({
@@ -30,6 +33,7 @@ interface SentOrderView {
 })
 export class SentOrdersPage implements OnInit {
   private readonly purchaseOrderService = inject(PurchaseOrderService);
+  private readonly notificationService = inject(AppNotificationService);
   private readonly dialog = inject(MatDialog);
   private readonly datePipe = inject(DatePipe);
   private readonly currencyPipe = inject(CurrencyPipe);
@@ -37,8 +41,12 @@ export class SentOrdersPage implements OnInit {
   protected readonly pageSize = 4;
   protected readonly currentPage = signal(1);
   protected readonly isLoading = signal(true);
+  protected readonly isUpdating = signal<number | null>(null);
   protected readonly errorMessage = signal('');
   protected readonly orders = signal<SentOrderView[]>([]);
+  
+  protected updateTarget = signal<SentOrderView | null>(null);
+  protected pendingDeliveryStatus = signal<DeliveryStatus | null>(null);
 
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.orders().length / this.pageSize))
@@ -67,15 +75,68 @@ export class SentOrdersPage implements OnInit {
     }
   }
 
+  protected updateDeliveryStatus(order: SentOrderView, status: DeliveryStatus): void {
+    if (this.isUpdating() === order.id || order.deliveryStatus === status) return;
+
+    if (order.status !== 'APROBADO') {
+      this.notificationService.error('Solo se puede cambiar el estado de entrega si la orden está APROBADA.');
+      return;
+    }
+
+    if (order.deliveryStatus === 'ENTREGADO') {
+      this.notificationService.error('No se puede revertir un pedido ya marcado como ENTREGADO.');
+      return;
+    }
+
+    if (status === 'ENTREGADO') {
+      this.updateTarget.set(order);
+      this.pendingDeliveryStatus.set(status);
+      return;
+    }
+
+    this.executeDeliveryStatusUpdate(order.id, status);
+  }
+
+  protected closeConfirmModal(): void {
+    this.updateTarget.set(null);
+    this.pendingDeliveryStatus.set(null);
+  }
+
+  protected confirmDeliveryUpdate(): void {
+    const target = this.updateTarget();
+    const status = this.pendingDeliveryStatus();
+
+    if (!target || !status) return;
+
+    this.executeDeliveryStatusUpdate(target.id, status);
+    this.closeConfirmModal();
+  }
+
+  private executeDeliveryStatusUpdate(orderId: number, status: DeliveryStatus): void {
+    this.isUpdating.set(orderId);
+    this.purchaseOrderService
+      .changeDeliveryStatus(orderId, { deliveryStatus: status })
+      .subscribe(({ error }) => {
+        this.isUpdating.set(null);
+        if (error) {
+          this.notificationService.error(error);
+          return;
+        }
+        this.notificationService.success('Estado de entrega actualizado correctamente.');
+        this.loadOrders();
+      });
+  }
+
   protected exportReport(): void {
-    const header = ['Pedido', 'FechaRegistro', 'Destino', 'Proveedor', 'Total', 'Estado'];
+    const header = ['Pedido', 'FechaRegistro', 'Destino', 'Proveedor', 'Total', 'Estado OC', 'Estado Entrega'];
     const rows = this.orders().map((order) => [
       order.orderNumber,
       order.shipmentDate,
       order.destination,
       order.supplierName,
       this.toCurrency(order.total),
-      this.resolveStatusLabel(order.status)
+      this.resolveStatusLabel(order.status),
+      this.resolveDeliveryStatusLabel(order.deliveryStatus)
     ]);
 
     const csv = [header, ...rows]
@@ -99,13 +160,39 @@ export class SentOrdersPage implements OnInit {
     return status === 'APROBADO' ? 'Aprobado' : 'Pendiente';
   }
 
+  protected resolveDeliveryStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDIENTE': return 'Pendiente';
+      case 'EN_PROCESO': return 'En Proceso';
+      case 'ENTREGADO': return 'Entregado';
+      case 'ENTREGADO_PARCIAL': return 'Parcial';
+      case 'RECHAZADO': return 'Rechazado';
+      case 'ATRASADO': return 'Atrasado';
+      default: return status;
+    }
+  }
+
+  protected getDeliveryStatusClass(status: string): string {
+    switch (status) {
+      case 'ENTREGADO': return 'delivered';
+      case 'ENTREGADO_PARCIAL': return 'partial';
+      case 'RECHAZADO':
+      case 'ATRASADO': return 'error';
+      default: return 'transit';
+    }
+  }
+
   protected viewDetail(id: number): void {
-    this.dialog.open(PurchaseOrderDetailModalComponent, {
+    const dialogRef = this.dialog.open(PurchaseOrderDetailModalComponent, {
       data: { orderId: id },
       width: '1100px',
       maxWidth: '95vw',
       maxHeight: '90vh',
       panelClass: 'purchase-order-detail-dialog'
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.loadOrders();
     });
   }
 
@@ -114,7 +201,7 @@ export class SentOrdersPage implements OnInit {
     this.errorMessage.set('');
 
     this.purchaseOrderService
-      .listPurchaseOrdersPage({}, 0, 50)
+      .listPurchaseOrdersPage({}, 0, 100) // Increased size for filtering
       .subscribe(({ data, error }) => {
         this.isLoading.set(false);
 
@@ -129,7 +216,6 @@ export class SentOrdersPage implements OnInit {
             .filter((order) => this.isSentOrderStatus(order.status))
             .map((order) => this.toSentOrderView(order))
         );
-        this.currentPage.set(1);
       });
   }
 
@@ -148,7 +234,8 @@ export class SentOrdersPage implements OnInit {
       destination: `${order.sede} · ${order.area}`,
       supplierName: order.supplierName,
       total: Number(order.total ?? 0),
-      status: normalizedStatus === 'APROBADO' ? 'APROBADO' : 'PENDIENTE'
+      status: normalizedStatus === 'APROBADO' ? 'APROBADO' : 'PENDIENTE',
+      deliveryStatus: order.deliveryStatus
     };
   }
 

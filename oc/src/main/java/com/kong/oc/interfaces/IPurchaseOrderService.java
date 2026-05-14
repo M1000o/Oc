@@ -36,4 +36,7 @@ public interface IPurchaseOrderService {
 
     /** Descarga PDF de una orden de compra según permisos del usuario autenticado. */
     PurchaseOrderPdfDownload downloadPdf(Long orderId, Long userId, boolean isAdmin);
+
+    /** Cambia el estado de entrega de una orden. */
+    PurchaseOrderResponse changeDeliveryStatus(Long id, DeliveryStatusPayload deliveryStatusDTO);
 }

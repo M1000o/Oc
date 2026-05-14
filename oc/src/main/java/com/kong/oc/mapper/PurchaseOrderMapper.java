@@ -22,8 +22,8 @@ public class PurchaseOrderMapper {
                 order.getSupplier().getRazonSocial(),
                 order.getOrderDate(),
                 order.getDeliveryDate(),
-                order.getSede().getId(),
-                order.getSede().getName(),
+                order.getArea().getSede().getId(),
+                order.getArea().getSede().getName(),
                 order.getArea().getId(),
                 order.getArea().getNombre(),
                 order.getStatus().name(),
@@ -38,15 +38,16 @@ public class PurchaseOrderMapper {
         );
     }
 
-    public PurchaseOrderSummary toSummary(PurchaseOrder order){
+    public PurchaseOrderSummary toSummary(PurchaseOrder order, String clientName){
         return new PurchaseOrderSummary(
                 order.getId(),
                 order.getPurchaseOrderNumber(),
                 order.getSupplier().getRazonSocial(),
+                clientName,
                 order.getOrderDate(),
                 order.getDeliveryDate(),
-                order.getSede().getId(),
-                order.getSede().getName(),
+                order.getArea().getSede().getId(),
+                order.getArea().getSede().getName(),
                 order.getArea().getId(),
                 order.getArea().getNombre(),
                 order.getStatus().name(),

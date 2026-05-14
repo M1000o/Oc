@@ -6,14 +6,12 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import {
+  OrderRow,
   PurchaseOrderEmailResponse,
   PurchaseOrderRequest,
   PurchaseOrderResponse
 } from '../../core/interfaces/purchase-order.interface';
-import {
-  OrderSummaryDraftService,
-  OrderSummaryDraftState
-} from '../../core/services/order-summary-draft.service';
+import { OrderSummaryDraftState} from '../../core/interfaces/order-summary.interface'
 import { ProductResponse } from '../../core/interfaces/product-response.interface';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ProductCatalogService } from '../../core/services/product-catalog.service';
@@ -21,31 +19,21 @@ import { PurchaseOrderService } from '../../core/services/purchase-order.service
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
 import { LocationService } from '../../core/services/location.service';
 import { AreaOption, SedeOption } from '../../core/interfaces/location.interface';
-import { ServiceProviderModalComponent } from './service-provider-modal.component';
+import { ServiceProviderModalComponent } from './service-provider-modal/service-provider-modal.component'; 
 import { ProviderSelection } from '../../core/interfaces/provider-option.interface';
 import {
   SendOrderModalComponent,
   SendOrderModalPreviewPayload,
   SendOrderModalSubmitPayload
-} from './send-order-modal.component';
+} from './send-order-modal/send-order-modal.component';
 import {
   ProductSelectionItem,
   ProductSelectionModalComponent,
   UnitOption
-} from './product-selection-modal.component';
+} from './portal-selection-modal/product-selection-modal.component';
 import { ConfirmExitModalComponent } from '../../shared/components/confirm-exit-modal/confirm-exit-modal.component';
+import { OrderSummaryDraftService } from '../../core/services/order-summary-draft.service';
 
-interface OrderRow {
-  id: number;
-  productId: number;
-  code: string;
-  description: string;
-  unit: UnitOption;
-  unitPrice: number;
-  quantity: number;
-  serviceId: number;
-  serviceName: string;
-}
 
 @Component({
   selector: 'app-portal-home-page',

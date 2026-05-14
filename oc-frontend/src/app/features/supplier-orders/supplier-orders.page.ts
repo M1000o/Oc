@@ -10,7 +10,7 @@ import {
 } from '../../core/interfaces/purchase-order.interface';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { PurchaseOrderDetailModalComponent } from './purchase-order-detail-modal.component';
+import { PurchaseOrderDetailModalComponent } from './purchase-order-detail-modal/purchase-order-detail-modal.component';
 
 @Component({
   selector: 'app-supplier-orders-page',

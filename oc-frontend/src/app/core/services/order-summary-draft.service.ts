@@ -1,30 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ProviderSelection } from '../interfaces/provider-option.interface';
-import { UnitOption } from '../../features/portal-home/product-selection-modal.component';
-
-export interface OrderSummaryDraftRow {
-  id: number;
-  productId: number;
-  code: string;
-  description: string;
-  unit: UnitOption;
-  unitPrice: number;
-  quantity: number;
-  serviceId: number;
-  serviceName: string;
-}
-
-export interface OrderSummaryDraftState {
-  rows: OrderSummaryDraftRow[];
-  summaryProviderSelection: ProviderSelection | null;
-  dispatchDate: string;
-  deliverySiteId: number;
-  deliverySite: string;
-  deliveryAreaId: number;
-  deliveryArea: string;
-  notes: string;
-  nextRowId: number;
-}
+import { OrderSummaryDraftState } from '../interfaces/order-summary.interface';
 
 @Injectable({ providedIn: 'root' })
 export class OrderSummaryDraftService {

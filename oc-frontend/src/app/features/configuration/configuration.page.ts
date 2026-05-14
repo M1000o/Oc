@@ -3,8 +3,10 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { PurchaseOrderCompanyConfiguration } from '../../core/interfaces/configuration.interface';
+import { AreaOption, SedeOption } from '../../core/interfaces/location.interface';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ConfigurationService } from '../../core/services/configuration.service';
+import { LocationService } from '../../core/services/location.service';
 
 @Component({
   selector: 'app-configuration-page',
@@ -15,6 +17,7 @@ import { ConfigurationService } from '../../core/services/configuration.service'
 export class ConfigurationPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly configurationService = inject(ConfigurationService);
+  private readonly locationService = inject(LocationService);
   private readonly notificationService = inject(AppNotificationService);
 
   protected readonly form = this.formBuilder.nonNullable.group({
@@ -23,13 +26,29 @@ export class ConfigurationPage implements OnInit {
     companyAddress: ['', [Validators.required, Validators.maxLength(280)]]
   });
 
+  protected readonly sedeForm = this.formBuilder.nonNullable.group({
+    id: [null as number | null],
+    name: ['', [Validators.required, Validators.maxLength(100)]]
+  });
+
+  protected readonly areaForm = this.formBuilder.nonNullable.group({
+    id: [null as number | null],
+    nombre: ['', [Validators.required, Validators.maxLength(100)]],
+    sedeId: [null as number | null, [Validators.required]]
+  });
+
   protected loading = true;
   protected saving = false;
   protected errorMessage = '';
   protected lastSavedConfiguration: PurchaseOrderCompanyConfiguration | null = null;
 
+  protected sedes: SedeOption[] = [];
+  protected areas: AreaOption[] = [];
+  protected selectedSedeId: number | null = null;
+
   ngOnInit(): void {
     this.loadConfiguration();
+    this.loadSedes();
   }
 
   protected loadConfiguration(): void {
@@ -54,6 +73,20 @@ export class ConfigurationPage implements OnInit {
 
       this.lastSavedConfiguration = result.data;
       this.form.reset(result.data);
+    });
+  }
+
+  protected loadSedes(): void {
+    this.locationService.getSedes().subscribe((result) => {
+      this.sedes = result.data;
+    });
+  }
+
+  protected loadAreas(sedeId: number): void {
+    this.selectedSedeId = sedeId;
+    this.areaForm.patchValue({ sedeId });
+    this.locationService.getAreasBySede(sedeId).subscribe((result) => {
+      this.areas = result.data;
     });
   }
 
@@ -84,6 +117,90 @@ export class ConfigurationPage implements OnInit {
         'Configuración guardada. Los próximos PDFs usarán estos datos.',
         3200
       );
+    });
+  }
+
+  protected saveSede(): void {
+    if (this.sedeForm.invalid) {
+      this.sedeForm.markAllAsTouched();
+      return;
+    }
+
+    const { id, name } = this.sedeForm.getRawValue();
+    const obs = id 
+      ? this.locationService.updateSede(id, { name }) 
+      : this.locationService.createSede({ name });
+
+    obs.subscribe((result) => {
+      if (result.error) {
+        this.notificationService.error(result.error);
+        return;
+      }
+      this.notificationService.success(id ? 'Sede actualizada' : 'Sede creada');
+      this.sedeForm.reset();
+      this.loadSedes();
+    });
+  }
+
+  protected editSede(sede: SedeOption): void {
+    this.sedeForm.reset({ id: sede.id, name: sede.name });
+  }
+
+  protected deleteSede(id: number): void {
+    if (!confirm('¿Estás seguro de eliminar esta sede? También se eliminarán sus áreas.')) return;
+
+    this.locationService.deleteSede(id).subscribe((result) => {
+      if (result.error) {
+        this.notificationService.error(result.error);
+        return;
+      }
+      this.notificationService.success('Sede eliminada');
+      this.loadSedes();
+      if (this.selectedSedeId === id) {
+        this.selectedSedeId = null;
+        this.areas = [];
+      }
+    });
+  }
+
+  protected saveArea(): void {
+    if (this.areaForm.invalid) {
+      this.areaForm.markAllAsTouched();
+      return;
+    }
+
+    const { id, nombre, sedeId } = this.areaForm.getRawValue();
+    if (!sedeId) return;
+
+    const obs = id 
+      ? this.locationService.updateArea(id, { nombre, sedeId }) 
+      : this.locationService.createArea({ nombre, sedeId });
+
+    obs.subscribe((result) => {
+      if (result.error) {
+        this.notificationService.error(result.error);
+        return;
+      }
+      this.notificationService.success(id ? 'Área actualizada' : 'Área creada');
+      this.areaForm.reset({ id: null, nombre: '', sedeId });
+      this.loadAreas(sedeId);
+    });
+  }
+
+  protected editArea(area: AreaOption): void {
+    this.areaForm.reset({ id: area.id, nombre: area.nombre, sedeId: area.sedeId });
+  }
+
+  protected deleteArea(area: AreaOption): void {
+    if (!confirm('¿Estás seguro de eliminar esta área?')) return;
+
+    this.locationService.deleteArea(area.id).subscribe((result) => {
+      if (result.error) {
+        this.notificationService.error(result.error);
+        return;
+      }
+      this.notificationService.success('Área eliminada');
+      this.loadAreas(area.sedeId);
     });
   }
 

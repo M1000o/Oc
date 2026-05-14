@@ -21,77 +21,176 @@
     </section>
   } @else {
     <main class="configuration-grid">
-      <section class="settings-card">
-        <div class="card-head">
-          <div class="card-icon">
-            <mat-icon aria-hidden="true">receipt_long</mat-icon>
+      <div class="main-column">
+        <section class="settings-card">
+          <div class="card-head">
+            <div class="card-icon">
+              <mat-icon aria-hidden="true">receipt_long</mat-icon>
+            </div>
+            <div>
+              <h2>Empresa emisora</h2>
+              <p>Información fiscal usada por el generador de PDF del backend.</p>
+            </div>
           </div>
-          <div>
-            <h2>Empresa emisora</h2>
-            <p>Información fiscal usada por el generador de PDF del backend.</p>
-          </div>
+
+          @if (errorMessage) {
+            <div class="feedback-banner error">
+              <mat-icon aria-hidden="true">error</mat-icon>
+              <span>{{ errorMessage }}</span>
+            </div>
+          }
+
+          <form class="settings-form" [formGroup]="form" (ngSubmit)="saveConfiguration()">
+            <label class="field">
+              <span>Razón social</span>
+              <input
+                type="text"
+                formControlName="companyName"
+                placeholder="Razón social de la empresa"
+                maxlength="180"
+              />
+              @if (hasFieldError('companyName')) {
+                <small>{{ getFieldError('companyName') }}</small>
+              }
+            </label>
+
+            <label class="field">
+              <span>RUC</span>
+              <input
+                type="text"
+                formControlName="companyRuc"
+                placeholder="RUC de 11 dígitos"
+                inputmode="numeric"
+                maxlength="11"
+              />
+              @if (hasFieldError('companyRuc')) {
+                <small>{{ getFieldError('companyRuc') }}</small>
+              }
+            </label>
+
+            <label class="field full">
+              <span>Dirección fiscal</span>
+              <textarea
+                formControlName="companyAddress"
+                placeholder="Dirección fiscal de la empresa"
+                rows="3"
+                maxlength="280"
+              ></textarea>
+              @if (hasFieldError('companyAddress')) {
+                <small>{{ getFieldError('companyAddress') }}</small>
+              }
+            </label>
+
+            <div class="form-actions">
+              <button class="btn btn-ghost" type="button" (click)="resetForm()" [disabled]="saving">
+                <mat-icon aria-hidden="true">undo</mat-icon>
+                Deshacer
+              </button>
+              <button class="btn btn-primary" type="submit" [disabled]="saving">
+                <mat-icon aria-hidden="true">{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+                {{ saving ? 'Guardando...' : 'Guardar configuración' }}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <div class="management-row">
+          <section class="settings-card">
+            <div class="card-head">
+              <div class="card-icon">
+                <mat-icon aria-hidden="true">business</mat-icon>
+              </div>
+              <div>
+                <h2>Sedes</h2>
+                <p>Gestiona las sedes de la empresa.</p>
+              </div>
+            </div>
+
+            <form class="simple-form" [formGroup]="sedeForm" (ngSubmit)="saveSede()">
+              <label class="field">
+                <span>Nombre de la sede</span>
+                <div class="input-with-btn">
+                  <input type="text" formControlName="name" placeholder="Ej. Lima, Trujillo..." />
+                  <button class="btn btn-primary" type="submit" [disabled]="sedeForm.invalid">
+                    <mat-icon aria-hidden="true">{{ sedeForm.value.id ? 'edit' : 'add' }}</mat-icon>
+                  </button>
+                </div>
+              </label>
+              @if (sedeForm.value.id) {
+                <button class="btn btn-link" type="button" (click)="sedeForm.reset()">Cancelar edición</button>
+              }
+            </form>
+
+            <div class="data-list">
+              @for (sede of sedes; track sede.id) {
+                <div class="data-item" [class.selected]="selectedSedeId === sede.id" (click)="loadAreas(sede.id)">
+                  <span>{{ sede.name }}</span>
+                  <div class="item-actions">
+                    <button class="icon-btn" title="Editar" (click)="editSede(sede); $event.stopPropagation()">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button class="icon-btn danger" title="Eliminar" (click)="deleteSede(sede.id); $event.stopPropagation()">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="settings-card">
+            <div class="card-head">
+              <div class="card-icon">
+                <mat-icon aria-hidden="true">groups</mat-icon>
+              </div>
+              <div>
+                <h2>Áreas</h2>
+                <p>Gestiona las áreas para la sede seleccionada.</p>
+              </div>
+            </div>
+
+            @if (selectedSedeId) {
+              <form class="simple-form" [formGroup]="areaForm" (ngSubmit)="saveArea()">
+                <label class="field">
+                  <span>Nombre del área</span>
+                  <div class="input-with-btn">
+                    <input type="text" formControlName="nombre" placeholder="Ej. Logística, Ventas..." />
+                    <button class="btn btn-primary" type="submit" [disabled]="areaForm.invalid">
+                      <mat-icon aria-hidden="true">{{ areaForm.value.id ? 'edit' : 'add' }}</mat-icon>
+                    </button>
+                  </div>
+                </label>
+                @if (areaForm.value.id) {
+                  <button class="btn btn-link" type="button" (click)="areaForm.reset({ id: null, nombre: '', sedeId: selectedSedeId })">Cancelar edición</button>
+                }
+              </form>
+
+              <div class="data-list">
+                @for (area of areas; track area.id) {
+                  <div class="data-item">
+                    <span>{{ area.nombre }}</span>
+                    <div class="item-actions">
+                      <button class="icon-btn" title="Editar" (click)="editArea(area)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button class="icon-btn danger" title="Eliminar" (click)="deleteArea(area)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="empty-state">No hay áreas registradas para esta sede.</p>
+                }
+              </div>
+            } @else {
+              <div class="empty-selection">
+                <mat-icon>arrow_back</mat-icon>
+                <p>Selecciona una sede para ver y gestionar sus áreas.</p>
+              </div>
+            }
+          </section>
         </div>
-
-        @if (errorMessage) {
-          <div class="feedback-banner error">
-            <mat-icon aria-hidden="true">error</mat-icon>
-            <span>{{ errorMessage }}</span>
-          </div>
-        }
-
-        <form class="settings-form" [formGroup]="form" (ngSubmit)="saveConfiguration()">
-          <label class="field">
-            <span>Razón social</span>
-            <input
-              type="text"
-              formControlName="companyName"
-              placeholder="Razón social de la empresa"
-              maxlength="180"
-            />
-            @if (hasFieldError('companyName')) {
-              <small>{{ getFieldError('companyName') }}</small>
-            }
-          </label>
-
-          <label class="field">
-            <span>RUC</span>
-            <input
-              type="text"
-              formControlName="companyRuc"
-              placeholder="RUC de 11 dígitos"
-              inputmode="numeric"
-              maxlength="11"
-            />
-            @if (hasFieldError('companyRuc')) {
-              <small>{{ getFieldError('companyRuc') }}</small>
-            }
-          </label>
-
-          <label class="field full">
-            <span>Dirección fiscal</span>
-            <textarea
-              formControlName="companyAddress"
-              placeholder="Dirección fiscal de la empresa"
-              rows="3"
-              maxlength="280"
-            ></textarea>
-            @if (hasFieldError('companyAddress')) {
-              <small>{{ getFieldError('companyAddress') }}</small>
-            }
-          </label>
-
-          <div class="form-actions">
-            <button class="btn btn-ghost" type="button" (click)="resetForm()" [disabled]="saving">
-              <mat-icon aria-hidden="true">undo</mat-icon>
-              Deshacer
-            </button>
-            <button class="btn btn-primary" type="submit" [disabled]="saving">
-              <mat-icon aria-hidden="true">{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
-              {{ saving ? 'Guardando...' : 'Guardar configuración' }}
-            </button>
-          </div>
-        </form>
-      </section>
+      </div>
 
       <aside class="preview-card">
         <div class="preview-label">Vista en PDF</div>

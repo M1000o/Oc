@@ -35,6 +35,7 @@ export class SavedOrdersPage implements OnInit {
   protected readonly errorMessage = signal('');
   protected readonly isCancellingOrderId = signal<number | null>(null);
   protected readonly orders = signal<SavedOrderView[]>([]);
+  protected deleteTarget = signal<SavedOrderView | null>(null);
 
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.orders().length / this.pageSize))
@@ -93,7 +94,25 @@ export class SavedOrdersPage implements OnInit {
     });
   }
 
-  protected deleteOrder(orderId: number): void {
+  protected openDeleteModal(order: SavedOrderView): void {
+    this.deleteTarget.set(order);
+  }
+
+  protected closeDeleteModal(): void {
+    if (this.isCancellingOrderId() !== null) {
+      return;
+    }
+
+    this.deleteTarget.set(null);
+  }
+
+  protected confirmDeleteOrder(): void {
+    const target = this.deleteTarget();
+    if (!target) {
+      return;
+    }
+
+    const orderId = target.id;
     this.isCancellingOrderId.set(orderId);
 
     this.purchaseOrderService
@@ -109,6 +128,7 @@ export class SavedOrdersPage implements OnInit {
           return;
         }
 
+        this.deleteTarget.set(null);
         this.loadOrders();
       });
   }

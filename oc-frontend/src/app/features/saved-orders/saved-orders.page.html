@@ -46,7 +46,7 @@
               <button
                 class="mini-btn delete"
                 type="button"
-                (click)="deleteOrder(order.id)"
+                (click)="openDeleteModal(order)"
                 [disabled]="isCancellingOrderId() === order.id"
               >
                 <mat-icon aria-hidden="true">delete</mat-icon>
@@ -62,6 +62,36 @@
         }
       }
     </div>
+
+    @if (deleteTarget()) {
+      <div class="product-modal-backdrop" (click)="closeDeleteModal()">
+        <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="deleteOrderModalTitle" (click)="$event.stopPropagation()">
+          <header class="confirm-modal__header">
+            <div class="confirm-modal__icon" aria-hidden="true">!</div>
+            <div>
+              <h2 id="deleteOrderModalTitle">Eliminar pedido</h2>
+              <p>Esta accion cancelará permanentemente este borrador.</p>
+            </div>
+          </header>
+
+          <div class="confirm-modal__content">
+            <p>
+              ¿Deseas eliminar el pedido <strong>{{ deleteTarget()?.reference }}</strong>
+              de <strong>{{ deleteTarget()?.supplierName }}</strong>?
+            </p>
+          </div>
+
+          <footer class="confirm-modal__footer">
+            <button type="button" class="btn btn-secondary" [disabled]="isCancellingOrderId() !== null" (click)="closeDeleteModal()">
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" [disabled]="isCancellingOrderId() !== null" (click)="confirmDeleteOrder()">
+              <span>{{ isCancellingOrderId() !== null ? 'Eliminando...' : 'Eliminar pedido' }}</span>
+            </button>
+          </footer>
+        </section>
+      </div>
+    }
 
     <footer class="pager">
       <span>{{ rangeLabel() }}</span>

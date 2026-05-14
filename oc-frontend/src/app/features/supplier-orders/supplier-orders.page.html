@@ -10,23 +10,38 @@
       <label>Búsqueda Rápida</label>
       <div class="input-container">
         <span class="material-symbols-outlined">search</span>
-        <input class="input-field" placeholder="Buscar por N° de Orden, Local..." type="text"/>
+        <input
+          class="input-field"
+          placeholder="Buscar por N° de Orden, Local..."
+          type="text"
+          [ngModel]="quickSearch()"
+          (ngModelChange)="onQuickSearchChange($event)"
+          [ngModelOptions]="{ standalone: true }"
+          (keyup.enter)="applyFilters()"
+        />
       </div>
     </div>
     <div class="control-group">
-      <label>Filtrar por Estado</label>
+      <label>Filtrar por Estado de Entrega</label>
       <div class="select-container">
-        <select class="select-field">
-          <option>Todos los Estados</option>
-          <option>Pendiente</option>
-          <option>En Proceso</option>
-          <option>Entregado</option>
-          <option>Cancelado</option>
+        <select
+          class="select-field"
+          [ngModel]="selectedDeliveryStatus()"
+          (ngModelChange)="selectedDeliveryStatus.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="ALL">Todos los Estados</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="EN_PROCESO">En Proceso</option>
+          <option value="ENTREGADO">Entregado</option>
+          <option value="ENTREGADO_PARCIAL">Entrega Parcial</option>
+          <option value="RECHAZADO">Rechazado</option>
+          <option value="ATRASADO">Atrasado</option>
         </select>
         <span class="material-symbols-outlined expand-icon">expand_more</span>
       </div>
     </div>
-    <button class="btn-filter">
+    <button class="btn-filter" (click)="applyFilters()">
       <span class="material-symbols-outlined">filter_list</span>
       Aplicar
     </button>
@@ -39,10 +54,10 @@
         <thead>
           <tr>
             <th>N° de Orden</th>
-            <th>Fecha de Emisión</th>
-            <th>Local de Entrega</th>
+            <th>Fecha de Entrega</th>
+            <th>Cliente</th>
             <th class="text-right">Monto Total</th>
-            <th class="text-center">Estado</th>
+            <th class="text-center">Estado Entrega</th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -69,12 +84,12 @@
             @for (order of orders(); track order.id) {
               <tr>
                 <td class="text-primary">{{ order.purchaseOrderNumber }}</td>
-                <td class="text-variant">{{ formatDate(order.orderDate) }}</td>
-                <td>{{ order.sede }} - {{ order.area }}</td>
+                <td class="text-variant">{{ formatDate(order.deliveryDate) }}</td>
+                <td>{{ order.clientName }}</td>
                 <td class="text-right font-medium">{{ formatCurrency(order.total) }}</td>
                 <td class="text-center">
-                  <span class="status-chip" [ngClass]="getStatusClass(order.status)">
-                    {{ getStatusLabel(order.status) }}
+                  <span class="status-chip" [ngClass]="getDeliveryStatusClass(order.deliveryStatus)">
+                    {{ getDeliveryStatusLabel(order.deliveryStatus) }}
                   </span>
                 </td>
                 <td>

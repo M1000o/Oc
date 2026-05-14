@@ -1,8 +1,13 @@
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { PurchaseOrderService } from '../../core/services/purchase-order.service';
-import { PurchaseOrderSummary, PurchaseOrderStatus } from '../../core/interfaces/purchase-order.interface';
+import {
+  DeliveryStatus,
+  PurchaseOrderStatus,
+  PurchaseOrderSummary
+} from '../../core/interfaces/purchase-order.interface';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PurchaseOrderDetailModalComponent } from './purchase-order-detail-modal.component';
@@ -10,7 +15,7 @@ import { PurchaseOrderDetailModalComponent } from './purchase-order-detail-modal
 @Component({
   selector: 'app-supplier-orders-page',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatDialogModule],
+  imports: [CommonModule, MatIconModule, MatDialogModule, FormsModule],
   providers: [DatePipe, CurrencyPipe],
   templateUrl: './supplier-orders.page.html',
   styleUrl: './supplier-orders.page.css'
@@ -22,19 +27,57 @@ export class SupplierOrdersPage implements OnInit {
   private readonly datePipe = inject(DatePipe);
   private readonly currencyPipe = inject(CurrencyPipe);
 
-  protected readonly orders = signal<PurchaseOrderSummary[]>([]);
+  protected readonly allOrders = signal<PurchaseOrderSummary[]>([]);
+  protected readonly quickSearch = signal('');
+  protected readonly selectedDeliveryStatus = signal<DeliveryStatus | 'ALL'>('ALL');
+  protected readonly appliedQuickSearch = signal('');
+  protected readonly appliedDeliveryStatus = signal<DeliveryStatus | 'ALL'>('ALL');
   protected readonly isLoading = signal(true);
   protected readonly loadingDelayed = signal(false);
   protected readonly errorMessage = signal('');
-  
-  private loadingTimeout?: any;
+
+  private loadingTimeout?: ReturnType<typeof setTimeout>;
 
   protected readonly currentPage = signal(0);
   protected readonly pageSize = 10;
-  protected readonly totalElements = signal(0);
-  protected readonly totalPages = signal(0);
+  protected readonly filteredOrders = computed(() => {
+    const deliveryStatus = this.appliedDeliveryStatus();
+    const quickSearch = this.appliedQuickSearch().trim().toLowerCase();
 
-  protected readonly showingFrom = computed(() => this.currentPage() * this.pageSize + 1);
+    return this.allOrders().filter((order) => {
+      const matchDeliveryStatus =
+        deliveryStatus === 'ALL' || order.deliveryStatus === deliveryStatus;
+      if (!matchDeliveryStatus) {
+        return false;
+      }
+
+      if (!quickSearch) {
+        return true;
+      }
+
+      const searchableText = [
+        order.purchaseOrderNumber,
+        order.sede,
+        order.area,
+        order.clientName ?? '',
+        order.supplierName ?? ''
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(quickSearch);
+    });
+  });
+  protected readonly totalElements = computed(() => this.filteredOrders().length);
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.totalElements() / this.pageSize))
+  );
+  protected readonly orders = computed(() => {
+    const start = this.currentPage() * this.pageSize;
+    return this.filteredOrders().slice(start, start + this.pageSize);
+  });
+
+  protected readonly showingFrom = computed(() => (this.totalElements() === 0 ? 0 : this.currentPage() * this.pageSize + 1));
   protected readonly showingTo = computed(() => Math.min((this.currentPage() + 1) * this.pageSize, this.totalElements()));
 
   ngOnInit(): void {
@@ -61,33 +104,43 @@ export class SupplierOrdersPage implements OnInit {
     }
   }
 
-  protected loadOrders(page = 0): void {
+  protected loadOrders(): void {
     this.setLoading(true);
     this.errorMessage.set('');
-    
-    this.purchaseOrderService.getSupplierOrders(page, this.pageSize)
+
+    this.purchaseOrderService.listAllSupplierOrders()
       .subscribe(({ data, error }) => {
         this.setLoading(false);
-        if (error || !data) {
+        if (error) {
           this.errorMessage.set(error || 'No se pudieron cargar las órdenes.');
           return;
         }
-        this.orders.set(data.content);
-        this.totalElements.set(data.totalElements);
-        this.totalPages.set(data.totalPages);
-        this.currentPage.set(data.number);
+        this.allOrders.set(data);
+        this.currentPage.set(0);
       });
+  }
+
+  protected applyFilters(): void {
+    this.appliedQuickSearch.set(this.quickSearch());
+    this.appliedDeliveryStatus.set(this.selectedDeliveryStatus());
+    this.currentPage.set(0);
+  }
+
+  protected onQuickSearchChange(value: string): void {
+    this.quickSearch.set(value);
+    this.appliedQuickSearch.set(value);
+    this.currentPage.set(0);
   }
 
   protected previousPage(): void {
     if (this.currentPage() > 0) {
-      this.loadOrders(this.currentPage() - 1);
+      this.currentPage.set(this.currentPage() - 1);
     }
   }
 
   protected nextPage(): void {
     if (this.currentPage() < this.totalPages() - 1) {
-      this.loadOrders(this.currentPage() + 1);
+      this.currentPage.set(this.currentPage() + 1);
     }
   }
 
@@ -123,14 +176,47 @@ export class SupplierOrdersPage implements OnInit {
       default: return status;
     }
   }
+
+  protected getDeliveryStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDIENTE': return 'Pendiente';
+      case 'EN_PROCESO': return 'En Proceso';
+      case 'ENTREGADO': return 'Entregado';
+      case 'ENTREGADO_PARCIAL': return 'Entrega Parcial';
+      case 'RECHAZADO': return 'Rechazado';
+      case 'ATRASADO': return 'Atrasado';
+      default: return status;
+    }
+  }
+
+  protected getDeliveryStatusClass(status: string): string {
+    switch (status) {
+      case 'ENTREGADO':
+        return 'bg-[#ecfdf5] text-[#059669] border-[#a7f3d0]/30';
+      case 'ENTREGADO_PARCIAL':
+        return 'bg-[#fffbeb] text-[#d97706] border-[#fde68a]/30';
+      case 'PENDIENTE':
+      case 'EN_PROCESO':
+        return 'bg-surface-container-high text-on-surface-variant border-outline-variant/30';
+      case 'RECHAZADO':
+      case 'ATRASADO':
+        return 'bg-[#fef2f2] text-[#dc2626] border-[#fecaca]/30';
+      default:
+        return 'bg-surface-container-high text-on-surface-variant border-outline-variant/30';
+    }
+  }
   
   protected viewDetail(id: number): void {
-      this.dialog.open(PurchaseOrderDetailModalComponent, {
+      const dialogRef = this.dialog.open(PurchaseOrderDetailModalComponent, {
         data: { orderId: id },
         width: '1100px',
         maxWidth: '95vw',
         maxHeight: '90vh',
         panelClass: 'purchase-order-detail-dialog'
+      });
+
+      dialogRef.afterClosed().subscribe(() => {
+        this.loadOrders();
       });
   }
   

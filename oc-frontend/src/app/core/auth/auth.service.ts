@@ -5,26 +5,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TokenStorageService } from './token-storage.service';
 import { OrderSummaryDraftService } from '../services/order-summary-draft.service';
-
-interface TokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
-}
-
-interface MessageResponse {
-  message: string;
-}
-
-interface JwtClaims {
-  [key: string]: unknown;
-}
-
-interface UserIdentity {
-  displayName: string;
-  role: string;
-  roleKey: string | null;
-}
+import { TokenResponse, MessageResponse, JwtClaims, UserIdentity } from '../interfaces/auth.interface';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

@@ -1,6 +1,7 @@
 package com.kong.oc.service;
 
 import com.kong.oc.common.exception.PurchaseOrderPdfException;
+import com.kong.oc.common.util.HtmlUtils;
 import com.kong.oc.dto.PurchaseOrderCompanyConfigurationResponse;
 import com.kong.oc.model.Contacts;
 import com.kong.oc.model.PurchaseOrder;
@@ -36,6 +37,7 @@ public class PurchaseOrderPdfService {
     private static final DateTimeFormatter DISPLAY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final Locale PERU_LOCALE = Locale.forLanguageTag("es-PE");
     private static final String TEMPLATE_PATH = "templates/purchase-order-pdf-template.html";
+    private final HtmlUtils htmlUtils;
 
     private final ContactsRepository contactsRepository;
     private final PurchaseOrderCompanyConfigurationService companyConfigurationService;
@@ -65,25 +67,25 @@ public class PurchaseOrderPdfService {
                 companyConfigurationService.resolveForPdf();
 
         Map<String, String> values = new LinkedHashMap<>();
-        values.put("companyName", escapeHtml(companyConfiguration.companyName()));
-        values.put("companyRuc", escapeHtml(companyConfiguration.companyRuc()));
-        values.put("companyAddress", escapeHtml(companyConfiguration.companyAddress()));
-        values.put("documentNumber", escapeHtml(order.getPurchaseOrderNumber()));
+        values.put("companyName", HtmlUtils.escape(companyConfiguration.companyName()));
+        values.put("companyRuc", HtmlUtils.escape(companyConfiguration.companyRuc()));
+        values.put("companyAddress", HtmlUtils.escape(companyConfiguration.companyAddress()));
+        values.put("documentNumber", HtmlUtils.escape(order.getPurchaseOrderNumber()));
         values.put("issueDate", formatDate(order.getOrderDate()));
-        values.put("supplierName", escapeHtml(supplier.getRazonSocial()));
-        values.put("supplierRuc", escapeHtml(supplier.getRuc()));
-        values.put("supplierContact", escapeHtml(resolveContactName(primaryContact)));
-        values.put("supplierEmail", escapeHtml(resolveSupplierEmail(primaryContact, supplier)));
-        values.put("deliverySite", escapeHtml(defaultText(order.getArea().getSede().getName(), "No registrado")));
-        values.put("deliveryArea", escapeHtml(defaultText(order.getArea().getNombre(), "No registrado")));
+        values.put("supplierName", HtmlUtils.escape(supplier.getRazonSocial()));
+        values.put("supplierRuc", HtmlUtils.escape(supplier.getRuc()));
+        values.put("supplierContact",HtmlUtils.escape(resolveContactName(primaryContact)));
+        values.put("supplierEmail", HtmlUtils.escape(resolveSupplierEmail(primaryContact, supplier)));
+        values.put("deliverySite", HtmlUtils.escape(defaultText(order.getArea().getSede().getName(), "No registrado")));
+        values.put("deliveryArea", HtmlUtils.escape(defaultText(order.getArea().getNombre(), "No registrado")));
         values.put("requiredDate", formatNullableDate(order.getDeliveryDate()));
-        values.put("paymentTerms", escapeHtml(resolvePaymentTerms(supplier)));
+        values.put("paymentTerms", HtmlUtils.escape(resolvePaymentTerms(supplier)));
         values.put("currencyLabel", "Soles (PEN)");
-        values.put("subtotal", escapeHtml(formatCurrency(order.getSubtotal())));
-        values.put("igv", escapeHtml(formatCurrency(order.getIgv())));
-        values.put("total", escapeHtml(formatCurrency(order.getTotal())));
-        values.put("notes", escapeHtml(resolveNotes(order)));
-        values.put("generatedBy", escapeHtml(generatedBy));
+        values.put("subtotal", HtmlUtils.escape(formatCurrency(order.getSubtotal())));
+        values.put("igv", HtmlUtils.escape(formatCurrency(order.getIgv())));
+        values.put("total", HtmlUtils.escape(formatCurrency(order.getTotal())));
+        values.put("notes", HtmlUtils.escape(resolveNotes(order)));
+        values.put("generatedBy", HtmlUtils.escape(generatedBy));
         values.put("lineItemsRows", buildLineItemsRows(order));
 
         String html = template;
@@ -122,12 +124,12 @@ public class PurchaseOrderPdfService {
         for (PurchaseOrderDetail detail : order.getDetails()) {
             rows.append("<tr>")
                     .append("<td>").append(index).append("</td>")
-                    .append("<td class=\"mono\">").append(escapeHtml(defaultText(detail.getProduct().getCodigoProducto(), "-"))).append("</td>")
-                    .append("<td class=\"description\">").append(escapeHtml(defaultText(detail.getProduct().getNombre(), "Sin descripcion"))).append("</td>")
-                    .append("<td>").append(escapeHtml(detail.getProduct().getUnd_medida().name())).append("</td>")
+                    .append("<td class=\"mono\">").append(HtmlUtils.escape(defaultText(detail.getProduct().getCodigoProducto(), "-"))).append("</td>")
+                    .append("<td class=\"description\">").append(HtmlUtils.escape(defaultText(detail.getProduct().getNombre(), "Sin descripcion"))).append("</td>")
+                    .append("<td>").append(HtmlUtils.escape(detail.getProduct().getUnd_medida().name())).append("</td>")
                     .append("<td class=\"align-center\">").append(detail.getCantidad()).append("</td>")
-                    .append("<td class=\"align-right\">").append(escapeHtml(formatCurrency(detail.getPrecioUnitario()))).append("</td>")
-                    .append("<td class=\"align-right strong\">").append(escapeHtml(formatCurrency(detail.getSubtotal()))).append("</td>")
+                    .append("<td class=\"align-right\">").append(HtmlUtils.escape(formatCurrency(detail.getPrecioUnitario()))).append("</td>")
+                    .append("<td class=\"align-right strong\">").append(HtmlUtils.escape(formatCurrency(detail.getSubtotal()))).append("</td>")
                     .append("</tr>");
             index++;
         }
@@ -211,16 +213,16 @@ public class PurchaseOrderPdfService {
                 .orElse(fallback);
     }
 
-    private String escapeHtml(String value) {
-        return value == null
-                ? ""
-                : value
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
-    }
+    // private String escapeHtml(String value) {
+    //     return value == null
+    //             ? ""
+    //             : value
+    //             .replace("&", "&amp;")
+    //             .replace("<", "&lt;")
+    //             .replace(">", "&gt;")
+    //             .replace("\"", "&quot;")
+    //             .replace("'", "&#39;");
+    // }
 
     public record GeneratedPdf(
             String fileName,

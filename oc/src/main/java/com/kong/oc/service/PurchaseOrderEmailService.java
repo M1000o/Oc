@@ -2,6 +2,7 @@ package com.kong.oc.service;
 
 import com.kong.oc.auth.service.EmailService;
 import com.kong.oc.common.exception.PurchaseOrderRecipientException;
+import com.kong.oc.common.util.HtmlUtils;
 import com.kong.oc.dto.PurchaseOrderEmailRequest;
 import com.kong.oc.dto.PurchaseOrderEmailResponse;
 import com.kong.oc.dto.PurchaseOrderEmailStatus;
@@ -22,6 +23,7 @@ public class PurchaseOrderEmailService {
     private final ContactsRepository contactsRepository;
     private final EmailService emailService;
     private final PurchaseOrderDocumentService purchaseOrderDocumentService;
+    private final HtmlUtils htmlUtils;
 
     public PurchaseOrderEmailResponse sendPurchaseOrderEmail(PurchaseOrder order, PurchaseOrderEmailRequest request) {
         String recipientEmail = resolveRecipientEmail(order.getSupplier());
@@ -80,7 +82,7 @@ public class PurchaseOrderEmailService {
                     <p>%s</p>
                   </body>
                 </html>
-                """.formatted(escapeHtml(customMessage).replace("\n", "<br/>"));
+                """.formatted(HtmlUtils.escape(customMessage).replace("\n", "<br/>"));
     }
 
     private String escapeHtml(String value) {

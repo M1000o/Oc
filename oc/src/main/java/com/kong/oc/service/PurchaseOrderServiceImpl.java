@@ -428,15 +428,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
 
 
     private void validateStatusTransition(Status current, Status next) {
-        boolean valid = switch (current) {
-            case BORRADOR    -> next == Status.PENDIENTE  || next == Status.CANCELADO;
-            case PENDIENTE  -> next == Status.APROBADO || next == Status.CANCELADO;
-            case APROBADO -> false;
-            case CANCELADO -> false;
-            case CERRADA -> false;
-        };
-
-        if (!valid) {
+        if (!current.canTransitionTo(next)) {
             throw new BadRequestException(
                     "Transición de estado no permitida: " + current + " → " + next
             );

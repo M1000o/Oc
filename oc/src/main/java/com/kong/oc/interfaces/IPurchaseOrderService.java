@@ -39,4 +39,10 @@ public interface IPurchaseOrderService {
 
     /** Cambia el estado de entrega de una orden. */
     PurchaseOrderResponse changeDeliveryStatus(Long id, DeliveryStatusPayload deliveryStatusDTO);
+
+    /** Listado de órdenes recibidas pendientes de control de calidad. */
+    Page<PurchaseOrderSummary> findOrdersForQuality(Pageable pageable);
+
+    /** Registra el resultado de calidad y actualiza el estado de entrega final. */
+    PurchaseOrderResponse changeQualityStatus(Long id, PurchaseOrderQualityStatus qualityStatusDTO);
 }

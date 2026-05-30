@@ -11,6 +11,7 @@ import com.kong.oc.interfaces.IPurchaseOrderService;
 import com.kong.oc.mapper.PurchaseOrderMapper;
 import com.kong.oc.model.*;
 import com.kong.oc.repository.ProductRepository;
+import com.kong.oc.repository.PurchaseOrderQualityInspectionRepository;
 import com.kong.oc.repository.PurchaseOrderRepository;
 import com.kong.oc.repository.SupplierRepository;
 import com.kong.oc.repository.AreaRepository;
@@ -41,6 +42,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
     private final PurchaseOrderEmailService purchaseOrderEmailService;
     private final PurchaseOrderDocumentService purchaseOrderDocumentService;
     private final PurchaseOrderCompanyConfigurationService companyConfigurationService;
+    private final PurchaseOrderQualityInspectionRepository qualityInspectionRepository;
 
 
     @Override
@@ -72,6 +74,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                 .status(isDraft ? Status.BORRADOR : Status.PENDIENTE)
                 .emailStatus(PurchaseOrderEmailStatus.PENDIENTE_ENVIO)
                 .deliveryStatus(DeliveryStatus.PENDIENTE)
+                .calidadStatus(CalidadStatus.PENDIENTE)
                 .usuario(user)
                 .subtotal(BigDecimal.ZERO)
                 .igv(BigDecimal.ZERO)
@@ -161,7 +164,10 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
             throw new BadRequestException("No se puede cambiar el estado de entrega si la orden no está APROBADA.");
         }
 
+        validateDeliveryStatusFromSentOrders(deliveryStatusDTO.deliveryStatus());
+
         order.setDeliveryStatus(deliveryStatusDTO.deliveryStatus());
+        order.setCalidadStatus(CalidadStatus.PENDIENTE);
 
         if (deliveryStatusDTO.notas() != null && !deliveryStatusDTO.notas().isBlank()) {
             String deliveryNotes = "[ENTREGA] " + deliveryStatusDTO.notas();
@@ -171,6 +177,52 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
         }
 
         return mapper.toResponse(purchaseOrderRepository.save(order));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PurchaseOrderSummary> findOrdersForQuality(Pageable pageable) {
+        String clientName = getClientName();
+        return purchaseOrderRepository.findQualityQueue(
+                Status.APROBADO,
+                PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR,
+                List.of(DeliveryStatus.RECIBIDO, DeliveryStatus.PARCIAL, DeliveryStatus.ENTREGADO_PARCIAL),
+                List.of(CalidadStatus.PENDIENTE, CalidadStatus.EN_REVISION),
+                pageable
+        ).map(order -> mapper.toSummary(order, clientName));
+    }
+
+    @Override
+    @Transactional
+    public PurchaseOrderResponse changeQualityStatus(Long id, PurchaseOrderQualityStatus qualityStatusDTO) {
+        PurchaseOrder order = findOrderWithDetailsOrThrow(id);
+
+        if (order.getStatus() != Status.APROBADO) {
+            throw new BadRequestException("Solo se puede revisar calidad de órdenes APROBADAS.");
+        }
+
+        if (!isQualityReviewDeliveryStatus(order.getDeliveryStatus())) {
+            throw new BadRequestException("La orden debe estar RECIBIDA o PARCIAL para revisar calidad.");
+        }
+
+        validateQualityDecision(qualityStatusDTO);
+        List<PurchaseOrderQualityDetailRequest> qualityDetails = resolveQualityDetails(order, qualityStatusDTO);
+        validateQualityDetails(order, qualityStatusDTO, qualityDetails);
+
+        order.setCalidadStatus(qualityStatusDTO.calidadStatus());
+        order.setDeliveryStatus(qualityStatusDTO.deliveryStatus());
+
+        if (qualityStatusDTO.motivo() != null && !qualityStatusDTO.motivo().isBlank()) {
+            String qualityNotes = "[CALIDAD] " + qualityStatusDTO.motivo().trim();
+            order.setNotas(order.getNotas() != null
+                    ? order.getNotas() + "\n" + qualityNotes
+                    : qualityNotes);
+        }
+
+        PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
+        saveQualityInspection(savedOrder, qualityStatusDTO, qualityDetails);
+
+        return mapper.toResponse(savedOrder);
     }
 
     @Override
@@ -212,6 +264,7 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
             order.setEmailStatus(PurchaseOrderEmailStatus.ENVIADO_PROVEEDOR);
             order.setStatus(Status.APROBADO);
             order.setDeliveryStatus(DeliveryStatus.PENDIENTE);
+            order.setCalidadStatus(CalidadStatus.PENDIENTE);
             purchaseOrderRepository.save(order);
             return response;
         } catch (PurchaseOrderRecipientException | PurchaseOrderEmailDispatchException ex) {
@@ -388,6 +441,170 @@ public class PurchaseOrderServiceImpl implements IPurchaseOrderService {
                     "Transición de estado no permitida: " + current + " → " + next
             );
         }
+    }
+
+    private void validateDeliveryStatusFromSentOrders(DeliveryStatus deliveryStatus) {
+        boolean valid = deliveryStatus == DeliveryStatus.RECIBIDO
+                || deliveryStatus == DeliveryStatus.PARCIAL
+                || deliveryStatus == DeliveryStatus.ENTREGADO_PARCIAL;
+
+        if (!valid) {
+            throw new BadRequestException("Desde pedidos enviados solo se puede marcar la entrega como RECIBIDO o PARCIAL.");
+        }
+    }
+
+    private boolean isQualityReviewDeliveryStatus(DeliveryStatus deliveryStatus) {
+        return deliveryStatus == DeliveryStatus.RECIBIDO
+                || deliveryStatus == DeliveryStatus.PARCIAL
+                || deliveryStatus == DeliveryStatus.ENTREGADO_PARCIAL;
+    }
+
+    private void validateQualityDecision(PurchaseOrderQualityStatus qualityStatusDTO) {
+        CalidadStatus calidadStatus = qualityStatusDTO.calidadStatus();
+        DeliveryStatus deliveryStatus = qualityStatusDTO.deliveryStatus();
+
+        boolean validPair = switch (calidadStatus) {
+            case APROBADO -> deliveryStatus == DeliveryStatus.COMPLETO;
+            case OBSERVADO -> deliveryStatus == DeliveryStatus.COMPLETO || deliveryStatus == DeliveryStatus.PARCIAL;
+            case PARCIAL -> deliveryStatus == DeliveryStatus.PARCIAL;
+            case RECHAZADO -> deliveryStatus == DeliveryStatus.COMPLETO;
+            case PENDIENTE, EN_REVISION -> false;
+        };
+
+        if (!validPair) {
+            throw new BadRequestException("La combinación de estado de calidad y entrega no es válida para el flujo de calidad.");
+        }
+    }
+
+    private List<PurchaseOrderQualityDetailRequest> resolveQualityDetails(
+            PurchaseOrder order,
+            PurchaseOrderQualityStatus qualityStatusDTO
+    ) {
+        if (qualityStatusDTO.calidadStatus() == CalidadStatus.APROBADO) {
+            return order.getDetails().stream()
+                    .map(detail -> new PurchaseOrderQualityDetailRequest(
+                            detail.getId(),
+                            detail.getCantidad(),
+                            0,
+                            null
+                    ))
+                    .toList();
+        }
+
+        if (qualityStatusDTO.details() == null || qualityStatusDTO.details().isEmpty()) {
+            throw new BadRequestException("Debe registrar el detalle de cantidades revisadas por producto.");
+        }
+
+        return qualityStatusDTO.details();
+    }
+
+    private void validateQualityDetails(
+            PurchaseOrder order,
+            PurchaseOrderQualityStatus qualityStatusDTO,
+            List<PurchaseOrderQualityDetailRequest> qualityDetails
+    ) {
+        Map<Long, PurchaseOrderDetail> orderDetails = order.getDetails().stream()
+                .collect(Collectors.toMap(PurchaseOrderDetail::getId, detail -> detail));
+
+        Set<Long> seen = new HashSet<>();
+        for (PurchaseOrderQualityDetailRequest detailDTO : qualityDetails) {
+            if (!seen.add(detailDTO.purchaseOrderDetailId())) {
+                throw new BadRequestException("Hay productos duplicados en el detalle de calidad.");
+            }
+
+            PurchaseOrderDetail orderDetail = orderDetails.get(detailDTO.purchaseOrderDetailId());
+            if (orderDetail == null) {
+                throw new BadRequestException("El detalle de calidad no pertenece a la orden de compra.");
+            }
+
+            int reviewedQuantity = detailDTO.acceptedQuantity() + detailDTO.rejectedQuantity();
+            if (reviewedQuantity > orderDetail.getCantidad()) {
+                throw new BadRequestException("Las cantidades revisadas superan la cantidad pedida para el producto "
+                        + orderDetail.getProduct().getNombre());
+            }
+
+            boolean lineNotFullyApproved = detailDTO.acceptedQuantity() < orderDetail.getCantidad();
+            if (lineNotFullyApproved && (detailDTO.motivo() == null || detailDTO.motivo().isBlank())) {
+                throw new BadRequestException("Debe indicar la razón para el producto "
+                        + orderDetail.getProduct().getNombre()
+                        + " porque no se aprobó toda la cantidad pedida.");
+            }
+        }
+
+        if (!seen.equals(orderDetails.keySet())) {
+            throw new BadRequestException("Debe revisar todos los productos de la orden de compra.");
+        }
+
+        int orderedTotal = order.getDetails().stream().mapToInt(PurchaseOrderDetail::getCantidad).sum();
+        int acceptedTotal = qualityDetails.stream().mapToInt(PurchaseOrderQualityDetailRequest::acceptedQuantity).sum();
+        int rejectedTotal = qualityDetails.stream().mapToInt(PurchaseOrderQualityDetailRequest::rejectedQuantity).sum();
+        int reviewedTotal = acceptedTotal + rejectedTotal;
+
+        switch (qualityStatusDTO.calidadStatus()) {
+            case APROBADO -> {
+                if (acceptedTotal != orderedTotal || rejectedTotal != 0) {
+                    throw new BadRequestException("Para Todo Ok, todos los productos deben quedar aceptados y sin rechazos.");
+                }
+            }
+            case OBSERVADO -> {
+                if (rejectedTotal <= 0) {
+                    throw new BadRequestException("Para OBSERVADO debe existir al menos una cantidad rechazada.");
+                }
+                if (qualityStatusDTO.deliveryStatus() == DeliveryStatus.COMPLETO && reviewedTotal != orderedTotal) {
+                    throw new BadRequestException("Para rechazo parcial con entrega completa, todas las cantidades deben estar aceptadas o rechazadas.");
+                }
+                if (qualityStatusDTO.deliveryStatus() == DeliveryStatus.PARCIAL && reviewedTotal >= orderedTotal) {
+                    throw new BadRequestException("Para entrega incompleta con rechazo, debe quedar cantidad pendiente de entrega.");
+                }
+            }
+            case PARCIAL -> {
+                if (rejectedTotal != 0) {
+                    throw new BadRequestException("Para entrega incompleta sin rechazo no debe haber cantidades rechazadas.");
+                }
+                if (acceptedTotal <= 0 || acceptedTotal >= orderedTotal) {
+                    throw new BadRequestException("Para entrega incompleta debe aceptarse una cantidad menor a la cantidad pedida.");
+                }
+            }
+            case RECHAZADO -> {
+                if (acceptedTotal != 0 || rejectedTotal != orderedTotal) {
+                    throw new BadRequestException("Para rechazo total, todas las cantidades deben quedar rechazadas.");
+                }
+            }
+            case PENDIENTE, EN_REVISION -> throw new BadRequestException("El resultado de calidad seleccionado no es final.");
+        }
+    }
+
+    private void saveQualityInspection(
+            PurchaseOrder order,
+            PurchaseOrderQualityStatus qualityStatusDTO,
+            List<PurchaseOrderQualityDetailRequest> qualityDetails
+    ) {
+        PurchaseOrderQualityInspection inspection = qualityInspectionRepository
+                .findByPurchaseOrderId(order.getId())
+                .orElseGet(() -> PurchaseOrderQualityInspection.builder()
+                        .purchaseOrder(order)
+                        .build());
+
+        Map<Long, PurchaseOrderDetail> orderDetails = order.getDetails().stream()
+                .collect(Collectors.toMap(PurchaseOrderDetail::getId, detail -> detail));
+
+        inspection.setCalidadStatus(qualityStatusDTO.calidadStatus());
+        inspection.setDeliveryStatus(qualityStatusDTO.deliveryStatus());
+        inspection.setMotivo(qualityStatusDTO.motivo());
+        inspection.getDetails().clear();
+
+        qualityDetails.forEach(detailDTO -> {
+            PurchaseOrderDetail orderDetail = orderDetails.get(detailDTO.purchaseOrderDetailId());
+            inspection.addDetail(PurchaseOrderQualityInspectionDetail.builder()
+                    .purchaseOrderDetail(orderDetail)
+                    .orderedQuantity(orderDetail.getCantidad())
+                    .acceptedQuantity(detailDTO.acceptedQuantity())
+                    .rejectedQuantity(detailDTO.rejectedQuantity())
+                    .motivo(detailDTO.motivo())
+                    .build());
+        });
+
+        qualityInspectionRepository.save(inspection);
     }
 
     private void validateOrderCanBeSent(PurchaseOrder order) {

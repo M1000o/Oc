@@ -12,6 +12,7 @@ import {
   PurchaseOrderStatus,
   PurchaseOrderStatusPayload,
   DeliveryStatusPayload,
+  PurchaseOrderQualityStatusPayload,
   PurchaseOrderSummary
 } from '../interfaces/purchase-order.interface';
 import { PageResponse } from '../interfaces/page-response.interface';
@@ -127,6 +128,52 @@ export class PurchaseOrderService {
             error?.error?.message ||
             error?.error?.error ||
             'No se pudo actualizar el estado de entrega.'
+        })
+      )
+    );
+  }
+
+  listQualityOrders(
+    page = 0,
+    size = 50
+  ): Observable<{ data: PageResponse<PurchaseOrderSummary> | null; error: string }> {
+    return this.http
+      .get<ApiResponse<PageResponse<PurchaseOrderSummary>>>(`${this.endpoint}/quality-view`, {
+        params: new HttpParams().set('page', page).set('size', size).set('sort', 'orderDate,DESC')
+      })
+      .pipe(
+        map((response) => ({
+          data: response.data ?? null,
+          error: ''
+        })),
+        catchError((error) =>
+          of({
+            data: null,
+            error:
+              error?.error?.message ||
+              error?.error?.error ||
+              'No se pudieron cargar las órdenes pendientes de calidad.'
+          })
+        )
+      );
+  }
+
+  changeQualityStatus(
+    id: number,
+    payload: PurchaseOrderQualityStatusPayload
+  ): Observable<{ data: PurchaseOrderResponse | null; error: string }> {
+    return this.http.patch<ApiResponse<PurchaseOrderResponse>>(`${this.endpoint}/${id}/quality-status`, payload).pipe(
+      map((response) => ({
+        data: response.data ?? null,
+        error: ''
+      })),
+      catchError((error) =>
+        of({
+          data: null,
+          error:
+            error?.error?.message ||
+            error?.error?.error ||
+            'No se pudo actualizar el estado de calidad.'
         })
       )
     );

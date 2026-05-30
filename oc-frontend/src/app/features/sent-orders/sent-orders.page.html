@@ -17,6 +17,7 @@
       <div class="align-right">TOTAL</div>
       <div class="align-center">ESTADO OC</div>
       <div class="align-center">ESTADO ENTREGA</div>
+      <div class="align-center">ESTADO CALIDAD</div>
       <div class="align-center">ACCIONES</div>
     </div>
     <div class="sent-list">
@@ -67,23 +68,37 @@
               </span>
             </div>
 
+            <div class="row-col status-col align-center">
+              <span class="status-chip" [ngClass]="getCalidadStatusClass(order.calidadStatus)">
+                {{ resolveCalidadStatusLabel(order.calidadStatus) }}
+              </span>
+            </div>
+
             <div class="row-col action-col align-center">
               <div class="delivery-actions">
                 <button
                   class="action-btn success"
-                  title="Marcar como Entregado"
-                  [disabled]="isUpdating() === order.id || order.deliveryStatus === 'ENTREGADO' || order.status !== 'APROBADO'"
-                  (click)="updateDeliveryStatus(order, 'ENTREGADO')"
+                  title="Marcar como Recibido"
+                  [disabled]="isUpdating() === order.id || order.deliveryStatus === 'RECIBIDO' || order.deliveryStatus === 'COMPLETO' || order.status !== 'APROBADO'"
+                  (click)="updateDeliveryStatus(order, 'RECIBIDO')"
                 >
                   <mat-icon>done_all</mat-icon>
                 </button>
                 <button
                   class="action-btn warning"
                   title="Marcar como Parcial"
-                  [disabled]="isUpdating() === order.id || order.deliveryStatus === 'ENTREGADO_PARCIAL' || order.deliveryStatus === 'ENTREGADO' || order.status !== 'APROBADO'"
-                  (click)="updateDeliveryStatus(order, 'ENTREGADO_PARCIAL')"
+                  [disabled]="isUpdating() === order.id || order.deliveryStatus === 'PARCIAL' || order.deliveryStatus === 'RECIBIDO' || order.deliveryStatus === 'COMPLETO' || order.status !== 'APROBADO'"
+                  (click)="updateDeliveryStatus(order, 'PARCIAL')"
                 >
                   <mat-icon>inventory</mat-icon>
+                </button>
+                <button
+                  class="action-btn info"
+                  title="Ver detalles de estado"
+                  [disabled]="order.deliveryStatus !== 'PARCIAL' && order.deliveryStatus !== 'ENTREGADO_PARCIAL' && order.calidadStatus !== 'OBSERVADO' && order.calidadStatus !== 'RECHAZADO' && order.calidadStatus !== 'PARCIAL'"
+                  (click)="viewStatusDetails(order)"
+                >
+                  <mat-icon>visibility</mat-icon>
                 </button>
               </div>
             </div>
@@ -134,8 +149,8 @@
 
           <div class="confirm-modal__content">
             <p>
-              ¿Deseas marcar el pedido <strong>{{ updateTarget()?.orderNumber }}</strong> como <strong>ENTREGADO</strong>?
-              Una vez confirmada la entrega completa, no podrás revertir el estado a pendiente o parcial.
+              ¿Deseas marcar el pedido <strong>{{ updateTarget()?.orderNumber }}</strong> como <strong>RECIBIDO</strong>?
+              Una vez confirmada la recepción, la orden pasará al módulo de calidad.
             </p>
           </div>
 
@@ -145,6 +160,65 @@
             </button>
             <button type="button" class="btn btn-primary" [disabled]="isUpdating() !== null" (click)="confirmDeliveryUpdate()">
               <span>{{ isUpdating() !== null ? 'Procesando...' : 'Confirmar Entrega' }}</span>
+            </button>
+          </footer>
+        </section>
+      </div>
+    }
+
+    @if (statusInfoTarget()) {
+      <div class="product-modal-backdrop" (click)="closeStatusInfoModal()">
+        <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="statusInfoModalTitle" (click)="$event.stopPropagation()">
+          <header class="confirm-modal__header">
+            <div class="confirm-modal__icon info" aria-hidden="true">
+              <mat-icon>info</mat-icon>
+            </div>
+            <div>
+              <h2 id="statusInfoModalTitle">Detalles de la Orden</h2>
+              <p>Información sobre los estados de entrega y calidad.</p>
+            </div>
+          </header>
+
+          <div class="confirm-modal__content">
+            <div class="status-info-grid">
+              <div class="status-info-item">
+                <strong>Pedido:</strong>
+                <span>{{ statusInfoTarget()?.orderNumber }}</span>
+              </div>
+              <div class="status-info-item">
+                <strong>Estado Entrega:</strong>
+                <span class="status-chip" [ngClass]="getDeliveryStatusClass(statusInfoTarget()?.deliveryStatus ?? '')">
+                  {{ resolveDeliveryStatusLabel(statusInfoTarget()?.deliveryStatus ?? '') }}
+                </span>
+              </div>
+              <div class="status-info-item">
+                <strong>Estado Calidad:</strong>
+                <span class="status-chip" [ngClass]="getCalidadStatusClass(statusInfoTarget()?.calidadStatus ?? '')">
+                  {{ resolveCalidadStatusLabel(statusInfoTarget()?.calidadStatus ?? '') }}
+                </span>
+              </div>
+              <div class="status-info-reason">
+                <strong>Motivo/Observaciones:</strong>
+                <p>
+                  @if (statusInfoTarget()?.deliveryStatus === 'PARCIAL') {
+                    Se recibió una cantidad menor a la solicitada debido a falta de stock en el proveedor.
+                  } @else if (statusInfoTarget()?.calidadStatus === 'OBSERVADO') {
+                    Algunos productos presentan daños menores en el empaque, pero son funcionales.
+                  } @else if (statusInfoTarget()?.calidadStatus === 'RECHAZADO') {
+                    Los productos no cumplen con las especificaciones técnicas requeridas.
+                  } @else if (statusInfoTarget()?.calidadStatus === 'PARCIAL') {
+                    Se aprobaron algunos items, otros fueron rechazados por control de calidad.
+                  } @else {
+                    No hay observaciones adicionales registradas.
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <footer class="confirm-modal__footer">
+            <button type="button" class="btn btn-primary" (click)="closeStatusInfoModal()">
+              Cerrar
             </button>
           </footer>
         </section>

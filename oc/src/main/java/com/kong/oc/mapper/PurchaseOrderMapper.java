@@ -1,6 +1,8 @@
 package com.kong.oc.mapper;
 
 import com.kong.oc.dto.PurchaseOrderDetailResponse;
+import com.kong.oc.dto.CalidadStatus;
+import com.kong.oc.dto.DeliveryStatus;
 import com.kong.oc.dto.PurchaseOrderResponse;
 import com.kong.oc.dto.PurchaseOrderSummary;
 import com.kong.oc.dto.PurchaseOrderEmailStatus;
@@ -28,7 +30,8 @@ public class PurchaseOrderMapper {
                 order.getArea().getNombre(),
                 order.getStatus().name(),
                 resolveEmailStatus(order),
-                order.getDeliveryStatus().name(),
+                resolveDeliveryStatus(order),
+                resolveCalidadStatus(order),
                 order.getNotas(),
                 order.getUsuario().getUsername(),
                 order.getSubtotal(),
@@ -52,7 +55,8 @@ public class PurchaseOrderMapper {
                 order.getArea().getNombre(),
                 order.getStatus().name(),
                 resolveEmailStatus(order),
-                order.getDeliveryStatus().name(),
+                resolveDeliveryStatus(order),
+                resolveCalidadStatus(order),
                 order.getTotal()
         );
     }
@@ -80,5 +84,17 @@ public class PurchaseOrderMapper {
         return order.getEmailStatus() != null
                 ? order.getEmailStatus().name()
                 : PurchaseOrderEmailStatus.PENDIENTE_ENVIO.name();
+    }
+
+    private String resolveDeliveryStatus(PurchaseOrder order) {
+        return order.getDeliveryStatus() != null
+                ? order.getDeliveryStatus().name()
+                : DeliveryStatus.PENDIENTE.name();
+    }
+
+    private String resolveCalidadStatus(PurchaseOrder order) {
+        return order.getCalidadStatus() != null
+                ? order.getCalidadStatus().name()
+                : CalidadStatus.PENDIENTE.name();
     }
 }

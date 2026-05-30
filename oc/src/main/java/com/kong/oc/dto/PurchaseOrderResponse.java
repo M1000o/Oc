@@ -19,6 +19,7 @@ public record PurchaseOrderResponse(
         String status,
         String emailStatus,
         String deliveryStatus,
+        String calidadStatus,
         String notas,
         String createdBy,
         BigDecimal subtotal,

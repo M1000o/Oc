@@ -6,7 +6,19 @@ import {
 
 export type PurchaseOrderStatus = 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'CANCELADO';
 
-export type DeliveryStatus = 'PENDIENTE' | 'EN_PROCESO' | 'ENTREGADO' | 'ENTREGADO_PARCIAL' | 'RECHAZADO' | 'ATRASADO';
+export type DeliveryStatus =
+  | 'PENDIENTE'
+  | 'EN_PROCESO'
+  | 'ENTREGADO'
+  | 'ENTREGADO_PARCIAL'
+  | 'EN_REVISION'
+  | 'PARCIAL'
+  | 'RECHAZADO'
+  | 'RECIBIDO'
+  | 'COMPLETO'
+  | 'ATRASADO';
+
+export type CalidadStatus = 'PENDIENTE' | 'EN_REVISION' | 'PARCIAL' | 'APROBADO' | 'OBSERVADO' | 'RECHAZADO';
 
 export interface PurchaseOrderRequest {
   supplierId: number;
@@ -33,6 +45,7 @@ export interface PurchaseOrderResponse {
   area: string;
   status: PurchaseOrderStatus;
   deliveryStatus: DeliveryStatus;
+  calidadStatus: CalidadStatus;
   notas: string | null;
   createdBy: string;
   subtotal: number;
@@ -70,6 +83,7 @@ export interface PurchaseOrderSummary {
   area: string;
   status: PurchaseOrderStatus;
   deliveryStatus: DeliveryStatus;
+  calidadStatus: CalidadStatus;
   total: number;
 }
 
@@ -90,6 +104,20 @@ export interface PurchaseOrderStatusPayload {
 export interface DeliveryStatusPayload {
   deliveryStatus: DeliveryStatus;
   notas?: string;
+}
+
+export interface PurchaseOrderQualityStatusPayload {
+  calidadStatus: CalidadStatus;
+  deliveryStatus: DeliveryStatus;
+  motivo?: string;
+  details?: PurchaseOrderQualityDetailPayload[];
+}
+
+export interface PurchaseOrderQualityDetailPayload {
+  purchaseOrderDetailId: number;
+  acceptedQuantity: number;
+  rejectedQuantity: number;
+  motivo?: string;
 }
 
 export interface OrderRow {

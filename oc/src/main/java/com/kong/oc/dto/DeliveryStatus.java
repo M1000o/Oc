@@ -2,9 +2,12 @@ package com.kong.oc.dto;
 
 public enum DeliveryStatus {
     PENDIENTE,
-    EN_PROCESO,
     ENTREGADO,
     ENTREGADO_PARCIAL,
+    EN_REVISION,
+    PARCIAL,
     RECHAZADO,
+    RECIBIDO,
+    COMPLETO,
     ATRASADO
 }

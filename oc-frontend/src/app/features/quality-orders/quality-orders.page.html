@@ -1,0 +1,179 @@
+<div layoutBody class="workspace-canvas">
+  <section class="page-headline">
+    <div>
+      <h1>Calidad</h1>
+      <p>Revisión de órdenes recibidas y entregas parciales.</p>
+    </div>
+  </section>
+
+  <section class="quality-board">
+    <div class="quality-grid-header">
+      <div>Nº PEDIDO</div>
+      <div>FECHA</div>
+      <div>DESTINO</div>
+      <div>PROVEEDOR</div>
+      <div class="align-right">TOTAL</div>
+      <div class="align-center">ENTREGA</div>
+      <div class="align-center">CALIDAD</div>
+      <div class="align-center">ACCIONES</div>
+    </div>
+
+    <div class="quality-list">
+      @if (isLoading()) {
+        <div class="empty-state">
+          <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+          <p>Cargando órdenes para calidad...</p>
+        </div>
+      } @else if (errorMessage()) {
+        <div class="empty-state">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      } @else {
+        @for (order of pagedOrders(); track order.id) {
+          <article class="quality-row">
+            <div class="row-col order-col" (click)="viewDetail(order.id)">{{ order.orderNumber }}</div>
+            <div class="row-col muted" (click)="viewDetail(order.id)">{{ order.orderDate }}</div>
+            <div class="row-col destination-col" (click)="viewDetail(order.id)">
+              <mat-icon aria-hidden="true">location_on</mat-icon>
+              <span>{{ order.destination }}</span>
+            </div>
+            <div class="row-col" (click)="viewDetail(order.id)">{{ order.supplierName }}</div>
+            <div class="row-col total-col" (click)="viewDetail(order.id)">{{ toCurrency(order.total) }}</div>
+            <div class="row-col align-center">
+              <span class="status-chip partial">{{ resolveDeliveryStatusLabel(order.deliveryStatus) }}</span>
+            </div>
+            <div class="row-col align-center">
+              <span class="status-chip transit">{{ resolveCalidadStatusLabel(order.calidadStatus) }}</span>
+            </div>
+            <div class="row-col align-center">
+              <button class="action-btn" type="button" title="Revisar calidad" (click)="openReview(order)">
+                <mat-icon aria-hidden="true">fact_check</mat-icon>
+              </button>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state">
+            <mat-icon aria-hidden="true">verified</mat-icon>
+            <p>No hay órdenes pendientes de revisión.</p>
+          </div>
+        }
+      }
+    </div>
+
+    <footer class="pager">
+      <span>Mostrando {{ pagedOrders().length }} de {{ orders().length }} órdenes</span>
+      <div class="pager-controls">
+        <button class="pager-btn" type="button" (click)="previousPage()" [disabled]="currentPage() === 1" aria-label="Pagina anterior">
+          <mat-icon aria-hidden="true">chevron_left</mat-icon>
+        </button>
+        <button class="pager-btn" type="button" (click)="nextPage()" [disabled]="currentPage() === totalPages()" aria-label="Pagina siguiente">
+          <mat-icon aria-hidden="true">chevron_right</mat-icon>
+        </button>
+      </div>
+    </footer>
+  </section>
+
+  @if (reviewTarget()) {
+    <div class="modal-backdrop" (click)="closeReview()">
+      <section class="review-modal" role="dialog" aria-modal="true" aria-labelledby="qualityModalTitle" (click)="$event.stopPropagation()">
+        <header class="review-modal__header">
+          <div>
+            <h2 id="qualityModalTitle">Resultado de calidad</h2>
+            <p>{{ reviewTarget()?.orderNumber }} · {{ reviewTarget()?.supplierName }}</p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="Cerrar" (click)="closeReview()">
+            <mat-icon aria-hidden="true">close</mat-icon>
+          </button>
+        </header>
+
+        <div class="scenario-grid" [class.compact]="selectedScenario()?.requiresReason">
+          @for (scenario of scenarios; track scenario.id) {
+            <button
+              class="scenario-btn"
+              type="button"
+              [class.selected]="selectedScenario()?.id === scenario.id"
+              (click)="selectScenario(scenario)"
+            >
+              <mat-icon aria-hidden="true">{{ scenario.icon }}</mat-icon>
+              <span>{{ scenario.label }}</span>
+            </button>
+          }
+        </div>
+
+        @if (selectedScenario()?.requiresReason) {
+          @if (isLoadingDetail()) {
+            <div class="detail-loading">
+              <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+              <span>Cargando productos...</span>
+            </div>
+          } @else {
+            <div class="quality-detail">
+              <div class="detail-grid detail-header">
+                <div>PRODUCTO</div>
+                <div class="align-center">PEDIDO</div>
+                <div class="align-center">ACEPTADO</div>
+                <div class="align-center">RECHAZADO</div>
+                <div class="align-center">PENDIENTE</div>
+                <div>RAZÓN</div>
+              </div>
+
+              @for (row of detailRows(); track row.purchaseOrderDetailId) {
+                <div class="detail-grid detail-row" [class.invalid]="reviewedQuantity(row) > row.orderedQuantity">
+                  <div class="product-cell">
+                    <strong>{{ row.nombreProducto }}</strong>
+                    <span>{{ row.codigoProducto }} · {{ row.unidadMedida }}</span>
+                  </div>
+                  <div class="quantity-readonly align-center">{{ row.orderedQuantity }}</div>
+                  <label class="quantity-input">
+                    <input
+                      type="number"
+                      min="0"
+                      [max]="row.orderedQuantity"
+                      [value]="row.acceptedQuantity"
+                      (input)="updateAcceptedQuantity(row, $any($event.target).value)"
+                    />
+                  </label>
+                  <label class="quantity-input">
+                    <input
+                      type="number"
+                      min="0"
+                      [max]="row.orderedQuantity"
+                      [value]="row.rejectedQuantity"
+                      (input)="updateRejectedQuantity(row, $any($event.target).value)"
+                    />
+                  </label>
+                  <div class="quantity-readonly align-center">{{ missingQuantity(row) }}</div>
+                  <label class="line-reason" [class.required]="requiresDetailReason(row)">
+                    @if (requiresDetailReason(row)) {
+                      <textarea
+                        rows="2"
+                        maxlength="500"
+                        [value]="row.motivo"
+                        (input)="updateDetailReason(row, $any($event.target).value)"
+                      ></textarea>
+                    } @else {
+                      <span class="line-reason__ok">Aprobado completo</span>
+                    }
+                  </label>
+                </div>
+              }
+            </div>
+          }
+
+          <label class="reason-field">
+            <span>Observación general</span>
+            <textarea [(ngModel)]="reason" rows="4" maxlength="500"></textarea>
+          </label>
+        }
+
+        <footer class="review-modal__footer">
+          <button class="btn btn-secondary" type="button" [disabled]="isSaving() !== null" (click)="closeReview()">Cancelar</button>
+          <button class="btn btn-primary" type="button" [disabled]="!selectedScenario() || isSaving() !== null" (click)="saveReview()">
+            {{ isSaving() !== null ? 'Guardando...' : 'Registrar resultado' }}
+          </button>
+        </footer>
+      </section>
+    </div>
+  }
+</div>

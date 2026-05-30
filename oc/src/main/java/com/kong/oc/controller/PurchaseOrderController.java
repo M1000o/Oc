@@ -92,6 +92,33 @@ public class PurchaseOrderController {
         );
     }
 
+    @GetMapping("/quality-view")
+    @PreAuthorize("!hasRole('PROVIDER')")
+    public ResponseEntity<ApiResponse<Page<PurchaseOrderSummary>>> getOrdersForQuality(
+            @PageableDefault(size = 10, sort = "orderDate", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Órdenes pendientes de revisión de calidad",
+                        purchaseOrderService.findOrdersForQuality(pageable)
+                )
+        );
+    }
+
+    @PatchMapping("/{id}/quality-status")
+    @PreAuthorize("!hasRole('PROVIDER')")
+    public ResponseEntity<ApiResponse<PurchaseOrderResponse>> changeQualityStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody PurchaseOrderQualityStatus qualityStatusDTO
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        "Estado de calidad de orden de compra actualizado",
+                        purchaseOrderService.changeQualityStatus(id, qualityStatusDTO)
+                )
+        );
+    }
+
     @PostMapping("/{id}/send-email")
     public ResponseEntity<ApiResponse<PurchaseOrderEmailResponse>> sendEmail(
             @PathVariable Long id,

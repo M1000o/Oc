@@ -331,7 +331,13 @@ export class SupplierRegistrationPage implements OnInit {
     }
 
     if (errors['longitudInvalida']) {
-      return 'Número no válido para el banco seleccionado.';
+      const error = errors['longitudInvalida'];
+
+      if (error.faltan > 0) {
+        return `Faltan ${error.faltan} dígitos.`;
+      }
+
+      return `Debe tener ${error.requeridas.join(' o ')} dígitos.`;
     }
     
     if (errors['soloNumeros']) {
@@ -427,9 +433,18 @@ export class SupplierRegistrationPage implements OnInit {
       if (!bankId || !this.bankRules[bankId]) return null;
   
       const longitudes = this.bankRules[bankId][tipo];
-  
+      const longitudMinima = Math.min(...longitudes);
+
       if (!longitudes.includes(value.length)) {
-        return { longitudInvalida: true };
+        return {          
+          longitudInvalida: {
+            actual: value.length,
+            requeridos: longitudes,
+            faltan: value.length < longitudMinima
+              ? longitudMinima - value.length
+              : 0 
+          } 
+        };
       }
   
       return null;

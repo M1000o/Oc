@@ -75,6 +75,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sent-orders/sent-orders.page').then((m) => m.SentOrdersPage)
       },
       {
+        path: 'calidad',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/quality-orders/quality-orders.page').then((m) => m.QualityOrdersPage)
+      },
+      {
         path: 'productos',
         canActivate: [nonProviderGuard],
         loadComponent: () => import('./features/productos-registration/productos-registration').then((m) => m.ProductosRegistration)

@@ -2,6 +2,7 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import {
+  CalidadStatus,
   DeliveryStatus,
   PurchaseOrderStatus,
   PurchaseOrderSummary
@@ -22,6 +23,7 @@ interface SentOrderView {
   total: number;
   status: ShipmentStatus;
   deliveryStatus: DeliveryStatus;
+  calidadStatus: CalidadStatus;
 }
 
 @Component({
@@ -47,6 +49,7 @@ export class SentOrdersPage implements OnInit {
   
   protected updateTarget = signal<SentOrderView | null>(null);
   protected pendingDeliveryStatus = signal<DeliveryStatus | null>(null);
+  protected readonly statusInfoTarget = signal<SentOrderView | null>(null);
 
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.orders().length / this.pageSize))
@@ -83,12 +86,12 @@ export class SentOrdersPage implements OnInit {
       return;
     }
 
-    if (order.deliveryStatus === 'ENTREGADO') {
-      this.notificationService.error('No se puede revertir un pedido ya marcado como ENTREGADO.');
+    if (order.deliveryStatus === 'RECIBIDO' || order.deliveryStatus === 'COMPLETO') {
+      this.notificationService.error('No se puede revertir un pedido ya marcado como recibido o completo.');
       return;
     }
 
-    if (status === 'ENTREGADO') {
+    if (status === 'RECIBIDO') {
       this.updateTarget.set(order);
       this.pendingDeliveryStatus.set(status);
       return;
@@ -128,7 +131,7 @@ export class SentOrdersPage implements OnInit {
   }
 
   protected exportReport(): void {
-    const header = ['Pedido', 'FechaRegistro', 'Destino', 'Proveedor', 'Total', 'Estado OC', 'Estado Entrega'];
+    const header = ['Pedido', 'FechaRegistro', 'Destino', 'Proveedor', 'Total', 'Estado OC', 'Estado Entrega', 'Estado Calidad'];
     const rows = this.orders().map((order) => [
       order.orderNumber,
       order.shipmentDate,
@@ -136,7 +139,8 @@ export class SentOrdersPage implements OnInit {
       order.supplierName,
       this.toCurrency(order.total),
       this.resolveStatusLabel(order.status),
-      this.resolveDeliveryStatusLabel(order.deliveryStatus)
+      this.resolveDeliveryStatusLabel(order.deliveryStatus),
+      this.resolveCalidadStatusLabel(order.calidadStatus)
     ]);
 
     const csv = [header, ...rows]
@@ -166,6 +170,9 @@ export class SentOrdersPage implements OnInit {
       case 'EN_PROCESO': return 'En Proceso';
       case 'ENTREGADO': return 'Entregado';
       case 'ENTREGADO_PARCIAL': return 'Parcial';
+      case 'PARCIAL': return 'Parcial';
+      case 'RECIBIDO': return 'Recibido';
+      case 'COMPLETO': return 'Completo';
       case 'RECHAZADO': return 'Rechazado';
       case 'ATRASADO': return 'Atrasado';
       default: return status;
@@ -175,9 +182,35 @@ export class SentOrdersPage implements OnInit {
   protected getDeliveryStatusClass(status: string): string {
     switch (status) {
       case 'ENTREGADO': return 'delivered';
+      case 'RECIBIDO': return 'delivered';
+      case 'COMPLETO': return 'delivered';
       case 'ENTREGADO_PARCIAL': return 'partial';
+      case 'PARCIAL': return 'partial';
       case 'RECHAZADO':
       case 'ATRASADO': return 'error';
+      default: return 'transit';
+    }
+  }
+
+  protected resolveCalidadStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDIENTE': return 'Pendiente';
+      case 'EN_REVISION': return 'En Revisión';
+      case 'PARCIAL': return 'Parcial';
+      case 'APROBADO': return 'Aprobado';
+      case 'OBSERVADO': return 'Observado';
+      case 'RECHAZADO': return 'Rechazado';
+      default: return status || 'Pendiente';
+    }
+  }
+
+  protected getCalidadStatusClass(status: string): string {
+    switch (status) {
+      case 'APROBADO': return 'delivered';
+      case 'PARCIAL': return 'partial';
+      case 'EN_REVISION': return 'transit';
+      case 'OBSERVADO':
+      case 'RECHAZADO': return 'error';
       default: return 'transit';
     }
   }
@@ -194,6 +227,14 @@ export class SentOrdersPage implements OnInit {
     dialogRef.afterClosed().subscribe(() => {
       this.loadOrders();
     });
+  }
+
+  protected viewStatusDetails(order: SentOrderView): void {
+    this.statusInfoTarget.set(order);
+  }
+
+  protected closeStatusInfoModal(): void {
+    this.statusInfoTarget.set(null);
   }
 
   private loadOrders(): void {
@@ -235,7 +276,8 @@ export class SentOrdersPage implements OnInit {
       supplierName: order.supplierName,
       total: Number(order.total ?? 0),
       status: normalizedStatus === 'APROBADO' ? 'APROBADO' : 'PENDIENTE',
-      deliveryStatus: order.deliveryStatus
+      deliveryStatus: order.deliveryStatus,
+      calidadStatus: order.calidadStatus
     };
   }
 

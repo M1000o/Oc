@@ -44,6 +44,12 @@ export class PortalSidebarComponent {
           icon: 'receipt_long',
           route: '/portal/mis-ordenes',
           exact: true
+        },
+        {
+          label: 'Notas de Crédito',
+          icon: 'credit_card',
+          route: '/portal/notas-credito',
+          exact: true
         }
       ];
     }
@@ -74,6 +80,12 @@ export class PortalSidebarComponent {
         label: 'Ver Pedidos Enviados',
         icon: 'local_shipping',
         route: '/portal/enviados',
+        exact: true
+      },
+      {
+        label: 'Calidad',
+        icon: 'verified',
+        route: '/portal/calidad',
         exact: true
       },
       {

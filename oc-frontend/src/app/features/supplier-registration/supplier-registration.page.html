@@ -244,6 +244,9 @@
             inputmode="numeric" 
             appOnlyNumbers 
           />
+          @if(hasError('cci_soles')){
+            <small>{{ controlError('cci_soles', 'CCI en soles') }}</small>
+          }
         </label>
 
         <label class="field">
@@ -256,6 +259,9 @@
             inputmode="numeric" 
             appOnlyNumbers 
           />
+          @if (hasError('accountNumber_Dolares')) {
+            <small>{{ controlError('accountNumber_Dolares', 'La cuenta en dolares') }}</small>
+          }
         </label>
 
         <label class="field">
@@ -268,6 +274,9 @@
             inputmode="numeric" 
             appOnlyNumbers 
           />
+          @if (hasError('cci_dolares')) {
+            <small>{{ controlError('cci_dolares', 'CCI en dolares') }}</small>
+          }
         </label>
 
         <label class="field" [class.full-width]="form.controls.is_detraccion.value">

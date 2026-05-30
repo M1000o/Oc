@@ -1,5 +1,7 @@
 package com.kong.oc.repository;
 
+import com.kong.oc.dto.CalidadStatus;
+import com.kong.oc.dto.DeliveryStatus;
 import com.kong.oc.dto.Status;
 import com.kong.oc.dto.PurchaseOrderEmailStatus;
 import com.kong.oc.model.PurchaseOrder;
@@ -11,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Optional;
 
 @Repository
@@ -117,6 +120,32 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
             @Param("fechaHasta")  LocalDate fechaHasta,
             @Param("sede")        String sede,
             @Param("area")        String area,
+            Pageable pageable
+    );
+
+    @Query(value = """
+            SELECT po FROM PurchaseOrder po
+            JOIN FETCH po.supplier s
+            JOIN FETCH po.usuario u
+            JOIN FETCH po.area ar
+            JOIN FETCH ar.sede se
+            WHERE po.status = :status
+              AND po.emailStatus = :emailStatus
+              AND po.deliveryStatus IN :deliveryStatuses
+              AND po.calidadStatus IN :calidadStatuses
+            """,
+            countQuery = """
+            SELECT COUNT(po) FROM PurchaseOrder po
+            WHERE po.status = :status
+              AND po.emailStatus = :emailStatus
+              AND po.deliveryStatus IN :deliveryStatuses
+              AND po.calidadStatus IN :calidadStatuses
+            """)
+    Page<PurchaseOrder> findQualityQueue(
+            @Param("status") Status status,
+            @Param("emailStatus") PurchaseOrderEmailStatus emailStatus,
+            @Param("deliveryStatuses") Collection<DeliveryStatus> deliveryStatuses,
+            @Param("calidadStatuses") Collection<CalidadStatus> calidadStatuses,
             Pageable pageable
     );
 

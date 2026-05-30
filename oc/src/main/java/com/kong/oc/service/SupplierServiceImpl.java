@@ -33,6 +33,7 @@ public class SupplierServiceImpl implements ISupplierService {
     private final RoleRepository roleRepository;
     private final ActivationService activationService;
     private final PasswordEncoder passwordEncoder;
+    private final SupplierValidator supplierValidator;
 
     @Override
     public List<ProveedorResponse> listAll() {
@@ -180,7 +181,7 @@ public class SupplierServiceImpl implements ISupplierService {
     @Transactional
     public Supplier createFromForm(SupplierFormRequest req) {
 
-        validateBussinessRules(req);
+        supplierValidator.validateCreationRules(req);
         Supplier supplier = buildSupplier(req);
 
         User user = createSupplierUser(req);
@@ -193,42 +194,6 @@ public class SupplierServiceImpl implements ISupplierService {
         createBankAccounts(req, supplier);
 
         return supplier;
-    }
-
-    private void validateBussinessRules(SupplierFormRequest req) {
-        if (supplierRepository.findByRuc(req.getRuc()).isPresent()) {
-            throw new BadRequestException("Ruc ya existe");
-        }
-
-        if (supplierRepository.findByRazonSocial(req.getRazon_social()).isPresent()) {
-            throw new BadRequestException("Razón social ya existe");
-        }
-
-        if (contactsRepository.existsByEmail(req.getCorreo_pedidos())) {
-            throw new BadRequestException("Correo de contacto ya en uso");
-        }
-
-        if (contactsRepository.existsByPhone(req.getTelefono_contacto())) {
-            throw new BadRequestException("Número de teléfono en uso, use otro");
-        }
-
-        if(cuentasRepository.existsByNumeroCuenta(req.getAccountNumber_Soles())){
-            throw new BadRequestException("El número de cuenta en soles ya existe");
-        }
-
-        if (cuentasRepository.existsByCci(req.getCci_soles())) {
-            throw new BadRequestException("El CCI en soles ya está registrado");
-        }
-
-        if (req.getAccountNumber_Dolares() != null && !req.getAccountNumber_Dolares().isBlank()) {
-            if (cuentasRepository.existsByNumeroCuenta(req.getAccountNumber_Dolares())) {
-                throw new BadRequestException("El número de cuenta en dólares ya está registrado");
-            }
-
-            if (cuentasRepository.existsByCci(req.getCci_dolares())) {
-                throw new BadRequestException("El CCI en dólares ya está registrado");
-            }
-        }
     }
 
     private Supplier buildSupplier(SupplierFormRequest req) {

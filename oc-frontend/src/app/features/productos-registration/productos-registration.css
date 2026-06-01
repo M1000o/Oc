@@ -574,14 +574,24 @@
 }
 
 .modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   width: 32px;
   height: 32px;
+
   border: 1px solid #e5e2e6;
   border-radius: 999px;
   background: #ffffff;
   color: #545f73;
-  font-size: 1.2rem;
   cursor: pointer;
+}
+
+.modal-close mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
 }
 
 .product-modal__content {

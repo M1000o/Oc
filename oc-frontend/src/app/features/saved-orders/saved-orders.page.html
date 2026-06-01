@@ -1,8 +1,22 @@
 <div layoutBody class="workspace-canvas">
   <section class="page-header">
-    <h1>Ver Pedidos Guardados</h1>
-    <p>Gestiona y revisa tus pedidos en estado borrador antes de enviarlos.</p>
+    <div class="header-main">
+      <h1>Ver Pedidos Guardados</h1>
+      <p>Gestiona y revisa tus pedidos en estado borrador antes de enviarlos.</p>
+    </div>
+
+    <article class="stat-card" aria-label="Resumen de pedidos guardados">
+      <div class="stat-icon">
+        <mat-icon>inventory_2</mat-icon>
+      </div>
+      <div>
+        <span class="stat-label">Borradores Guardados</span>
+        <strong class="stat-value">{{ totalOrdersCount() }}</strong>
+        <span class="stat-sub">Pedidos pendientes de envío</span>
+      </div>
+    </article>
   </section>
+
   <section class="saved-orders-card">
     <div class="list-header">
       <div>FECHA</div>

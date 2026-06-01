@@ -24,6 +24,12 @@ public class EmailService {
     @Value("${app.email.from}")
     private String fromEmail;
 
+    @Value("${app.purchase-order.email.copy-to-1:}")
+    private String copyTo1;
+
+    @Value("${app.purchase-order.email.copy-to-2:}")
+    private String copyTo2;
+
     @Value("${app.activation.expiration-hours}")
     private int expirationHours;
 
@@ -34,7 +40,27 @@ public class EmailService {
     }
 
     public void sendPurchaseOrderEmail(String toEmail, String subject, String htmlContent) {
-        sendHtmlEmail(toEmail, subject, htmlContent, "No se pudo enviar el correo de la orden de compra");
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            helper.setText(htmlContent, true);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setFrom(fromEmail);
+
+            if (copyTo1 != null && !copyTo1.isBlank()) {
+                helper.addBcc(copyTo1);
+            }
+            if (copyTo2 != null && !copyTo2.isBlank()) {
+                helper.addBcc(copyTo2);
+            }
+
+            mailSender.send(message);
+            log.info("Email enviado a {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("Error enviando email", e);
+            throw new PurchaseOrderEmailDispatchException("No se pudo enviar el correo de la orden de compra", e);
+        }
     }
 
     public void sendPurchaseOrderEmail(
@@ -51,6 +77,14 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setFrom(fromEmail);
+
+            if (copyTo1 != null && !copyTo1.isBlank()) {
+                helper.addBcc(copyTo1);
+            }
+            if (copyTo2 != null && !copyTo2.isBlank()) {
+                helper.addBcc(copyTo2);
+            }
+
             helper.addAttachment(
                     attachmentFileName,
                     new ByteArrayResource(attachmentBytes),

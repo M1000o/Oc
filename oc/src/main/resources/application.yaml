@@ -36,6 +36,9 @@ app:
   activation:
     expiration-hours: 24
   purchase-order:
+    email:
+      copy-to-1: ${PO_EMAIL_COPY_1:luissalzar48@gmail.com}
+      copy-to-2: ${PO_EMAIL_COPY_2:erickvva6@gmail.com}
     pdf:
       storage-path: ${PURCHASE_ORDER_PDF_STORAGE_PATH:${user.home}/Documents/oc/pdfs}
       generated-by: ${PURCHASE_ORDER_GENERATED_BY:Generado por Grupo Kong Sistemas}

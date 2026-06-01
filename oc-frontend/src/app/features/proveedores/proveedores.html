@@ -10,6 +10,10 @@
         placeholder="Buscar proveedor, RUC, contacto..."
       />
     </label>
+    <button class="btn btn-ghost" type="button" (click)="addSupplier()">
+      <mat-icon aria-hidden="true">create_new_folder</mat-icon>
+      Añadir Proveedor
+    </button>
     <button class="btn btn-ghost" type="button">
       <mat-icon aria-hidden="true">tune</mat-icon>
       Filtros
@@ -51,11 +55,6 @@
           <span class="stat-label">Categorías activas</span>
           <strong class="stat-value">{{ totalCategoriesCount }}</strong>
           <span class="stat-sub brand">Verticales conectadas</span>
-        </article>
-        <article class="stat-card">
-          <span class="stat-label">Salud operativa</span>
-          <strong class="stat-value">{{ healthRatio }}</strong>
-          <span class="stat-sub success">Proveedores activos</span>
         </article>
         <article class="stat-card">
           <span class="stat-label">Revisiones pendientes</span>
@@ -196,3 +195,10 @@
     }
   </main>
 </div>
+
+@if (showAddSupplierModal()) {
+  <app-proveedor-registration
+    (closeRequest)="showAddSupplierModal.set(false)"
+    (success)="onModalSuccess()"
+  ></app-proveedor-registration>
+}

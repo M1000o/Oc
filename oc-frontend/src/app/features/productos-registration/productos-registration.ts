@@ -8,6 +8,7 @@ import { ServiceResponse } from '../../core/interfaces/services.interface';
 import { SupplierResponse } from '../../core/interfaces/supplier.interface';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ProductCatalogService } from '../../core/services/product-catalog.service';
+import { MatIconModule } from '@angular/material/icon';
 
 type ProductRow = {
   id: number;
@@ -38,7 +39,7 @@ type DeleteTarget = {
 
 @Component({
   selector: 'app-productos-registration',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './productos-registration.html',
   styleUrl: './productos-registration.css',
 })
@@ -401,15 +402,15 @@ export class ProductosRegistration implements OnInit {
   private buildPayload(): ProductRequest | null {
     const codigo = this.form.codigo_producto.trim().toUpperCase();
     const nombre = this.form.nombre.trim();
-    const precio = Number(this.form.precio);
+    const precio = Number(this.form.precio || 0);
 
     if (!codigo || !nombre || !this.form.und_medida || !this.form.proveedorId || !this.form.servicioId) {
       this.formError = 'Completa codigo, nombre, unidad, proveedor y categoria.';
       return null;
     }
 
-    if (!Number.isFinite(precio) || precio <= 0) {
-      this.formError = 'El precio debe ser mayor que 0.';
+    if (!Number.isFinite(precio)) {
+      this.formError = 'El precio debe ser un número válido.';
       return null;
     }
 

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
@@ -8,10 +8,11 @@ import {
   SupplierDirectoryStatus,
 } from '../../core/interfaces/supplier-directory.interface';
 import { SupplierDirectoryService } from '../../core/services/supplier-directory.service';
+import { ProveedorRegistrationModal } from './proveedor-registration/proveedor-registration/proveedor-registration';
 
 @Component({
   selector: 'app-proveedores',
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, ProveedorRegistrationModal],
   templateUrl: './proveedores.html',
   styleUrl: './proveedores.css',
 })
@@ -26,6 +27,7 @@ export class Proveedores implements OnInit {
   protected currentPage = 1;
   protected loadingDirectory = true;
   protected directoryError = '';
+  protected readonly showAddSupplierModal = signal(false);
 
   ngOnInit(): void {
     this.loadDirectory();
@@ -278,4 +280,11 @@ export class Proveedores implements OnInit {
     return candidate?.error?.message || candidate?.error?.error || candidate?.message || fallback;
   }
 
+  public addSupplier(): void {
+    this.showAddSupplierModal.set(true);
+  }
+
+  protected onModalSuccess(): void {
+    this.loadDirectory();
+  }
 }

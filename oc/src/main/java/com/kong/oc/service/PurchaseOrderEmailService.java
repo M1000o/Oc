@@ -24,7 +24,7 @@ public class PurchaseOrderEmailService {
     private final PurchaseOrderDocumentService purchaseOrderDocumentService;
 
     public PurchaseOrderEmailResponse sendPurchaseOrderEmail(PurchaseOrder order, PurchaseOrderEmailRequest request) {
-        String recipientEmail = resolveRecipientEmail(order.getSupplier());
+        String recipientEmail = resolveRecipientEmail(order.getSupplier(), request.recipientEmail());
         String subject = buildSubject(order);
         String htmlBody = buildEmailBody(order, request.message());
         PurchaseOrderDocumentService.PreparedPurchaseOrderPdf preparedPdf = purchaseOrderDocumentService.preparePdf(order);
@@ -48,7 +48,15 @@ public class PurchaseOrderEmailService {
         );
     }
 
-    private String resolveRecipientEmail(Supplier supplier) {
+    private String resolveRecipientEmail(Supplier supplier, String requestedRecipientEmail) {
+        Optional<String> requestEmail = Optional.ofNullable(requestedRecipientEmail)
+                .map(String::trim)
+                .filter(email -> !email.isBlank());
+
+        if (requestEmail.isPresent()) {
+            return requestEmail.get();
+        }
+
         Optional<String> contactEmail = contactsRepository
                 .findFirstBySupplier_IdAndIsDeletedFalseOrderByIdAsc(supplier.getId())
                 .map(Contacts::getEmail)

@@ -108,7 +108,7 @@ export class PortalSidebarComponent {
       },
       {
         label: 'Configuración',
-        icon: 'bookmark',
+        icon: 'settings',
         route: '/portal/configuracion',
         exact: true
       }

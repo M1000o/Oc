@@ -128,9 +128,6 @@ public class ProductServiceImpl implements IProductService {
         if (normalizedName.isBlank()){
             throw new BadRequestException("El nombre del producto es obligatorio");
         }
-        if (request.precio() == null || request.precio().signum() <= 0){
-            throw new BadRequestException("El precio del producto debe ser mayor que 0");
-        }
         if (request.und_medida() == null) {
             throw new BadRequestException("La unidad de medida es obligatoria");
         }

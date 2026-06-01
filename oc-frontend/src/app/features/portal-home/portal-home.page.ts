@@ -82,6 +82,8 @@ export class PortalHomePage {
   private pendingEmailOrderId: number | null = null;
   private pendingEmailOrderNumber = '';
   private pendingEmailMessage = '';
+  private pendingEmailRecipient = '';
+  private defaultRecipientEmail = '';
 
   protected orderDate = this.toDateInputValue(new Date());
   protected dispatchDate = this.toDateInputValue(this.addDays(new Date(), 2));
@@ -354,6 +356,7 @@ export class PortalHomePage {
     this.pendingEmailOrderId = null;
     this.pendingEmailOrderNumber = '';
     this.pendingEmailMessage = '';
+    this.pendingEmailRecipient = '';
     this.rows = [];
     this.showServiceProviderModal = false;
     this.showProductSelectionModal = false;
@@ -361,6 +364,7 @@ export class PortalHomePage {
     this.currentProviderSelection = null;
     this.summaryProviderSelection = null;
     this.recipientEmail = '';
+    this.defaultRecipientEmail = '';
     this.emailSubject = '';
     this.emailMessage = '';
     this.attachmentName = '';
@@ -378,6 +382,7 @@ export class PortalHomePage {
       this.pendingEmailOrderId,
       this.pendingEmailOrderNumber,
       this.pendingEmailMessage,
+      this.pendingEmailRecipient,
       true
     );
   }
@@ -397,12 +402,14 @@ export class PortalHomePage {
     const providerEmail = this.summaryProviderSelection?.providerEmail?.trim() ?? '';
     if (providerEmail) {
       this.recipientEmail = providerEmail;
+      this.defaultRecipientEmail = providerEmail;
       return;
     }
 
     const providerId = this.summaryProviderSelection?.providerId ?? 0;
     if (!providerId) {
       this.recipientEmail = '';
+      this.defaultRecipientEmail = '';
       return;
     }
 
@@ -411,6 +418,7 @@ export class PortalHomePage {
       next: (response) => {
         const email = response.data?.contactoEmail?.trim() ?? '';
         this.recipientEmail = email;
+        this.defaultRecipientEmail = email;
 
         if (this.summaryProviderSelection) {
           this.summaryProviderSelection = {
@@ -422,6 +430,7 @@ export class PortalHomePage {
       },
       error: () => {
         this.recipientEmail = '';
+        this.defaultRecipientEmail = '';
         this.isLoadingRecipientEmail = false;
       },
       complete: () => {
@@ -438,8 +447,25 @@ export class PortalHomePage {
     this.showSendOrderModal = false;
   }
 
+  private resolveRecipientOverride(recipientEmail: string): string {
+    const trimmedRecipient = recipientEmail.trim();
+    if (!trimmedRecipient) {
+      return '';
+    }
+
+    const baseRecipient = this.defaultRecipientEmail.trim();
+    if (!baseRecipient) {
+      return trimmedRecipient;
+    }
+
+    return trimmedRecipient.toLowerCase() === baseRecipient.toLowerCase() ? '' : trimmedRecipient;
+  }
+
   protected onSendOrderRequested(payload: SendOrderModalSubmitPayload): void {
-    this.recipientEmail = payload.recipientEmail;
+    const trimmedRecipientEmail = payload.recipientEmail.trim();
+    const recipientOverride = this.resolveRecipientOverride(trimmedRecipientEmail);
+
+    this.recipientEmail = trimmedRecipientEmail;
     this.emailSubject = payload.emailSubject;
     this.emailMessage = payload.emailMessage;
 
@@ -455,11 +481,16 @@ export class PortalHomePage {
     }
 
     if (this.pendingEmailOrderId && !this.currentEditingOrderId) {
-      this.sendPurchaseOrderEmail(this.pendingEmailOrderId, this.pendingEmailOrderNumber, payload.emailMessage);
+      this.sendPurchaseOrderEmail(
+        this.pendingEmailOrderId,
+        this.pendingEmailOrderNumber,
+        payload.emailMessage,
+        recipientOverride
+      );
       return;
     }
 
-    this.createAndSendPurchaseOrder(payload.emailMessage);
+    this.createAndSendPurchaseOrder(payload.emailMessage, recipientOverride);
   }
 
   protected openPdfPreview(payload: SendOrderModalPreviewPayload): void {
@@ -810,7 +841,7 @@ export class PortalHomePage {
     });
   }
 
-  private createAndSendPurchaseOrder(customMessage: string): void {
+  private createAndSendPurchaseOrder(customMessage: string, recipientOverride?: string): void {
     const request = this.buildPurchaseOrderRequest(false);
     if (!request) {
       this.showStatus('error', 'No se pudo preparar la orden de compra.');
@@ -834,18 +865,29 @@ export class PortalHomePage {
       this.emailSubject = this.buildEmailSubject(data.purchaseOrderNumber);
       this.attachmentName = `${data.purchaseOrderNumber}.pdf`;
 
-      this.sendPurchaseOrderEmail(data.id, data.purchaseOrderNumber, customMessage);
+      this.sendPurchaseOrderEmail(data.id, data.purchaseOrderNumber, customMessage, recipientOverride);
     });
   }
 
-  private sendPurchaseOrderEmail(orderId: number, orderNumber: string, customMessage: string, isRetry = false): void {
+  private sendPurchaseOrderEmail(
+    orderId: number,
+    orderNumber: string,
+    customMessage: string,
+    recipientOverride?: string,
+    isRetry = false
+  ): void {
     if (isRetry) {
       this.isRetryingEmail = true;
     } else {
       this.isSubmittingOrder = true;
     }
 
-    this.purchaseOrderService.sendPurchaseOrderEmail(orderId, { message: customMessage }).subscribe(({ data, error }) => {
+    const trimmedRecipientOverride = recipientOverride?.trim() ?? '';
+    const emailRequest = trimmedRecipientOverride
+      ? { message: customMessage, recipientEmail: trimmedRecipientOverride }
+      : { message: customMessage };
+
+    this.purchaseOrderService.sendPurchaseOrderEmail(orderId, emailRequest).subscribe(({ data, error }) => {
       this.isSubmittingOrder = false;
       this.isRetryingEmail = false;
 
@@ -853,6 +895,7 @@ export class PortalHomePage {
         this.pendingEmailOrderId = orderId;
         this.pendingEmailOrderNumber = orderNumber;
         this.pendingEmailMessage = customMessage;
+        this.pendingEmailRecipient = trimmedRecipientOverride;
         this.emailSubject = this.buildEmailSubject(orderNumber);
         this.attachmentName = `${orderNumber}.pdf`;
         this.showSendOrderModal = false;

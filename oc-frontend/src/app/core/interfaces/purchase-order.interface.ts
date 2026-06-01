@@ -58,6 +58,7 @@ export type PurchaseOrderEmailStatus = 'QUEUED' | 'SENT' | 'FAILED';
 
 export interface PurchaseOrderEmailRequest {
   message: string;
+  recipientEmail?: string;
 }
 
 export interface PurchaseOrderEmailResponse {

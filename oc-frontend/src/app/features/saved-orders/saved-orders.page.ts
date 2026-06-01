@@ -37,6 +37,8 @@ export class SavedOrdersPage implements OnInit {
   protected readonly orders = signal<SavedOrderView[]>([]);
   protected deleteTarget = signal<SavedOrderView | null>(null);
 
+  protected readonly totalOrdersCount = computed(() => this.orders().length);
+
   protected readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.orders().length / this.pageSize))
   );

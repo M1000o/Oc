@@ -1,5 +1,6 @@
 package com.kong.oc.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -7,7 +8,11 @@ public record PurchaseOrderEmailRequest(
 
         @NotBlank(message = "El mensaje personalizado es obligatorio")
         @Size(max = 1000, message = "El mensaje personalizado no puede superar 1000 caracteres")
-        String message
+        String message,
+
+        @Email(message = "Correo del destinatario inválido")
+        @Size(max = 320, message = "El correo del destinatario no puede superar 320 caracteres")
+        String recipientEmail
 
 ) {
 }

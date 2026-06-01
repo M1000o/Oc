@@ -16,7 +16,6 @@ public record ProductRequest(
         @NotBlank(message = "El nombre del producto es obligatorio")
         String nombre,
         String descripcion,
-        @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor que 0")
         BigDecimal precio,
 
         @NotNull(message = "La unidad de medida es obligatoria")

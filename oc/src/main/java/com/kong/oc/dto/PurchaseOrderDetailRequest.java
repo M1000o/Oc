@@ -14,7 +14,6 @@ public record PurchaseOrderDetailRequest(
         Integer cantidad,
 
         @NotNull(message = "El precio unitario es obligatorio")
-        @DecimalMin(value = "0.0", inclusive = false, message = "El precio unitario debe ser mayor a cero")
         @Digits(integer = 10, fraction = 2, message = "El precio unitario tiene un formato inválido")
         BigDecimal precioUnitario
 ) {

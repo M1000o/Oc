@@ -9,6 +9,8 @@ import { SupplierResponse } from '../../core/interfaces/supplier.interface';
 import { AppNotificationService } from '../../core/services/app-notification.service';
 import { ProductCatalogService } from '../../core/services/product-catalog.service';
 import { MatIconModule } from '@angular/material/icon';
+import { UnitModalComponent } from '../../shared/components/unit-modal/unit-modal.component';
+import { UnitResponse } from '../../core/interfaces/unidad-medida.interface';
 
 type ProductRow = {
   id: number;
@@ -18,6 +20,7 @@ type ProductRow = {
   provider: string;
   price: number;
   unit: string;
+  unitId: number | null;
   thumbClass: string;
   tagClass: string;
 };
@@ -26,7 +29,7 @@ type ProductFormModel = {
   codigo_producto: string;
   nombre: string;
   precio: string;
-  und_medida: string;
+  unidadMedidaId: number | null;
   proveedorId: number | null;
   servicioId: number | null;
 };
@@ -39,7 +42,7 @@ type DeleteTarget = {
 
 @Component({
   selector: 'app-productos-registration',
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, UnitModalComponent],
   templateUrl: './productos-registration.html',
   styleUrl: './productos-registration.css',
 })
@@ -48,19 +51,12 @@ export class ProductosRegistration implements OnInit {
   private readonly notificationService = inject(AppNotificationService);
 
   protected readonly pageSize = 4;
-  protected readonly unitOptions = [
-    { value: 'KG', label: 'Kilogramos' },
-    { value: 'UND', label: 'Unidad' },
-    { value: 'PAQ', label: 'Paquete' },
-    { value: 'DOC', label: 'Docena' },
-    { value: 'GR', label: 'Gramos' },
-  ];
-
   protected searchTerm = '';
   protected currentPage = 1;
   protected products: ProductRow[] = [];
   protected suppliers: SupplierResponse[] = [];
   protected services: ServiceResponse[] = [];
+  protected unitOptions: UnitResponse[] = [];
   protected supplierServices: ServiceResponse[] = [];
   protected loadingTable = true;
   protected loadingCatalogs = true;
@@ -68,6 +64,7 @@ export class ProductosRegistration implements OnInit {
   protected tableError = '';
   protected catalogsError = '';
   protected isModalOpen = false;
+  protected isUnitModalOpen = false;
   protected isSaving = false;
   protected isDeletingId: number | null = null;
   protected deleteTarget: DeleteTarget | null = null;
@@ -78,6 +75,21 @@ export class ProductosRegistration implements OnInit {
 
   ngOnInit(): void {
     this.loadInitialData();
+  }
+
+  protected openUnitModal(): void {
+    this.isUnitModalOpen = true;
+  }
+
+  protected onUnitModalClosed(): void {
+    this.isUnitModalOpen = false;
+  }
+
+  protected onUnitModalSaved(unit: UnitResponse): void {
+    this.unitOptions = [unit, ...this.unitOptions];
+    this.form.unidadMedidaId = unit.id;
+    this.isUnitModalOpen = false;
+    this.notificationService.success('Unidad de medida creada exitosamente');
   }
 
   protected get filteredProducts(): ProductRow[] {
@@ -183,7 +195,7 @@ export class ProductosRegistration implements OnInit {
       codigo_producto: product.sku,
       nombre: product.name,
       precio: product.price.toString(),
-      und_medida: this.resolveUnitValue(product.unit),
+      unidadMedidaId: product.unitId,
       proveedorId: this.findSupplierIdByName(product.provider),
       servicioId: this.findServiceIdByName(product.category),
     };
@@ -333,8 +345,10 @@ export class ProductosRegistration implements OnInit {
       products: this.productCatalogService.listAllProducts(),
       suppliers: this.productCatalogService.listSuppliers(),
       services: this.productCatalogService.listServices(),
+      units: this.productCatalogService.listUnits(),
     }).subscribe({
-      next: ({ products, suppliers, services }) => {
+      next: ({ products, suppliers, services, units }) => {
+        this.unitOptions = units.data ?? [];
         this.products = (products.data ?? []).map((product) => this.mapProduct(product));
         this.suppliers = suppliers.data ?? [];
         this.services = services.data ?? [];
@@ -393,7 +407,8 @@ export class ProductosRegistration implements OnInit {
       category,
       provider: product.proveedorName?.trim() || 'Proveedor no disponible',
       price: this.toNumber(product.precio),
-      unit: this.resolveUnitLabel(product.und_medida),
+      unit: product.unidadMedidaNombre?.trim() || this.resolveUnitLabel(product.und_medida),
+      unitId: product.unidadMedidaId ?? this.resolveUnitId(product.und_medida),
       thumbClass: this.resolveThumbClass(category),
       tagClass: this.resolveTagClass(category),
     };
@@ -404,7 +419,7 @@ export class ProductosRegistration implements OnInit {
     const nombre = this.form.nombre.trim();
     const precio = Number(this.form.precio || 0);
 
-    if (!codigo || !nombre || !this.form.und_medida || !this.form.proveedorId || !this.form.servicioId) {
+    if (!codigo || !nombre || !this.form.unidadMedidaId || !this.form.proveedorId || !this.form.servicioId) {
       this.formError = 'Completa codigo, nombre, unidad, proveedor y categoria.';
       return null;
     }
@@ -419,7 +434,7 @@ export class ProductosRegistration implements OnInit {
       nombre,
       descripcion: '',
       precio,
-      und_medida: this.form.und_medida,
+      unidadMedidaId: this.form.unidadMedidaId,
       proveedorId: this.form.proveedorId,
       servicioId: this.form.servicioId,
     };
@@ -430,7 +445,7 @@ export class ProductosRegistration implements OnInit {
       codigo_producto: '',
       nombre: '',
       precio: '',
-      und_medida: 'UND',
+      unidadMedidaId: this.resolveUnitId('UND'),
       proveedorId: null,
       servicioId: null,
     };
@@ -462,13 +477,12 @@ export class ProductosRegistration implements OnInit {
   }
 
   private resolveUnitLabel(value: string | null | undefined): string {
-    const option = this.unitOptions.find((item) => item.value === value);
-    return option?.label ?? value ?? 'Unidad';
+    const option = this.unitOptions.find((item) => item.codigo === value);
+    return option?.nombre ?? value ?? 'Unidad';
   }
 
-  private resolveUnitValue(label: string): string {
-    const option = this.unitOptions.find((item) => item.label === label);
-    return option?.value ?? 'UND';
+  private resolveUnitId(code: string | null | undefined): number | null {
+    return this.unitOptions.find((item) => item.codigo === code)?.id ?? null;
   }
 
   private findSupplierIdByName(name: string): number | null {

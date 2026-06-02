@@ -709,6 +709,39 @@
   box-shadow: 0 0 0 4px rgba(216, 227, 251, 0.66);
 }
 
+.field-with-action {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid #e2dfe3;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #545f73;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.action-btn:hover {
+  background: #f0edef;
+  border-color: rgba(84, 95, 115, 0.3);
+  transform: translateY(-1px);
+}
+
+.action-btn mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
 @media (max-width: 1120px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

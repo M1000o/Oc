@@ -234,11 +234,17 @@
 
             <label class="field">
               <span>Unidad</span>
-              <select [(ngModel)]="form.und_medida">
-                @for (unit of unitOptions; track unit.value) {
-                <option [value]="unit.value">{{ unit.label }}</option>
-                }
-              </select>
+              <div class="field-with-action">
+                <select [(ngModel)]="form.unidadMedidaId">
+                  <option [ngValue]="null">Selecciona una unidad</option>
+                  @for (unit of unitOptions; track unit.id) {
+                  <option [ngValue]="unit.id">{{ unit.nombre }}</option>
+                  }
+                </select>
+                <button type="button" class="action-btn" (click)="openUnitModal()" title="Nueva unidad de medida">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
             </label>
 
             <label class="field">
@@ -273,6 +279,13 @@
         </footer>
       </section>
     </div>
+
+    <app-unit-modal
+      [isOpen]="isUnitModalOpen"
+      mode="create"
+      (closed)="onUnitModalClosed()"
+      (saved)="onUnitModalSaved($event)"
+    ></app-unit-modal>
     }
 
     @if (deleteTarget) {

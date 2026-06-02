@@ -103,6 +103,12 @@ export class PortalSidebarComponent {
             icon: 'folder_shared',
             route: '/portal/proveedores',
             exact: false
+          },
+          {
+            label: 'Und. Medida',
+            icon: 'straighten',
+            route: '/portal/unidad-medida',
+            exact: true
           }
         ]
       },

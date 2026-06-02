@@ -8,9 +8,11 @@ import com.kong.oc.interfaces.IProductService;
 import com.kong.oc.model.Product;
 import com.kong.oc.model.Services;
 import com.kong.oc.model.Supplier;
+import com.kong.oc.model.Unit;
 import com.kong.oc.repository.ProductRepository;
 import com.kong.oc.repository.ServicesRepository;
 import com.kong.oc.repository.SupplierRepository;
+import com.kong.oc.repository.UnitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ public class ProductServiceImpl implements IProductService {
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
     private final ServicesRepository servicesRepository;
+    private final UnitRepository unitRepository;
 
     @Transactional
     public ProductResponse create(ProductRequest request){
@@ -30,6 +33,7 @@ public class ProductServiceImpl implements IProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
         Services servicio = servicesRepository.findById(request.servicioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
+        Unit unit = findActiveUnitById(request.unidadMedidaId());
 
         String normalizedName = request.nombre() == null ? "" : request.nombre().trim();
         String normalizedProductCode = normalizeProductCode(request.codigo_producto());
@@ -40,7 +44,7 @@ public class ProductServiceImpl implements IProductService {
                 .nombre(normalizedName)
                 .descripcion(request.descripcion())
                 .precio(request.precio())
-                .und_medida(request.und_medida())
+                .und_medida(unit)
                 .proveedor(supplier)
                 .servicio(servicio)
                 .build();
@@ -55,6 +59,7 @@ public class ProductServiceImpl implements IProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
         Services servicio = servicesRepository.findById(request.servicioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
+        Unit unit = findActiveUnitById(request.unidadMedidaId());
 
         String normalizedName = request.nombre() == null ? "" : request.nombre().trim();
         String normalizedProductCode = normalizeProductCode(request.codigo_producto());
@@ -64,16 +69,18 @@ public class ProductServiceImpl implements IProductService {
         p.setNombre(normalizedName);
         p.setDescripcion(request.descripcion());
         p.setPrecio(request.precio());
-        p.setUnd_medida(request.und_medida());
+        p.setUnd_medida(unit);
         p.setProveedor(supplier);
         p.setServicio(servicio);
         return toDto(p);
     }
 
+    @Transactional(readOnly = true)
     public ProductResponse getById(Long id) {
         return toDto(findActiveProductById(id));
     }
 
+    @Transactional(readOnly = true)
     public List<ProductResponse> listAll() {
         return productRepository.findByIsDeletedFalse()
                 .stream()
@@ -87,6 +94,7 @@ public class ProductServiceImpl implements IProductService {
         p.softDelete();
     }
 
+    @Transactional(readOnly = true)
     public List<ProductResponse> listByProveedor(Long proveedorId) {
         Supplier supplier = supplierRepository.findById(proveedorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
@@ -96,6 +104,7 @@ public class ProductServiceImpl implements IProductService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ProductResponse> listByServicio(Long servicioId) {
         Services servicio = servicesRepository.findById(servicioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
@@ -128,7 +137,7 @@ public class ProductServiceImpl implements IProductService {
         if (normalizedName.isBlank()){
             throw new BadRequestException("El nombre del producto es obligatorio");
         }
-        if (request.und_medida() == null) {
+        if (request.unidadMedidaId() == null) {
             throw new BadRequestException("La unidad de medida es obligatoria");
         }
 
@@ -155,7 +164,9 @@ public class ProductServiceImpl implements IProductService {
                 p.getProveedor() == null ? null : p.getProveedor().getId(),
                 p.getProveedor() == null ? null : p.getProveedor().getRuc(),
                 p.getProveedor() == null ? null : p.getProveedor().getRazonSocial(),
-                p.getUnd_medida() == null ? null : p.getUnd_medida().name(),
+                p.getUnd_medida() == null ? null : p.getUnd_medida().getId(),
+                p.getUnd_medida() == null ? null : p.getUnd_medida().getCodigo(),
+                p.getUnd_medida() == null ? null : p.getUnd_medida().getNombre(),
                 p.getServicio() == null ? null : p.getServicio().getId(),
                 p.getServicio() == null ? null : p.getServicio().getNombre()
         );
@@ -165,5 +176,11 @@ public class ProductServiceImpl implements IProductService {
         return productRepository.findById(id)
                 .filter(p -> !Boolean.TRUE.equals(p.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("El producto no existe"));
+    }
+
+    private Unit findActiveUnitById(Long id) {
+        return unitRepository.findById(id)
+                .filter(unit -> !Boolean.TRUE.equals(unit.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Unidad de medida no encontrada"));
     }
 }

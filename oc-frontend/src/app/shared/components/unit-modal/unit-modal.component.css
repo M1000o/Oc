@@ -1,0 +1,130 @@
+.product-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100; /* Mayor que el modal de productos */
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(30, 33, 41, 0.38);
+  backdrop-filter: blur(6px);
+}
+
+.product-modal {
+  width: min(100%, 500px);
+  border-radius: 24px;
+  background: #fffdfd;
+  box-shadow: 0 28px 60px rgba(20, 24, 35, 0.22);
+}
+
+.product-modal__header,
+.product-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.product-modal__header {
+  border-bottom: 1px solid #ece8eb;
+}
+
+.product-modal__header h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.product-modal__header p {
+  margin: 6px 0 0;
+  color: #6c6b6f;
+  font-size: 0.8rem;
+}
+
+.product-modal__content {
+  padding: 18px 20px;
+}
+
+.product-modal__footer {
+  border-top: 1px solid #ece8eb;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e2e6;
+  border-radius: 999px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field span {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #54545a;
+}
+
+.field input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2dfe3;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  outline: 0;
+}
+
+.field input:focus {
+  border-color: rgba(84, 95, 115, 0.45);
+  box-shadow: 0 0 0 4px rgba(216, 227, 251, 0.66);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0.72rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border-color: #e4e2e5;
+  color: #545f73;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #5d6b84, #445166);
+  color: #f6f7ff;
+}
+
+.panel-message {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.panel-message--error {
+  border: 1px solid #f2cccc;
+  background: #fff1f1;
+  color: #9f403d;
+}

@@ -1,0 +1,40 @@
+@if (isOpen) {
+<div class="product-modal-backdrop" (click)="closeModal()">
+  <section class="product-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <header class="product-modal__header">
+      <div>
+        <h2>{{ mode === 'create' ? 'Nueva Unidad de Medida' : 'Editar Unidad de Medida' }}</h2>
+        <p>Completa los datos de la unidad de medida.</p>
+      </div>
+      <button type="button" class="modal-close" (click)="closeModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <div class="product-modal__content">
+      @if (formError) {
+      <div class="panel-message panel-message--error">{{ formError }}</div>
+      }
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Código</span>
+          <input [(ngModel)]="form.codigo" maxlength="20" placeholder="Ej. KG, UND, MTS" />
+        </label>
+
+        <label class="field">
+          <span>Nombre</span>
+          <input [(ngModel)]="form.nombre" maxlength="100" placeholder="Ej. Kilogramos, Unidad, Metros" />
+        </label>
+      </div>
+    </div>
+
+    <footer class="product-modal__footer">
+      <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary" [disabled]="isSaving" (click)="save()">
+        <span>{{ isSaving ? 'Guardando...' : (mode === 'create' ? 'Crear' : 'Guardar') }}</span>
+      </button>
+    </footer>
+  </section>
+</div>
+}

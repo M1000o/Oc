@@ -10,7 +10,9 @@ public record ProductResponse(
         Long proveedorId,
         String proveedorRuc,
         String proveedorName,
+        Long unidadMedidaId,
         String und_medida,
+        String unidadMedidaNombre,
         Long servicioId,
         String servicioNombre
 ) {

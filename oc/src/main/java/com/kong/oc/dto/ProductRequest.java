@@ -19,7 +19,7 @@ public record ProductRequest(
         BigDecimal precio,
 
         @NotNull(message = "La unidad de medida es obligatoria")
-        Unit und_medida,
+        Long unidadMedidaId,
 
         @NotNull(message = "El proveedor es obligatorio")
         Long proveedorId,

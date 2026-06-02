@@ -1,7 +1,6 @@
 package com.kong.oc.model;
 
 import com.kong.oc.common.model.BaseEntity;
-import com.kong.oc.dto.Unit;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,8 +26,8 @@ public class Product extends BaseEntity {
     private String descripcion;
     private BigDecimal precio;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "und", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unidad_medida_id")
     private Unit und_medida;
 
     @ManyToOne

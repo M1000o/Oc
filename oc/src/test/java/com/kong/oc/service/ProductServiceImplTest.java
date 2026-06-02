@@ -3,13 +3,14 @@ package com.kong.oc.service;
 import com.kong.oc.common.exception.ResourceNotFoundException;
 import com.kong.oc.dto.ProductRequest;
 import com.kong.oc.dto.ProductResponse;
-import com.kong.oc.dto.Unit;
 import com.kong.oc.model.Product;
 import com.kong.oc.model.Services;
 import com.kong.oc.model.Supplier;
+import com.kong.oc.model.Unit;
 import com.kong.oc.repository.ProductRepository;
 import com.kong.oc.repository.ServicesRepository;
 import com.kong.oc.repository.SupplierRepository;
+import com.kong.oc.repository.UnitRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,8 @@ class ProductServiceImplTest {
     SupplierRepository supplierRepository;
     @Mock
     ServicesRepository servicesRepository;
+    @Mock
+    UnitRepository unitRepository;
 
     @InjectMocks
     ProductServiceImpl productService;
@@ -43,6 +46,7 @@ class ProductServiceImplTest {
 
     Supplier supplier;
     Services servicio;
+    Unit unit;
 
     @BeforeEach
     void setUp(){
@@ -52,19 +56,25 @@ class ProductServiceImplTest {
         servicio = new Services();
         servicio.setId(2L);
         servicio.setNombre("Categoria X");
+        unit = Unit.builder()
+                .id(3L)
+                .codigo("KG")
+                .nombre("Kilogramos")
+                .build();
     }
 
     @Test
     void create_success() {
         when(supplierRepository.findById(1L)).thenReturn(Optional.of(supplier));
         when(servicesRepository.findById(2L)).thenReturn(Optional.of(servicio));
+        when(unitRepository.findById(3L)).thenReturn(Optional.of(unit));
 
         ProductRequest req = new ProductRequest(
             "prd_001",
             "Producto A",
             "Desc",
             new BigDecimal("10.5"),
-            Unit.KG,
+            3L,
             1L,
             2L
         );
@@ -75,7 +85,7 @@ class ProductServiceImplTest {
                 .nombre(req.nombre())
                 .descripcion(req.descripcion())
                 .precio(req.precio())
-                .und_medida(req.und_medida())
+                .und_medida(unit)
                 .proveedor(supplier)
                 .servicio(servicio)
                 .build();
@@ -89,7 +99,7 @@ class ProductServiceImplTest {
         Product cap = productCaptor.getValue();
         assertEquals("Producto A", cap.getNombre());
         assertEquals("PRD_001", cap.getCodigoProducto());
-        assertEquals(Unit.KG, cap.getUnd_medida());
+        assertEquals(unit, cap.getUnd_medida());
         assertEquals(supplier, cap.getProveedor());
         assertEquals(servicio, cap.getServicio());
 
@@ -98,13 +108,15 @@ class ProductServiceImplTest {
         assertEquals(saved.getCodigoProducto(), resp.codigo_producto());
         assertEquals(saved.getNombre(), resp.nombre());
         assertEquals(saved.getPrecio(), resp.precio());
-        assertEquals(saved.getUnd_medida().name(), resp.und_medida());
+        assertEquals(saved.getUnd_medida().getId(), resp.unidadMedidaId());
+        assertEquals(saved.getUnd_medida().getCodigo(), resp.und_medida());
+        assertEquals(saved.getUnd_medida().getNombre(), resp.unidadMedidaNombre());
     }
 
     @Test
     void create_supplierNotFound_throws() {
         when(supplierRepository.findById(1L)).thenReturn(Optional.empty());
-        ProductRequest req = new ProductRequest("PRD01", "p", "d", new BigDecimal("1"), Unit.UND, 1L, 2L);
+        ProductRequest req = new ProductRequest("PRD01", "p", "d", new BigDecimal("1"), 3L, 1L, 2L);
         assertThrows(ResourceNotFoundException.class, () -> productService.create(req));
     }
 }

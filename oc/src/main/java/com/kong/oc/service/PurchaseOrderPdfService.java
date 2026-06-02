@@ -124,7 +124,7 @@ public class PurchaseOrderPdfService {
                     .append("<td>").append(index).append("</td>")
                     .append("<td class=\"mono\">").append(escapeHtml(defaultText(detail.getProduct().getCodigoProducto(), "-"))).append("</td>")
                     .append("<td class=\"description\">").append(escapeHtml(defaultText(detail.getProduct().getNombre(), "Sin descripcion"))).append("</td>")
-                    .append("<td>").append(escapeHtml(detail.getProduct().getUnd_medida().name())).append("</td>")
+                    .append("<td>").append(escapeHtml(detail.getProduct().getUnd_medida().getCodigo())).append("</td>")
                     .append("<td class=\"align-center\">").append(detail.getCantidad()).append("</td>")
                     .append("<td class=\"align-right\">").append(escapeHtml(formatCurrency(detail.getPrecioUnitario()))).append("</td>")
                     .append("<td class=\"align-right strong\">").append(escapeHtml(formatCurrency(detail.getSubtotal()))).append("</td>")

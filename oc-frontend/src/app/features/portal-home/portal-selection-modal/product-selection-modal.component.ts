@@ -8,7 +8,7 @@ import { ProductResponse } from '../../../core/interfaces/product-response.inter
 import { ProviderSelection } from '../../../core/interfaces/provider-option.interface';
 import { ProductCatalogService } from '../../../core/services/product-catalog.service';
 
-export type UnitOption = 'KG' | 'UND' | 'PAQ' | 'DOC' | 'GR' | 'UN' | 'CJ';
+export type UnitOption = string;
 
 export interface ProductSelectionItem {
   productId: number;
@@ -34,7 +34,6 @@ interface ProductRow extends ProductSelectionItem {
 export class ProductSelectionModalComponent {
   private readonly productCatalogService = inject(ProductCatalogService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly supportedUnits: UnitOption[] = ['KG', 'UND', 'PAQ', 'DOC', 'GR', 'UN', 'CJ'];
 
   readonly providerSelection = input<ProviderSelection | null>(null);
   readonly initialSelections = input<ProductSelectionItem[]>([]);
@@ -167,7 +166,7 @@ export class ProductSelectionModalComponent {
       productId: product.id,
       sku,
       name: product.nombre,
-      unit: this.toUnitOption(product.und_medida),
+      unit: product.und_medida?.trim() || '',
       unitPrice: this.toNumber(product.precio),
       quantity: existingSelection?.quantity ?? 0,
       serviceId: product.servicioId,
@@ -178,15 +177,6 @@ export class ProductSelectionModalComponent {
   private toSku(product: ProductResponse): string {
     const normalizedCode = typeof product.codigo_producto === 'string' ? product.codigo_producto.trim() : '';
     return normalizedCode.length ? normalizedCode : `${product.id}`.padStart(3, '0');
-  }
-
-  private toUnitOption(value: unknown): UnitOption {
-    const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
-    return this.isUnitOption(normalized) ? normalized : 'UND';
-  }
-
-  private isUnitOption(value: string): value is UnitOption {
-    return this.supportedUnits.includes(value as UnitOption);
   }
 
   private toNumber(value: number | string): number {

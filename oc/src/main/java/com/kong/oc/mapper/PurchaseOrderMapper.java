@@ -67,7 +67,7 @@ public class PurchaseOrderMapper {
                 detail.getProduct().getId(),
                 detail.getProduct().getCodigoProducto(),
                 detail.getProduct().getNombre(),
-                detail.getProduct().getUnd_medida().name(),
+                detail.getProduct().getUnd_medida().getCodigo(),
                 detail.getCantidad(),
                 detail.getPrecioUnitario(),
                 detail.getSubtotal()

@@ -5,7 +5,9 @@ export interface ProductResponse {
   precio: number | string;
   proveedorId: number;
   proveedorName: string;
+  unidadMedidaId: number | null;
   und_medida: string;
+  unidadMedidaNombre: string | null;
   proveedorRuc: string;
   servicioId: number;
   servicioNombre: string;

@@ -3,7 +3,7 @@ export interface ProductRequest {
   nombre: string;
   descripcion: string;
   precio: number;
-  und_medida: string;
+  unidadMedidaId: number;
   proveedorId: number;
   servicioId: number;
 }

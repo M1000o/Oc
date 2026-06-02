@@ -1,0 +1,183 @@
+<div layoutBody class="workspace-canvas">
+  <section class="catalog-shell">
+    <header class="page-header">
+      <div class="page-header__copy">
+        <div class="title-block">
+          <h1>Unidades de Medida</h1>
+        </div>
+      </div>
+
+      <div class="page-header__actions">
+        <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+          <span class="btn__icon" aria-hidden="true">+</span>
+          <span>Nuevo Registro</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="table-card">
+      <div class="table-toolbar">
+        <label class="search-box" aria-label="Buscar unidades">
+          <span class="search-box__icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            [ngModel]="searchTerm"
+            (ngModelChange)="onSearchChange($event)"
+            placeholder="Buscar por código o nombre"
+          />
+        </label>
+
+        <span class="results-counter">
+          {{ filteredUnidades.length }} resultado{{ filteredUnidades.length === 1 ? '' : 's' }}
+        </span>
+      </div>
+
+      @if (tableError) {
+      <div class="panel-message panel-message--error">
+        <span>{{ tableError }}</span>
+        <button type="button" class="panel-message__action" (click)="loadData()">Reintentar</button>
+      </div>
+      }
+
+      <div class="table-wrap">
+        <table class="catalog-table">
+          <colgroup>
+            <col class="col-code" style="width: 150px;" />
+            <col class="col-name" />
+            <col class="col-actions" style="width: 200px;" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th class="actions-column">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loadingTable) {
+            <tr>
+              <td colspan="3" class="empty-state">Cargando unidades de medida...</td>
+            </tr>
+            } @else {
+              @for (unidad of paginatedUnidades; track unidad.id) {
+              <tr>
+                <td>
+                  <span class="sku-chip">{{ unidad.codigo }}</span>
+                </td>
+                <td>
+                  <span class="product-name">{{ unidad.nombre }}</span>
+                </td>
+                <td class="actions-column">
+                  <div class="row-actions">
+                    <button
+                      type="button"
+                      class="icon-action"
+                      (click)="openEditModal(unidad)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-action icon-action--danger"
+                      [disabled]="isDeletingId === unidad.id"
+                      (click)="openDeleteModal(unidad)"
+                    >
+                      <mat-icon>delete</mat-icon>
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="3" class="empty-state">
+                  No encontramos unidades de medida con ese criterio de búsqueda.
+                </td>
+              </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="table-footer">
+        <span>
+          Mostrando {{ startItem }} a {{ endItem }} de {{ filteredUnidades.length }} registros
+        </span>
+        <div class="pagination" aria-label="Paginación">
+          <button
+            type="button"
+            class="page-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            ‹
+          </button>
+
+          @for (item of pageItems; track $index) {
+            @if (item === '...') {
+              <span class="page-dots">...</span>
+            } @else {
+              <button
+                type="button"
+                class="page-btn"
+                [class.page-btn--active]="currentPage === item"
+                (click)="setPage(+item)"
+              >
+                {{ item }}
+              </button>
+            }
+          }
+
+          <button
+            type="button"
+            class="page-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            ›
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <app-unit-modal
+      [isOpen]="isModalOpen"
+      [mode]="modalMode"
+      [unitId]="editingId"
+      [initialData]="editingData"
+      (closed)="onModalClosed()"
+      (saved)="onModalSaved($event)"
+    ></app-unit-modal>
+
+    @if (deleteTarget) {
+    <div class="product-modal-backdrop" (click)="closeDeleteModal()">
+      <section class="confirm-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <header class="confirm-modal__header">
+          <div class="confirm-modal__icon" aria-hidden="true">!</div>
+          <div>
+            <h2>Eliminar Unidad de Medida</h2>
+            <p>Esta acción desactivará la unidad de medida.</p>
+          </div>
+        </header>
+
+        <div class="confirm-modal__content">
+          <p>
+            ¿Deseas eliminar la unidad <strong>{{ deleteTarget.nombre }}</strong> ({{ deleteTarget.codigo }})?
+          </p>
+        </div>
+
+        <footer class="confirm-modal__footer">
+          <button type="button" class="btn btn-secondary" [disabled]="isDeletingId !== null" (click)="closeDeleteModal()">
+            Cancelar
+          </button>
+          <button type="button" class="btn btn-danger" [disabled]="isDeletingId !== null" (click)="confirmDelete()">
+            <span>{{ isDeletingId !== null ? 'Eliminando...' : 'Eliminar' }}</span>
+          </button>
+        </footer>
+      </section>
+    </div>
+    }
+  </section>
+</div>

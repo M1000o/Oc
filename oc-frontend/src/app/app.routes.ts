@@ -85,6 +85,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/productos-registration/productos-registration').then((m) => m.ProductosRegistration)
       },
       {
+        path: 'unidad-medida',
+        canActivate: [nonProviderGuard],
+        loadComponent: () => import('./features/unidad-medida/unidad-medida').then((m) => m.UnidadMedida)
+      },
+      {
         path: 'proveedores',
         canActivate: [nonProviderGuard],
         loadComponent: () => import('./features/proveedores/proveedores').then((m) => m.Proveedores)

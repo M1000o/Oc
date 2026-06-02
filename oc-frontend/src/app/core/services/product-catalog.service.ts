@@ -7,6 +7,7 @@ import { ProductRequest } from '../interfaces/product-request.interface';
 import { ProductResponse } from '../interfaces/product-response.interface';
 import { ServiceId, ServiceResponse } from '../interfaces/services.interface';
 import { SupplierResponse } from '../interfaces/supplier.interface';
+import { UnitResponse } from '../interfaces/unit.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,7 @@ export class ProductCatalogService {
   private readonly productsEndpoint = environment.api.endpoints.products;
   private readonly servicesEndpoint = environment.api.endpoints.services;
   private readonly suppliersEndpoint = environment.api.endpoints.suppliers;
+  private readonly unitsEndpoint = environment.api.endpoints.units;
 
   listAllProducts(): Observable<ApiResponse<ProductResponse[]>> {
     return this.http.get<ApiResponse<ProductResponse[]>>(
@@ -33,6 +35,12 @@ export class ProductCatalogService {
   listSuppliers(): Observable<ApiResponse<SupplierResponse[]>> {
     return this.http.get<ApiResponse<SupplierResponse[]>>(
       `${this.baseUrl}${this.suppliersEndpoint}`
+    );
+  }
+
+  listUnits(): Observable<ApiResponse<UnitResponse[]>> {
+    return this.http.get<ApiResponse<UnitResponse[]>>(
+      `${this.baseUrl}${this.unitsEndpoint}`
     );
   }
 

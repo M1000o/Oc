@@ -7,7 +7,7 @@ import { ProductRequest } from '../interfaces/product-request.interface';
 import { ProductResponse } from '../interfaces/product-response.interface';
 import { ServiceId, ServiceResponse } from '../interfaces/services.interface';
 import { SupplierResponse } from '../interfaces/supplier.interface';
-import { UnitResponse } from '../interfaces/unit.interface';
+import { UnitResponse } from '../interfaces/unidad-medida.interface';
 
 @Injectable({
   providedIn: 'root'
